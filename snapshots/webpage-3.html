@@ -1,11 +1,10 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
+<html lang="en"><head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
-    <link rel="stylesheet" href="css/style.css">
-    <script src="js/main.js"></script>
+    <link rel="stylesheet" href="webpage-3_files/style.css">
 </head>
 <body>
     <header class="site-header">
@@ -48,43 +47,43 @@
         
                             <div class="filter-group">
                                 <div class="filter-group-head">
-                                    <h4>Publication Focus</h4>
-                                    <button type="button" class="expand-btn" data-target="publication-filter-extra">Show more</button>
+                                    <h4>Geographic Scope</h4>
+                                    <button type="button" class="expand-btn">Show more</button>
                                 </div>
         
                                 <div class="filter-list">
                                     <label class="filter-option">
-                                        <input type="checkbox" checked />
+                                        <input type="checkbox" checked="checked">
                                         <span>World</span>
                                     </label>
                                     <label class="filter-option">
-                                        <input type="checkbox" />
+                                        <input type="checkbox">
                                         <span>Europe</span>
                                     </label>
                                     <label class="filter-option">
-                                        <input type="checkbox" />
+                                        <input type="checkbox">
                                         <span>Asia</span>
                                     </label>
         
-                                    <div class="filter-extra" id="geo-filter-extra">
+                                    <div class="filter-extra">
                                         <label class="filter-option">
-                                            <input type="checkbox" />
+                                            <input type="checkbox">
                                             <span>North America</span>
                                         </label>
                                         <label class="filter-option">
-                                            <input type="checkbox" />
+                                            <input type="checkbox">
                                             <span>Africa</span>
                                         </label>
                                         <label class="filter-option">
-                                            <input type="checkbox" />
+                                            <input type="checkbox">
                                             <span>Middle East</span>
                                         </label>
                                         <label class="filter-option">
-                                            <input type="checkbox" />
+                                            <input type="checkbox">
                                             <span>South America</span>
                                         </label>
                                         <label class="filter-option">
-                                            <input type="checkbox" />
+                                            <input type="checkbox">
                                             <span>Oceania</span>
                                         </label>
                                     </div>
@@ -94,30 +93,30 @@
                             <div class="filter-group">
                                 <div class="filter-group-head">
                                     <h4>Media Type</h4>
-                                    <button type="button" class="expand-btn" data-target="media-filter-extra">Show more</button>
+                                    <button type="button" class="expand-btn">Show more</button>
                                 </div>
         
                                 <div class="filter-list">
                                     <label class="filter-option">
-                                        <input type="checkbox" checked />
+                                        <input type="checkbox" checked="checked">
                                         <span>Newspapers</span>
                                     </label>
                                     <label class="filter-option">
-                                        <input type="checkbox" checked />
+                                        <input type="checkbox" checked="checked">
                                         <span>News Channels</span>
                                     </label>
                                     <label class="filter-option">
-                                        <input type="checkbox" />
+                                        <input type="checkbox">
                                         <span>Magazines</span>
                                     </label>
         
-                                    <div class="filter-extra" id="media-filter-extra">
+                                    <div class="filter-extra">
                                         <label class="filter-option">
-                                            <input type="checkbox" />
+                                            <input type="checkbox">
                                             <span>Online Platforms</span>
                                         </label>
                                         <label class="filter-option">
-                                            <input type="checkbox" />
+                                            <input type="checkbox">
                                             <span>International Journals</span>
                                         </label>
                                     </div>
@@ -127,30 +126,30 @@
                             <div class="filter-group">
                                 <div class="filter-group-head">
                                     <h4>Publication Focus</h4>
-                                    <div class="mini-summary">8 sources · mixed sentiment · 3 regions</div>
+                                    <button type="button" class="expand-btn">Show more</button>
                                 </div>
         
                                 <div class="filter-list">
                                     <label class="filter-option">
-                                        <input type="checkbox" />
+                                        <input type="checkbox">
                                         <span>Regional publications</span>
                                     </label>
                                     <label class="filter-option">
-                                        <input type="checkbox" checked />
+                                        <input type="checkbox" checked="checked">
                                         <span>International publications</span>
                                     </label>
                                     <label class="filter-option">
-                                        <input type="checkbox" />
+                                        <input type="checkbox">
                                         <span>Policy outlets</span>
                                     </label>
         
-                                    <div class="filter-extra" id="publication-filter-extra">
+                                    <div class="filter-extra">
                                         <label class="filter-option">
-                                            <input type="checkbox" />
+                                            <input type="checkbox">
                                             <span>Research and journals</span>
                                         </label>
                                         <label class="filter-option">
-                                            <input type="checkbox" />
+                                            <input type="checkbox">
                                             <span>Editorial analysis</span>
                                         </label>
                                     </div>
@@ -160,7 +159,7 @@
                     </aside>
         
                     <!-- CENTER PANEL -->
-                    <section class="console-panel console-center">
+                    <main class="console-panel console-center">
                         <article class="panel-shell command-shell">
                             <div class="command-top">
                                 <span class="variant-label">Scenario Command</span>
@@ -177,12 +176,7 @@
         
                             <form class="scenario-command-form">
                                 <label for="scenario-command" class="sr-only">Enter geopolitical scenario</label>
-                                <input
-                                    type="text"
-                                    id="scenario-command"
-                                    name="scenario-command"
-                                    placeholder="e.g. US election impact on global oil prices"
-                                />
+                                <input type="text" id="scenario-command" name="scenario-command" placeholder="e.g. US election impact on global oil prices">
         
                                 <div class="scenario-example-row">
                                     <span class="example-label">Suggested prompts</span>
@@ -219,100 +213,42 @@
                                 <div class="mini-summary">8 sources · mixed sentiment</div>
                             </div>
         
-                            <div class="signal-summary-bar">
-                                <div class="signal-metric">
-                                    <span class="signal-metric-label">Signal Strength</span>
-                                    <strong>High</strong>
-                                </div>
-                                <div class="signal-metric">
-                                    <span class="signal-metric-label">Dominant Tone</span>
-                                    <strong>Cautious</strong>
-                                </div>
-                                <div class="signal-metric">
-                                    <span class="signal-metric-label">Source Spread</span>
-                                    <strong>Balanced</strong>
-                                </div>
-                            </div>
-                            
                             <div class="results-list">
                                 <div class="result-card">
                                     <div class="result-head">
-                                        <div>
-                                            <h4>Financial Times</h4>
-                                            <p class="result-meta">Europe · Newspaper · Markets & policy</p>
-                                        </div>
+                                        <h4>Financial Times</h4>
                                         <span class="sentiment-tag sentiment-neutral">Neutral</span>
                                     </div>
                                     <p>
                                         Coverage suggests cautious market interpretation with emphasis on oil sensitivity,
                                         election uncertainty, and geopolitical spillover risk.
                                     </p>
-                                    <div class="result-footer">
-                                        <span class="result-chip">Macro risk</span>
-                                        <span class="result-chip">Energy exposure</span>
-                                        <span class="result-chip">Investor caution</span>
-                                    </div>
                                 </div>
-                            
+        
                                 <div class="result-card">
                                     <div class="result-head">
-                                        <div>
-                                            <h4>Reuters</h4>
-                                            <p class="result-meta">Global · Wire service · Breaking coverage</p>
-                                        </div>
+                                        <h4>Reuters</h4>
                                         <span class="sentiment-tag sentiment-negative">Negative</span>
                                     </div>
                                     <p>
                                         Signals increased instability concerns tied to supply shocks, investor defensiveness,
                                         and heightened policy uncertainty.
                                     </p>
-                                    <div class="result-footer">
-                                        <span class="result-chip">Volatility</span>
-                                        <span class="result-chip">Policy stress</span>
-                                        <span class="result-chip">Supply shock</span>
-                                    </div>
                                 </div>
-                            
+        
                                 <div class="result-card">
                                     <div class="result-head">
-                                        <div>
-                                            <h4>Al Jazeera</h4>
-                                            <p class="result-meta">Middle East · Broadcaster · Global affairs</p>
-                                        </div>
+                                        <h4>Al Jazeera</h4>
                                         <span class="sentiment-tag sentiment-positive">Positive</span>
                                     </div>
                                     <p>
                                         Focuses on broader diplomatic recalibration and potential strategic adaptation
                                         rather than immediate escalation.
                                     </p>
-                                    <div class="result-footer">
-                                        <span class="result-chip">Diplomacy</span>
-                                        <span class="result-chip">Adaptation</span>
-                                        <span class="result-chip">Strategic shift</span>
-                                    </div>
-                                </div>
-                            
-                                <div class="result-card">
-                                    <div class="result-head">
-                                        <div>
-                                            <h4>Nikkei Asia</h4>
-                                            <p class="result-meta">Asia-Pacific · Business press · Regional lens</p>
-                                        </div>
-                                        <span class="sentiment-tag sentiment-neutral">Neutral</span>
-                                    </div>
-                                    <p>
-                                        Highlights downstream supply-chain implications, regional trade sensitivity,
-                                        and hedging behavior among Asian markets.
-                                    </p>
-                                    <div class="result-footer">
-                                        <span class="result-chip">Supply chain</span>
-                                        <span class="result-chip">Trade watch</span>
-                                        <span class="result-chip">Regional impact</span>
-                                    </div>
                                 </div>
                             </div>
                         </article>
-                    </section>
+                    </main>
         
                     <!-- RIGHT PANEL -->
                     <aside class="console-panel console-right">
@@ -363,5 +299,5 @@
             <p class="footer-note">Sprint 1 · GEO-30 Landing Page Shell</p>
         </div>
     </footer>
-</body>
-</html>
+
+</body></html>
