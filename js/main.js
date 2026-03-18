@@ -14,3 +14,19 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 });
+
+
+// Country dropdown toggle
+const dropdownBtn = document.querySelector(".country-dropdown-btn");
+const dropdown = document.getElementById("country-dropdown");
+
+dropdownBtn.addEventListener("click", () => {
+    dropdown.classList.toggle("hidden");
+});
+
+// Close dropdown on outside click
+document.addEventListener("click", (e) => {
+    if (!dropdown.contains(e.target) && !dropdownBtn.contains(e.target)) {
+        dropdown.classList.add("hidden");
+    }
+});
