@@ -306,7 +306,8 @@ button {
 .primary-action-btn:hover,
 .secondary-action-btn:hover,
 .ghost-btn:hover,
-.expand-btn:hover {
+.expand-btn:hover,
+.country-dropdown-btn:hover {
     transform: translateY(-1px);
 }
 
@@ -362,6 +363,101 @@ button {
     display: grid;
 }
 
+/* Countries */
+.country-filter {
+    position: relative;
+    display: grid;
+    gap: 0.6rem;
+}
+
+.country-dropdown-btn {
+    width: 100%;
+    text-align: left;
+    padding: 0.6rem 0.8rem;
+    border-radius: 12px;
+    border: 1px solid rgba(19, 37, 74, 0.12);
+    background: #ffffff;
+    font-size: 0.9rem;
+    color: #22324d;
+    transition: transform 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+}
+
+.country-dropdown-btn.is-active {
+    border-color: rgba(30, 64, 175, 0.25);
+    background: rgba(30, 64, 175, 0.05);
+}
+
+.country-dropdown {
+    position: absolute;
+    top: calc(100% + 0.25rem);
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid rgba(19, 37, 74, 0.12);
+    border-radius: 12px;
+    max-height: 260px;
+    overflow-y: auto;
+    z-index: 20;
+    padding: 0.5rem;
+    box-shadow: 0 12px 28px rgba(15, 36, 83, 0.12);
+}
+
+.hidden {
+    display: none;
+}
+
+.country-search input {
+    width: 100%;
+    padding: 0.5rem 0.6rem;
+    border-radius: 8px;
+    border: 1px solid rgba(19, 37, 74, 0.12);
+    margin-bottom: 0.5rem;
+    outline: none;
+}
+
+.country-search input:focus {
+    border-color: rgba(34, 77, 164, 0.35);
+    box-shadow: 0 0 0 4px rgba(34, 77, 164, 0.08);
+}
+
+.country-list {
+    display: grid;
+    gap: 0.3rem;
+    font-size: 0.85rem;
+}
+
+.country-list label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.35rem 0.2rem;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.country-list label:hover {
+    background: rgba(30, 64, 175, 0.05);
+}
+
+.country-list input {
+    accent-color: #1e40af;
+}
+
+.selected-countries {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+}
+
+.country-chip {
+    background: rgba(30, 64, 175, 0.08);
+    border: 1px solid rgba(30, 64, 175, 0.15);
+    padding: 0.3rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    color: #1e3a8a;
+}
+
 /* ==========================================
    Command Panel
 ========================================== */
@@ -407,6 +503,11 @@ button {
     margin: 0;
     color: #4f5f79;
     line-height: 1.6;
+}
+
+.highlight {
+    color: #1e40af;
+    font-weight: 700;
 }
 
 .scenario-command-form {
@@ -488,6 +589,15 @@ button {
     background: rgba(20, 43, 99, 0.06);
     border: 1px solid rgba(20, 43, 99, 0.08);
     color: var(--primary-500);
+}
+
+.scope-chip.is-country {
+    background: rgba(15, 36, 83, 0.09);
+    border-color: rgba(15, 36, 83, 0.14);
+}
+
+.scope-chip.is-muted {
+    opacity: 0.88;
 }
 
 .scenario-command-actions {
@@ -707,71 +817,4 @@ button {
     .signal-summary-bar {
         grid-template-columns: 1fr;
     }
-}
-
-.highlight {
-    color: #1e40af;
-    font-weight: 700;
-}
-
-.country-filter {
-    position: relative;
-    display: grid;
-    gap: 0.6rem;
-}
-
-.country-dropdown-btn {
-    width: 100%;
-    text-align: left;
-    padding: 0.6rem 0.8rem;
-    border-radius: 12px;
-    border: 1px solid rgba(19, 37, 74, 0.12);
-    background: #ffffff;
-    font-size: 0.9rem;
-}
-
-.country-dropdown {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    right: 0;
-    background: white;
-    border: 1px solid rgba(19, 37, 74, 0.12);
-    border-radius: 12px;
-    max-height: 220px;
-    overflow-y: auto;
-    z-index: 20;
-    padding: 0.5rem;
-}
-
-.hidden {
-    display: none;
-}
-
-.country-search input {
-    width: 100%;
-    padding: 0.5rem;
-    border-radius: 8px;
-    border: 1px solid rgba(19, 37, 74, 0.12);
-    margin-bottom: 0.5rem;
-}
-
-.country-list {
-    display: grid;
-    gap: 0.3rem;
-    font-size: 0.85rem;
-}
-
-.selected-countries {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.4rem;
-}
-
-.country-chip {
-    background: rgba(30, 64, 175, 0.08);
-    border: 1px solid rgba(30, 64, 175, 0.15);
-    padding: 0.3rem 0.6rem;
-    border-radius: 999px;
-    font-size: 0.75rem;
 }
