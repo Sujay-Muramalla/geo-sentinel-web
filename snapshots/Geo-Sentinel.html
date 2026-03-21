@@ -1,10 +1,10 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
+<html lang="en"><head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Geo-Sentinel</title>
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="Geo-Sentinel_files/style.css">
 </head>
 <body>
     <header class="site-header">
@@ -53,7 +53,7 @@
 
                                 <div class="filter-list">
                                     <label class="filter-option">
-                                        <input type="checkbox" value="World" checked>
+                                        <input type="checkbox" value="World">
                                         <span>World</span>
                                     </label>
                                     <label class="filter-option">
@@ -97,19 +97,17 @@
                                 </div>
 
                                 <div class="country-filter">
-                                    <button type="button" class="country-dropdown-btn" id="country-dropdown-btn">
-                                        All countries (current scope)
-                                    </button>
+                                    <button type="button" class="country-dropdown-btn is-active" id="country-dropdown-btn">1 country selected</button>
 
                                     <div class="country-dropdown hidden" id="country-dropdown">
                                         <div class="country-search">
                                             <input type="text" id="country-search-input" placeholder="Search country...">
                                         </div>
 
-                                        <div class="country-list" id="country-list"></div>
+                                        <div class="country-list" id="country-list"><label><input type="checkbox" data-country="Argentina"><span>Argentina</span></label><label><input type="checkbox" data-country="Australia"><span>Australia</span></label><label><input type="checkbox" data-country="Brazil" checked="checked"><span>Brazil</span></label><label><input type="checkbox" data-country="Canada"><span>Canada</span></label><label><input type="checkbox" data-country="Chile"><span>Chile</span></label><label><input type="checkbox" data-country="China"><span>China</span></label><label><input type="checkbox" data-country="Colombia"><span>Colombia</span></label><label><input type="checkbox" data-country="Egypt"><span>Egypt</span></label><label><input type="checkbox" data-country="France"><span>France</span></label><label><input type="checkbox" data-country="Germany"><span>Germany</span></label><label><input type="checkbox" data-country="India"><span>India</span></label><label><input type="checkbox" data-country="Indonesia"><span>Indonesia</span></label><label><input type="checkbox" data-country="Israel"><span>Israel</span></label><label><input type="checkbox" data-country="Italy"><span>Italy</span></label><label><input type="checkbox" data-country="Japan"><span>Japan</span></label><label><input type="checkbox" data-country="Kenya"><span>Kenya</span></label><label><input type="checkbox" data-country="Mexico"><span>Mexico</span></label><label><input type="checkbox" data-country="Morocco"><span>Morocco</span></label><label><input type="checkbox" data-country="Netherlands"><span>Netherlands</span></label><label><input type="checkbox" data-country="New Zealand"><span>New Zealand</span></label><label><input type="checkbox" data-country="Nigeria"><span>Nigeria</span></label><label><input type="checkbox" data-country="Peru"><span>Peru</span></label><label><input type="checkbox" data-country="Qatar"><span>Qatar</span></label><label><input type="checkbox" data-country="Saudi Arabia"><span>Saudi Arabia</span></label><label><input type="checkbox" data-country="Singapore"><span>Singapore</span></label><label><input type="checkbox" data-country="South Africa"><span>South Africa</span></label><label><input type="checkbox" data-country="South Korea"><span>South Korea</span></label><label><input type="checkbox" data-country="Spain"><span>Spain</span></label><label><input type="checkbox" data-country="Turkey"><span>Turkey</span></label><label><input type="checkbox" data-country="United Arab Emirates"><span>United Arab Emirates</span></label><label><input type="checkbox" data-country="United Kingdom"><span>United Kingdom</span></label><label><input type="checkbox" data-country="United States"><span>United States</span></label></div>
                                     </div>
 
-                                    <div class="selected-countries" id="selected-countries"></div>
+                                    <div class="selected-countries" id="selected-countries"><span class="country-chip">Brazil</span></div>
                                 </div>
                             </div>
 
@@ -117,16 +115,16 @@
                             <div class="filter-group">
                                 <div class="filter-group-head">
                                     <h4>Media Type</h4>
-                                    <button type="button" class="expand-btn" data-target="media-filter-extra">Show more</button>
+                                    <button type="button" class="expand-btn is-open" data-target="media-filter-extra">Show less</button>
                                 </div>
 
                                 <div class="filter-list">
                                     <label class="filter-option">
-                                        <input type="checkbox" checked>
+                                        <input type="checkbox" checked="checked">
                                         <span>Newspapers</span>
                                     </label>
                                     <label class="filter-option">
-                                        <input type="checkbox" checked>
+                                        <input type="checkbox">
                                         <span>News Channels</span>
                                     </label>
                                     <label class="filter-option">
@@ -134,7 +132,7 @@
                                         <span>Magazines</span>
                                     </label>
 
-                                    <div class="filter-extra" id="media-filter-extra">
+                                    <div class="filter-extra is-open" id="media-filter-extra">
                                         <label class="filter-option">
                                             <input type="checkbox">
                                             <span>Online Platforms</span>
@@ -160,7 +158,7 @@
                                         <span>Regional publications</span>
                                     </label>
                                     <label class="filter-option">
-                                        <input type="checkbox" checked>
+                                        <input type="checkbox" checked="checked">
                                         <span>International publications</span>
                                     </label>
                                     <label class="filter-option">
@@ -204,12 +202,7 @@
 
                             <form class="scenario-command-form">
                                 <label for="scenario-command" class="sr-only">Enter geopolitical scenario</label>
-                                <input
-                                    type="text"
-                                    id="scenario-command"
-                                    name="scenario-command"
-                                    placeholder="e.g. US election impact on global oil prices"
-                                >
+                                <input type="text" id="scenario-command" name="scenario-command" placeholder="e.g. US election impact on global oil prices">
 
                                 <div class="scenario-example-row">
                                     <span class="example-label">Suggested prompts</span>
@@ -222,7 +215,7 @@
 
                                 <div class="selected-scope">
                                     <p class="scope-title">Active source scope</p>
-                                    <div class="scope-chips" id="scope-chips"></div>
+                                    <div class="scope-chips" id="scope-chips"><span class="scope-chip is-country">Brazil</span><span class="scope-chip">Newspapers</span><span class="scope-chip">International publications</span></div>
                                 </div>
 
                                 <div class="scenario-command-actions">
@@ -238,13 +231,13 @@
                                     <p class="panel-label">Results Preview</p>
                                     <h3>Intelligence Signals</h3>
                                 </div>
-                                <div class="mini-summary" id="results-mini-summary">8 sources · mixed sentiment · world</div>
+                                <div class="mini-summary" id="results-mini-summary">4 sources · mixed sentiment · 1 country</div>
                             </div>
 
                             <div class="signal-summary-bar">
                                 <div class="signal-metric">
                                     <span class="signal-metric-label">Signal Strength</span>
-                                    <strong id="metric-signal-strength">High</strong>
+                                    <strong id="metric-signal-strength">Moderate</strong>
                                 </div>
                                 <div class="signal-metric">
                                     <span class="signal-metric-label">Dominant Tone</span>
@@ -252,7 +245,7 @@
                                 </div>
                                 <div class="signal-metric">
                                     <span class="signal-metric-label">Source Spread</span>
-                                    <strong id="metric-source-spread">Balanced</strong>
+                                    <strong id="metric-source-spread">Focused</strong>
                                 </div>
                             </div>
 
@@ -385,6 +378,6 @@
         </div>
     </footer>
 
-    <script src="js/main.js"></script>
-</body>
-</html>
+    <script src="Geo-Sentinel_files/main.js"></script>
+
+</body></html>
