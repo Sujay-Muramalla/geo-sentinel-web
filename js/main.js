@@ -1,415 +1,507 @@
 document.addEventListener("DOMContentLoaded", () => {
-    /* -----------------------------
-       Expand / collapse filter groups
-    ----------------------------- */
+    // -----------------------------
+    // ELEMENTS
+    // -----------------------------
     const expandButtons = document.querySelectorAll(".expand-btn");
-
-    expandButtons.forEach((button) => {
-        button.addEventListener("click", () => {
-            const targetId = button.getAttribute("data-target");
-            const target = document.getElementById(targetId);
-
-            if (!target) return;
-
-            const isOpen = target.classList.toggle("is-open");
-            button.classList.toggle("is-open", isOpen);
-            button.textContent = isOpen ? "Show less" : "Show more";
-        });
-    });
-
-    /* -----------------------------
-       Data model
-    ----------------------------- */
-    const regionCountryMap = {
-        "Europe": ["Germany", "France", "United Kingdom", "Italy", "Spain", "Netherlands"],
-        "Asia": ["India", "China", "Japan", "South Korea", "Singapore", "Indonesia"],
-        "North America": ["United States", "Canada", "Mexico"],
-        "Africa": ["Nigeria", "South Africa", "Kenya", "Egypt", "Morocco"],
-        "Middle East": ["Saudi Arabia", "United Arab Emirates", "Israel", "Qatar", "Turkey"],
-        "South America": ["Brazil", "Argentina", "Chile", "Colombia", "Peru"],
-        "Oceania": ["Australia", "New Zealand"]
-    };
-
-    const allCountries = Array.from(
-        new Set(Object.values(regionCountryMap).flat())
-    ).sort((a, b) => a.localeCompare(b));
-
-    /* -----------------------------
-       Selectors
-    ----------------------------- */
-    const regionCheckboxes = document.querySelectorAll(
-        '.filter-group input[type="checkbox"][value]'
-    );
+    const clearFiltersBtn = document.getElementById("clear-filters-btn");
 
     const countryDropdownBtn = document.getElementById("country-dropdown-btn");
     const countryDropdown = document.getElementById("country-dropdown");
+    const countrySearchInput = document.getElementById("country-search-input");
     const countryList = document.getElementById("country-list");
     const selectedCountriesContainer = document.getElementById("selected-countries");
-    const countrySearchInput = document.getElementById("country-search-input");
-
-    const mediaCheckboxes = Array.from(document.querySelectorAll(".filter-group"))
-        .find(group => group.querySelector("h4")?.textContent.trim() === "Media Type")
-        ?.querySelectorAll('input[type="checkbox"]') || [];
-
-    const publicationCheckboxes = Array.from(document.querySelectorAll(".filter-group"))
-        .find(group => group.querySelector("h4")?.textContent.trim() === "Publication Focus")
-        ?.querySelectorAll('input[type="checkbox"]') || [];
-
     const scopeChipsContainer = document.getElementById("scope-chips");
+
+    const resultCards = Array.from(document.querySelectorAll(".result-card"));
     const resultsMiniSummary = document.getElementById("results-mini-summary");
-    const metricSignalStrength = document.getElementById("metric-signal-strength");
-    const metricDominantTone = document.getElementById("metric-dominant-tone");
-    const metricSourceSpread = document.getElementById("metric-source-spread");
-    const clearFiltersBtn = document.getElementById("clear-filters-btn");
 
-    let explicitCountrySelection = new Set();
+    // -----------------------------
+    // COUNTRY DATA BY REGION
+    // -----------------------------
+    const countriesByRegion = {
+        europe: ["uk", "germany", "france", "italy", "spain", "poland"],
+        asia: ["china", "taiwan", "japan", "india", "south korea", "singapore"],
+        "north-america": ["us", "canada", "mexico"],
+        africa: ["egypt", "kenya", "south africa", "nigeria", "morocco"],
+        "middle-east": ["qatar", "saudi arabia", "uae", "israel", "iran", "turkey"],
+        "south-america": ["brazil", "argentina", "chile", "colombia", "peru"],
+        oceania: ["australia", "new zealand"],
+    };
 
-    /* -----------------------------
-       Helpers
-    ----------------------------- */
-    function getCheckedLabels(nodeList) {
-        return Array.from(nodeList)
-            .filter(input => input.checked)
-            .map(input => input.parentElement.textContent.trim());
+    // -----------------------------
+    // HELPERS
+    // -----------------------------
+    function normalizeText(value) {
+        return value.trim().toLowerCase();
+    }
+
+    function titleCase(value) {
+        return value
+            .split(" ")
+            .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+            .join(" ");
+    }
+
+    function parseDatasetList(value) {
+        if (!value) return [];
+        return value
+            .split(",")
+            .map((item) => normalizeText(item))
+            .filter(Boolean);
+    }
+
+    function getFilterGroupByTitle(sectionTitle) {
+        return Array.from(document.querySelectorAll(".filter-group")).find((group) => {
+            const heading = group.querySelector(".filter-group-head h4");
+            return heading && heading.textContent.trim() === sectionTitle;
+        });
+    }
+
+    function getCheckedValuesFromSection(sectionTitle) {
+        const group = getFilterGroupByTitle(sectionTitle);
+        if (!group) return [];
+
+        return Array.from(group.querySelectorAll('input[type="checkbox"]:checked'))
+            .map((input) => input.value)
+            .filter(Boolean);
+    }
+
+    function getGeoCheckboxes() {
+        const geoGroup = getFilterGroupByTitle("Geographic Scope");
+        if (!geoGroup) return [];
+        return Array.from(geoGroup.querySelectorAll('input[type="checkbox"]'));
+    }
+
+    function getWorldCheckbox() {
+        return getGeoCheckboxes().find((checkbox) => checkbox.value === "world");
+    }
+
+    function getSpecificRegionCheckboxes() {
+        return getGeoCheckboxes().filter((checkbox) => checkbox.value !== "world");
     }
 
     function getSelectedRegions() {
-        return Array.from(regionCheckboxes)
-            .filter((checkbox) => checkbox.checked)
-            .map((checkbox) => checkbox.value);
+        return getCheckedValuesFromSection("Geographic Scope");
     }
 
-    function getAvailableCountries() {
+    function getSelectedCountries() {
+        return Array.from(
+            selectedCountriesContainer.querySelectorAll(".country-chip")
+        )
+            .map((chip) => normalizeText(chip.dataset.country || chip.textContent.replace("×", "")))
+            .filter(Boolean);
+    }
+
+    function getAvailableCountriesForSelectedRegions() {
         const selectedRegions = getSelectedRegions();
 
-        if (selectedRegions.length === 0 || selectedRegions.includes("World")) {
-            return allCountries;
+        if (selectedRegions.length === 0 || selectedRegions.includes("world")) {
+            return Object.values(countriesByRegion)
+                .flat()
+                .filter((value, index, self) => self.indexOf(value) === index)
+                .sort();
         }
 
-        const scopedCountries = selectedRegions.flatMap((region) => regionCountryMap[region] || []);
-        return Array.from(new Set(scopedCountries)).sort((a, b) => a.localeCompare(b));
+        return selectedRegions
+            .flatMap((region) => countriesByRegion[region] || [])
+            .filter((value, index, self) => self.indexOf(value) === index)
+            .sort();
     }
 
-    function sanitizeExplicitSelection() {
-        const availableCountries = new Set(getAvailableCountries());
+    // -----------------------------
+    // EXPAND / COLLAPSE FILTER GROUPS
+    // -----------------------------
+    function bindExpandButtons() {
+        expandButtons.forEach((button) => {
+            button.addEventListener("click", () => {
+                const targetId = button.dataset.target;
+                const target = document.getElementById(targetId);
+                if (!target) return;
 
-        explicitCountrySelection = new Set(
-            Array.from(explicitCountrySelection).filter((country) =>
-                availableCountries.has(country)
-            )
-        );
-    }
-
-    function getEffectiveCountries() {
-        const availableCountries = getAvailableCountries();
-
-        if (explicitCountrySelection.size === 0) {
-            return availableCountries;
-        }
-
-        return availableCountries.filter((country) =>
-            explicitCountrySelection.has(country)
-        );
-    }
-
-    function getSelectedMediaTypes() {
-        return getCheckedLabels(mediaCheckboxes);
-    }
-
-    function getSelectedPublicationFocus() {
-        return getCheckedLabels(publicationCheckboxes);
-    }
-
-    function renderCountryList(filterText = "") {
-        const availableCountries = getAvailableCountries();
-        const normalizedFilter = filterText.trim().toLowerCase();
-
-        const filteredCountries = availableCountries.filter((country) =>
-            country.toLowerCase().includes(normalizedFilter)
-        );
-
-        countryList.innerHTML = "";
-
-        if (filteredCountries.length === 0) {
-            const emptyState = document.createElement("div");
-            emptyState.textContent = "No countries match your search.";
-            emptyState.style.fontSize = "0.85rem";
-            emptyState.style.color = "#667792";
-            emptyState.style.padding = "0.4rem 0.2rem";
-            countryList.appendChild(emptyState);
-            return;
-        }
-
-        filteredCountries.forEach((country) => {
-            const label = document.createElement("label");
-            const checkbox = document.createElement("input");
-            const span = document.createElement("span");
-
-            checkbox.type = "checkbox";
-            checkbox.checked = explicitCountrySelection.has(country);
-            checkbox.dataset.country = country;
-
-            checkbox.addEventListener("change", () => {
-                if (checkbox.checked) {
-                    explicitCountrySelection.add(country);
-                } else {
-                    explicitCountrySelection.delete(country);
-                }
-
-                updateAllUI();
+                target.classList.toggle("is-open");
+                button.textContent = target.classList.contains("is-open")
+                    ? "Show less"
+                    : "Show more";
             });
-
-            span.textContent = country;
-
-            label.appendChild(checkbox);
-            label.appendChild(span);
-            countryList.appendChild(label);
         });
     }
 
-    function renderSelectedCountryChips() {
-        selectedCountriesContainer.innerHTML = "";
+    // -----------------------------
+    // COUNTRY DROPDOWN
+    // -----------------------------
+    function renderCountryDropdown(searchTerm = "") {
+        if (!countryList) return;
 
-        if (explicitCountrySelection.size === 0) {
+        const availableCountries = getAvailableCountriesForSelectedRegions();
+        const selectedCountries = getSelectedCountries();
+        const normalizedSearch = normalizeText(searchTerm);
+
+        const filteredCountries = availableCountries.filter((country) =>
+            country.includes(normalizedSearch)
+        );
+
+        if (filteredCountries.length === 0) {
+            countryList.innerHTML = `<div class="country-empty">No countries found</div>`;
             return;
         }
 
-        Array.from(explicitCountrySelection)
-            .sort((a, b) => a.localeCompare(b))
-            .forEach((country) => {
-                const chip = document.createElement("span");
-                chip.className = "country-chip";
-                chip.textContent = country;
-                selectedCountriesContainer.appendChild(chip);
+        countryList.innerHTML = filteredCountries
+            .map((country) => {
+                const checked = selectedCountries.includes(country) ? "checked" : "";
+                return `
+                    <label class="filter-option">
+                        <input type="checkbox" value="${country}" ${checked} data-country-option="true">
+                        <span>${titleCase(country)}</span>
+                    </label>
+                `;
+            })
+            .join("");
+
+        bindCountryOptionEvents();
+    }
+
+    function bindCountryOptionEvents() {
+        const countryOptions = countryList.querySelectorAll('input[data-country-option="true"]');
+
+        countryOptions.forEach((checkbox) => {
+            checkbox.addEventListener("change", () => {
+                const country = normalizeText(checkbox.value);
+
+                if (checkbox.checked) {
+                    addCountryChip(country);
+                } else {
+                    removeCountryChip(country);
+                }
+
+                updateCountryButtonLabel();
+                updateScopeChips();
+                filterResultCards();
             });
+        });
+    }
+
+    function addCountryChip(country) {
+        const existing = selectedCountriesContainer.querySelector(
+            `.country-chip[data-country="${country}"]`
+        );
+        if (existing) return;
+
+        const chip = document.createElement("button");
+        chip.type = "button";
+        chip.className = "country-chip scope-chip";
+        chip.dataset.country = country;
+        chip.innerHTML = `${titleCase(country)} <span aria-hidden="true">×</span>`;
+
+        chip.addEventListener("click", () => {
+            removeCountryChip(country);
+            syncCountryDropdownChecks();
+            updateCountryButtonLabel();
+            updateScopeChips();
+            filterResultCards();
+        });
+
+        selectedCountriesContainer.appendChild(chip);
+    }
+
+    function removeCountryChip(country) {
+        const chip = selectedCountriesContainer.querySelector(
+            `.country-chip[data-country="${country}"]`
+        );
+        if (chip) chip.remove();
+    }
+
+    function syncCountryDropdownChecks() {
+        const selectedCountries = getSelectedCountries();
+        const options = countryList.querySelectorAll('input[data-country-option="true"]');
+
+        options.forEach((option) => {
+            option.checked = selectedCountries.includes(normalizeText(option.value));
+        });
     }
 
     function updateCountryButtonLabel() {
-        const selectedRegions = getSelectedRegions();
-        const availableCountries = getAvailableCountries();
+        const selectedCountries = getSelectedCountries();
 
-        if (explicitCountrySelection.size > 0) {
-            const count = explicitCountrySelection.size;
-            countryDropdownBtn.textContent = count === 1 ? "1 country selected" : `${count} countries selected`;
-            countryDropdownBtn.classList.add("is-active");
+        if (!countryDropdownBtn) return;
+
+        if (selectedCountries.length === 0) {
+            countryDropdownBtn.textContent = "All countries (current scope)";
             return;
         }
 
-        if (selectedRegions.length === 0) {
-            countryDropdownBtn.textContent = "All countries (global scope)";
-            countryDropdownBtn.classList.remove("is-active");
+        if (selectedCountries.length === 1) {
+            countryDropdownBtn.textContent = `${titleCase(selectedCountries[0])} selected`;
             return;
         }
 
-        if (selectedRegions.includes("World")) {
-            countryDropdownBtn.textContent = "All countries (world)";
-            countryDropdownBtn.classList.remove("is-active");
-            return;
-        }
-
-        const regionCount = selectedRegions.length;
-        if (regionCount === 1) {
-            countryDropdownBtn.textContent = `All countries (${availableCountries.length} in selected region)`;
-        } else {
-            countryDropdownBtn.textContent = `All countries (${availableCountries.length} in selected regions)`;
-        }
-
-        countryDropdownBtn.classList.remove("is-active");
+        countryDropdownBtn.textContent = `${selectedCountries.length} countries selected`;
     }
 
-    function renderScopeChips() {
-        scopeChipsContainer.innerHTML = "";
+    function bindCountryDropdown() {
+        if (!countryDropdownBtn || !countryDropdown) return;
+
+        countryDropdownBtn.addEventListener("click", () => {
+            countryDropdown.classList.toggle("hidden");
+            renderCountryDropdown(countrySearchInput ? countrySearchInput.value : "");
+        });
+
+        document.addEventListener("click", (event) => {
+            const clickedInside =
+                countryDropdown.contains(event.target) ||
+                countryDropdownBtn.contains(event.target);
+
+            if (!clickedInside) {
+                countryDropdown.classList.add("hidden");
+            }
+        });
+
+        if (countrySearchInput) {
+            countrySearchInput.addEventListener("input", () => {
+                renderCountryDropdown(countrySearchInput.value);
+            });
+        }
+    }
+
+    // -----------------------------
+    // ACTIVE SCOPE CHIPS
+    // -----------------------------
+    function updateScopeChips() {
+        if (!scopeChipsContainer) return;
 
         const selectedRegions = getSelectedRegions();
-        const selectedMedia = getSelectedMediaTypes();
-        const selectedFocus = getSelectedPublicationFocus();
+        const selectedCountries = getSelectedCountries();
 
         const chips = [];
 
-        if (explicitCountrySelection.size > 0) {
-            Array.from(explicitCountrySelection)
-                .sort((a, b) => a.localeCompare(b))
-                .forEach(country => {
-                    chips.push({ text: country, className: "scope-chip is-country" });
-                });
-        } else if (selectedRegions.length === 0) {
-            chips.push({ text: "World", className: "scope-chip is-muted" });
-        } else if (selectedRegions.includes("World")) {
-            chips.push({ text: "World", className: "scope-chip is-muted" });
+        if (selectedRegions.includes("world") || selectedRegions.length === 0) {
+            chips.push("World");
         } else {
-            selectedRegions.forEach(region => {
-                chips.push({ text: region, className: "scope-chip is-muted" });
+            selectedRegions.forEach((region) => {
+                chips.push(titleCase(region.replace(/-/g, " ")));
             });
         }
 
-        selectedMedia.forEach(item => {
-            chips.push({ text: item, className: "scope-chip" });
+        selectedCountries.forEach((country) => {
+            chips.push(titleCase(country));
         });
 
-        selectedFocus.forEach(item => {
-            chips.push({ text: item, className: "scope-chip" });
-        });
+        scopeChipsContainer.innerHTML = chips
+            .map((label) => `<span class="scope-chip">${label}</span>`)
+            .join("");
+    }
 
-        if (chips.length === 0) {
-            chips.push({ text: "World", className: "scope-chip is-muted" });
+    // -----------------------------
+    // WORLD CHECKBOX RULE
+    // -----------------------------
+    function handleWorldSelectionRule(changedCheckbox) {
+        const worldCheckbox = getWorldCheckbox();
+        const regionCheckboxes = getSpecificRegionCheckboxes();
+
+        if (!worldCheckbox) return;
+
+        if (changedCheckbox.value === "world" && changedCheckbox.checked) {
+            regionCheckboxes.forEach((checkbox) => {
+                checkbox.checked = false;
+            });
+
+            clearSelectedCountries();
+            renderCountryDropdown(countrySearchInput ? countrySearchInput.value : "");
+            updateCountryButtonLabel();
+            updateScopeChips();
+            return;
         }
 
-        chips.forEach(chipData => {
-            const chip = document.createElement("span");
-            chip.className = chipData.className;
-            chip.textContent = chipData.text;
-            scopeChipsContainer.appendChild(chip);
+        if (changedCheckbox.value !== "world" && changedCheckbox.checked) {
+            worldCheckbox.checked = false;
+        }
+
+        const anySpecificRegionChecked = regionCheckboxes.some((checkbox) => checkbox.checked);
+
+        if (!anySpecificRegionChecked) {
+            worldCheckbox.checked = true;
+        }
+
+        pruneSelectedCountriesOutsideScope();
+        renderCountryDropdown(countrySearchInput ? countrySearchInput.value : "");
+        updateCountryButtonLabel();
+        updateScopeChips();
+    }
+
+    function clearSelectedCountries() {
+        selectedCountriesContainer.innerHTML = "";
+    }
+
+    function pruneSelectedCountriesOutsideScope() {
+        const allowedCountries = getAvailableCountriesForSelectedRegions();
+        const chips = Array.from(selectedCountriesContainer.querySelectorAll(".country-chip"));
+
+        chips.forEach((chip) => {
+            const country = normalizeText(chip.dataset.country || "");
+            if (!allowedCountries.includes(country)) {
+                chip.remove();
+            }
         });
     }
 
-    function updateResultsSummary() {
-        const selectedRegions = getSelectedRegions();
-        const selectedMedia = getSelectedMediaTypes();
-        const effectiveCountries = getEffectiveCountries();
+    // -----------------------------
+    // RESULT CARD FILTERING
+    // -----------------------------
+    function cardMatchesRegions(cardRegion, selectedRegions) {
+        if (!selectedRegions.length || selectedRegions.includes("world")) {
+            return true;
+        }
 
-        const sourceCount = Math.max(4, selectedMedia.length * 2 + Math.min(effectiveCountries.length, 6));
+        return selectedRegions.includes(cardRegion);
+    }
+
+    function cardMatchesCountries(cardCountries, selectedCountries) {
+        if (!selectedCountries.length) {
+            return true;
+        }
+
+        return selectedCountries.some((country) => cardCountries.includes(country));
+    }
+
+    function cardMatchesMediaTypes(cardMediaTypes, selectedMediaTypes) {
+        if (!selectedMediaTypes.length) {
+            return true;
+        }
+
+        return selectedMediaTypes.some((mediaType) => cardMediaTypes.includes(mediaType));
+    }
+
+    function cardMatchesFocus(cardFocusValues, selectedFocusValues) {
+        if (!selectedFocusValues.length) {
+            return true;
+        }
+
+        return selectedFocusValues.some((focus) => cardFocusValues.includes(focus));
+    }
+
+    function updateResultsSummary(visibleCount, selectedRegions, selectedCountries) {
+        if (!resultsMiniSummary) return;
 
         let regionLabel = "world";
-        if (explicitCountrySelection.size > 0) {
-            regionLabel = explicitCountrySelection.size === 1
-                ? "1 country"
-                : `${explicitCountrySelection.size} countries`;
-        } else if (selectedRegions.length === 0 || selectedRegions.includes("World")) {
-            regionLabel = "world";
-        } else if (selectedRegions.length === 1) {
-            regionLabel = "1 region";
-        } else {
-            regionLabel = `${selectedRegions.length} regions`;
+
+        if (selectedRegions.length > 0 && !selectedRegions.includes("world")) {
+            regionLabel = selectedRegions
+                .map((region) => titleCase(region.replace(/-/g, " ")))
+                .join(", ");
         }
 
-        resultsMiniSummary.textContent = `${sourceCount} sources · mixed sentiment · ${regionLabel}`;
+        const countryLabel =
+            selectedCountries.length > 0
+                ? `${selectedCountries.length} countries`
+                : "all countries";
+
+        resultsMiniSummary.textContent = `${visibleCount} sources · mixed sentiment · ${countryLabel} · ${regionLabel}`;
     }
 
-    function updateSignalMetrics() {
-        const selectedMedia = getSelectedMediaTypes();
-        const selectedFocus = getSelectedPublicationFocus();
+    function filterResultCards() {
         const selectedRegions = getSelectedRegions();
-        const countryCount = explicitCountrySelection.size;
-        const effectiveCountryCount = getEffectiveCountries().length;
+        const selectedCountries = getSelectedCountries();
+        const selectedMediaTypes = getCheckedValuesFromSection("Media Type");
+        const selectedFocusValues = getCheckedValuesFromSection("Publication Focus");
 
-        let strength = "Moderate";
-        if (countryCount >= 3 || selectedMedia.length >= 3) {
-            strength = "High";
-        } else if (selectedRegions.includes("World")) {
-            strength = "High";
-        }
+        let visibleCount = 0;
 
-        let tone = "Cautious";
-        if (selectedFocus.includes("Policy outlets") || selectedFocus.includes("Research and journals")) {
-            tone = "Analytical";
-        } else if (selectedMedia.includes("News Channels") && selectedMedia.includes("Newspapers")) {
-            tone = "Balanced";
-        }
+        resultCards.forEach((card) => {
+            const cardRegion = normalizeText(card.dataset.region || "");
+            const cardCountries = parseDatasetList(card.dataset.countries);
+            const cardMediaTypes = parseDatasetList(card.dataset.mediaType);
+            const cardFocusValues = parseDatasetList(card.dataset.focus);
 
-        let spread = "Balanced";
-        if (countryCount > 0 && countryCount <= 2) {
-            spread = "Focused";
-        } else if (effectiveCountryCount > 8 || selectedRegions.includes("World")) {
-            spread = "Wide";
-        }
+            const matchesRegion = cardMatchesRegions(cardRegion, selectedRegions);
+            const matchesCountry = cardMatchesCountries(cardCountries, selectedCountries);
+            const matchesMedia = cardMatchesMediaTypes(cardMediaTypes, selectedMediaTypes);
+            const matchesFocus = cardMatchesFocus(cardFocusValues, selectedFocusValues);
 
-        metricSignalStrength.textContent = strength;
-        metricDominantTone.textContent = tone;
-        metricSourceSpread.textContent = spread;
-    }
+            const shouldShow = matchesRegion && matchesCountry && matchesMedia && matchesFocus;
 
-    function updateAllUI() {
-        sanitizeExplicitSelection();
-        renderCountryList(countrySearchInput.value);
-        renderSelectedCountryChips();
-        updateCountryButtonLabel();
-        renderScopeChips();
-        updateResultsSummary();
-        updateSignalMetrics();
+            card.style.display = shouldShow ? "" : "none";
 
-        console.log("Selected regions:", getSelectedRegions());
-        console.log("Explicit countries:", Array.from(explicitCountrySelection));
-        console.log("Effective countries:", getEffectiveCountries());
-        console.log("Selected media:", getSelectedMediaTypes());
-        console.log("Selected focus:", getSelectedPublicationFocus());
-    }
-
-    function resetFilters() {
-        regionCheckboxes.forEach((checkbox) => {
-            checkbox.checked = checkbox.value === "World";
-        });
-
-        Array.from(mediaCheckboxes).forEach((checkbox) => {
-            const label = checkbox.parentElement.textContent.trim();
-            checkbox.checked = label === "Newspapers" || label === "News Channels";
-        });
-
-        Array.from(publicationCheckboxes).forEach((checkbox) => {
-            const label = checkbox.parentElement.textContent.trim();
-            checkbox.checked = label === "International publications";
-        });
-
-        explicitCountrySelection = new Set();
-        countrySearchInput.value = "";
-        updateAllUI();
-    }
-
-    /* -----------------------------
-       Region selection behavior
-    ----------------------------- */
-    regionCheckboxes.forEach((checkbox) => {
-        checkbox.addEventListener("change", () => {
-            if (checkbox.value === "World" && checkbox.checked) {
-                regionCheckboxes.forEach((cb) => {
-                    if (cb !== checkbox) cb.checked = false;
-                });
-            } else if (checkbox.value !== "World" && checkbox.checked) {
-                const worldCheckbox = Array.from(regionCheckboxes).find(
-                    (cb) => cb.value === "World"
-                );
-                if (worldCheckbox) worldCheckbox.checked = false;
+            if (shouldShow) {
+                visibleCount += 1;
             }
-
-            updateAllUI();
         });
-    });
 
-    /* -----------------------------
-       Media / publication listeners
-    ----------------------------- */
-    [...mediaCheckboxes, ...publicationCheckboxes].forEach(input => {
-        input.addEventListener("change", updateAllUI);
-    });
-
-    /* -----------------------------
-       Country dropdown behavior
-    ----------------------------- */
-    countryDropdownBtn.addEventListener("click", (event) => {
-        event.stopPropagation();
-        countryDropdown.classList.toggle("hidden");
-    });
-
-    countryDropdown.addEventListener("click", (event) => {
-        event.stopPropagation();
-    });
-
-    document.addEventListener("click", () => {
-        countryDropdown.classList.add("hidden");
-    });
-
-    countrySearchInput.addEventListener("input", () => {
-        renderCountryList(countrySearchInput.value);
-    });
-
-    /* -----------------------------
-       Clear filters
-    ----------------------------- */
-    if (clearFiltersBtn) {
-        clearFiltersBtn.addEventListener("click", resetFilters);
+        updateResultsSummary(visibleCount, selectedRegions, selectedCountries);
     }
 
-    /* -----------------------------
-       Initial render
-    ----------------------------- */
-    updateAllUI();
+    // -----------------------------
+    // CLEAR FILTERS
+    // -----------------------------
+    function clearAllFilters() {
+        document.querySelectorAll('.filter-group input[type="checkbox"]').forEach((checkbox) => {
+            checkbox.checked = false;
+        });
+
+        const worldCheckbox = getWorldCheckbox();
+        if (worldCheckbox) {
+            worldCheckbox.checked = true;
+        }
+
+        const mediaGroup = getFilterGroupByTitle("Media Type");
+        if (mediaGroup) {
+            const newspapers = mediaGroup.querySelector('input[value="newspapers"]');
+            const newsChannels = mediaGroup.querySelector('input[value="news-channels"]');
+            if (newspapers) newspapers.checked = true;
+            if (newsChannels) newsChannels.checked = true;
+        }
+
+        const publicationGroup = getFilterGroupByTitle("Publication Focus");
+        if (publicationGroup) {
+            const international = publicationGroup.querySelector('input[value="international"]');
+            if (international) international.checked = true;
+        }
+
+        clearSelectedCountries();
+
+        if (countrySearchInput) {
+            countrySearchInput.value = "";
+        }
+
+        renderCountryDropdown();
+        updateCountryButtonLabel();
+        updateScopeChips();
+        filterResultCards();
+    }
+
+    // -----------------------------
+    // BIND FILTER EVENTS
+    // -----------------------------
+    function bindFilterEvents() {
+        const filterCheckboxes = document.querySelectorAll('.filter-group input[type="checkbox"]');
+
+        filterCheckboxes.forEach((checkbox) => {
+            checkbox.addEventListener("change", () => {
+                if (getGeoCheckboxes().includes(checkbox)) {
+                    handleWorldSelectionRule(checkbox);
+                } else {
+                    filterResultCards();
+                }
+
+                updateScopeChips();
+            });
+        });
+
+        if (clearFiltersBtn) {
+            clearFiltersBtn.addEventListener("click", clearAllFilters);
+        }
+    }
+
+    // -----------------------------
+    // INIT
+    // -----------------------------
+    function init() {
+        bindExpandButtons();
+        bindCountryDropdown();
+        bindFilterEvents();
+        renderCountryDropdown();
+        updateCountryButtonLabel();
+        updateScopeChips();
+        filterResultCards();
+    }
+
+    init();
 });

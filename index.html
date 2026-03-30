@@ -53,37 +53,37 @@
 
                                 <div class="filter-list">
                                     <label class="filter-option">
-                                        <input type="checkbox" value="World" checked>
+                                        <input type="checkbox" value="world" checked>
                                         <span>World</span>
                                     </label>
                                     <label class="filter-option">
-                                        <input type="checkbox" value="Europe">
+                                        <input type="checkbox" value="europe">
                                         <span>Europe</span>
                                     </label>
                                     <label class="filter-option">
-                                        <input type="checkbox" value="Asia">
+                                        <input type="checkbox" value="asia">
                                         <span>Asia</span>
                                     </label>
 
                                     <div class="filter-extra" id="geo-filter-extra">
                                         <label class="filter-option">
-                                            <input type="checkbox" value="North America">
+                                            <input type="checkbox" value="north-america">
                                             <span>North America</span>
                                         </label>
                                         <label class="filter-option">
-                                            <input type="checkbox" value="Africa">
+                                            <input type="checkbox" value="africa">
                                             <span>Africa</span>
                                         </label>
                                         <label class="filter-option">
-                                            <input type="checkbox" value="Middle East">
+                                            <input type="checkbox" value="middle-east">
                                             <span>Middle East</span>
                                         </label>
                                         <label class="filter-option">
-                                            <input type="checkbox" value="South America">
+                                            <input type="checkbox" value="south-america">
                                             <span>South America</span>
                                         </label>
                                         <label class="filter-option">
-                                            <input type="checkbox" value="Oceania">
+                                            <input type="checkbox" value="oceania">
                                             <span>Oceania</span>
                                         </label>
                                     </div>
@@ -122,25 +122,25 @@
 
                                 <div class="filter-list">
                                     <label class="filter-option">
-                                        <input type="checkbox" checked>
+                                        <input type="checkbox" value="newspapers" checked>
                                         <span>Newspapers</span>
                                     </label>
                                     <label class="filter-option">
-                                        <input type="checkbox" checked>
+                                        <input type="checkbox" value="news-channels" checked>
                                         <span>News Channels</span>
                                     </label>
                                     <label class="filter-option">
-                                        <input type="checkbox">
+                                        <input type="checkbox" value="magazines">
                                         <span>Magazines</span>
                                     </label>
 
                                     <div class="filter-extra" id="media-filter-extra">
                                         <label class="filter-option">
-                                            <input type="checkbox">
+                                            <input type="checkbox" value="online-platforms">
                                             <span>Online Platforms</span>
                                         </label>
                                         <label class="filter-option">
-                                            <input type="checkbox">
+                                            <input type="checkbox" value="international-journals">
                                             <span>International Journals</span>
                                         </label>
                                     </div>
@@ -156,15 +156,15 @@
 
                                 <div class="filter-list">
                                     <label class="filter-option">
-                                        <input type="checkbox">
+                                        <input type="checkbox" value="regional">
                                         <span>Regional publications</span>
                                     </label>
                                     <label class="filter-option">
-                                        <input type="checkbox" checked>
+                                        <input type="checkbox" value="international" checked>
                                         <span>International publications</span>
                                     </label>
                                     <label class="filter-option">
-                                        <input type="checkbox">
+                                        <input type="checkbox" value="policy">
                                         <span>Policy outlets</span>
                                     </label>
 
@@ -257,7 +257,14 @@
                             </div>
 
                             <div class="results-list">
-                                <div class="result-card">
+                                <div
+                                    class="result-card"
+                                    data-region="europe"
+                                    data-countries="uk,germany,france"
+                                    data-media-type="newspapers,news-channels,magazines"
+                                    data-focus="international,policy"
+                                    data-signal="high"
+                                >
                                     <div class="result-head">
                                         <div>
                                             <h4>Financial Times</h4>
@@ -275,61 +282,82 @@
                                         <span class="result-chip">Investor caution</span>
                                     </div>
                                 </div>
-
-                                <div class="result-card">
+                            
+                                <div
+                                    class="result-card"
+                                    data-region="middle-east"
+                                    data-countries="qatar,saudi-arabia,uae"
+                                    data-media-type="online-platforms"
+                                    data-focus="regional,international"
+                                    data-signal="medium"
+                                >
                                     <div class="result-head">
                                         <div>
-                                            <h4>Reuters</h4>
-                                            <p class="result-meta">Global · Wire service · Breaking coverage</p>
+                                            <h4>Al Jazeera</h4>
+                                            <p class="result-meta">Middle East · Online platform · Regional analysis</p>
                                         </div>
                                         <span class="sentiment-tag sentiment-negative">Negative</span>
                                     </div>
                                     <p>
-                                        Signals increased instability concerns tied to supply shocks, investor defensiveness,
-                                        and heightened policy uncertainty.
+                                        Reporting frames the scenario as escalation-prone, with stronger concern around
+                                        diplomatic friction, supply disruption, and downstream instability.
                                     </p>
                                     <div class="result-footer">
-                                        <span class="result-chip">Volatility</span>
-                                        <span class="result-chip">Policy stress</span>
-                                        <span class="result-chip">Supply shock</span>
+                                        <span class="result-chip">Escalation risk</span>
+                                        <span class="result-chip">Regional pressure</span>
+                                        <span class="result-chip">Supply concern</span>
                                     </div>
                                 </div>
-
-                                <div class="result-card">
+                            
+                                <div
+                                    class="result-card"
+                                    data-region="asia"
+                                    data-countries="china,taiwan,japan"
+                                    data-media-type="international-journals"
+                                    data-focus="policy,research"
+                                    data-signal="high"
+                                >
                                     <div class="result-head">
                                         <div>
-                                            <h4>Al Jazeera</h4>
-                                            <p class="result-meta">Middle East · Broadcaster · Global affairs</p>
+                                            <h4>Nikkei Asia</h4>
+                                            <p class="result-meta">Asia · International journal · Policy &amp; industry</p>
                                         </div>
                                         <span class="sentiment-tag sentiment-positive">Positive</span>
                                     </div>
                                     <p>
-                                        Focuses on broader diplomatic recalibration and potential strategic adaptation
-                                        rather than immediate escalation.
+                                        The analysis highlights resilience planning, strategic diversification, and strong
+                                        long-term policy positioning despite immediate pressure points.
                                     </p>
                                     <div class="result-footer">
-                                        <span class="result-chip">Diplomacy</span>
-                                        <span class="result-chip">Adaptation</span>
-                                        <span class="result-chip">Strategic shift</span>
+                                        <span class="result-chip">Supply chains</span>
+                                        <span class="result-chip">Semiconductors</span>
+                                        <span class="result-chip">Policy resilience</span>
                                     </div>
                                 </div>
-
-                                <div class="result-card">
+                            
+                                <div
+                                    class="result-card"
+                                    data-region="north-america"
+                                    data-countries="us,canada"
+                                    data-media-type="newspapers,news-channels,magazines"
+                                    data-focus="international,editorial"
+                                    data-signal="medium"
+                                >
                                     <div class="result-head">
                                         <div>
-                                            <h4>Nikkei Asia</h4>
-                                            <p class="result-meta">Asia-Pacific · Business press · Regional lens</p>
+                                            <h4>Reuters</h4>
+                                            <p class="result-meta">North America · News channel · International desk</p>
                                         </div>
                                         <span class="sentiment-tag sentiment-neutral">Neutral</span>
                                     </div>
                                     <p>
-                                        Highlights downstream supply-chain implications, regional trade sensitivity,
-                                        and hedging behavior among Asian markets.
+                                        Reporting remains balanced, focusing on cross-border political signaling, market
+                                        reaction, and scenario-based diplomatic developments.
                                     </p>
                                     <div class="result-footer">
-                                        <span class="result-chip">Supply chain</span>
-                                        <span class="result-chip">Trade watch</span>
-                                        <span class="result-chip">Regional impact</span>
+                                        <span class="result-chip">Balanced tone</span>
+                                        <span class="result-chip">Diplomatic watch</span>
+                                        <span class="result-chip">Market reaction</span>
                                     </div>
                                 </div>
                             </div>

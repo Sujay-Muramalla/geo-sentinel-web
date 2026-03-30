@@ -818,3 +818,15 @@ button {
         grid-template-columns: 1fr;
     }
 }
+
+.hidden {
+    display: none;
+}
+
+.filter-extra {
+    display: none;
+}
+
+.filter-extra.is-open {
+    display: block;
+}
