@@ -32,11 +32,11 @@ document.addEventListener("DOMContentLoaded", () => {
     // HELPERS
     // -----------------------------
     function normalizeText(value) {
-        return value.trim().toLowerCase();
+        return String(value || "").trim().toLowerCase();
     }
 
     function titleCase(value) {
-        return value
+        return String(value || "")
             .split(" ")
             .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
             .join(" ");
@@ -85,9 +85,9 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function getSelectedCountries() {
-        return Array.from(
-            selectedCountriesContainer.querySelectorAll(".country-chip")
-        )
+        if (!selectedCountriesContainer) return [];
+
+        return Array.from(selectedCountriesContainer.querySelectorAll(".country-chip"))
             .map((chip) => normalizeText(chip.dataset.country || chip.textContent.replace("×", "")))
             .filter(Boolean);
     }
@@ -119,6 +119,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (!target) return;
 
                 target.classList.toggle("is-open");
+                button.classList.toggle("is-open", target.classList.contains("is-open"));
                 button.textContent = target.classList.contains("is-open")
                     ? "Show less"
                     : "Show more";
@@ -161,6 +162,8 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function bindCountryOptionEvents() {
+        if (!countryList) return;
+
         const countryOptions = countryList.querySelectorAll('input[data-country-option="true"]');
 
         countryOptions.forEach((checkbox) => {
@@ -181,6 +184,8 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function addCountryChip(country) {
+        if (!selectedCountriesContainer) return;
+
         const existing = selectedCountriesContainer.querySelector(
             `.country-chip[data-country="${country}"]`
         );
@@ -204,6 +209,8 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function removeCountryChip(country) {
+        if (!selectedCountriesContainer) return;
+
         const chip = selectedCountriesContainer.querySelector(
             `.country-chip[data-country="${country}"]`
         );
@@ -211,6 +218,8 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function syncCountryDropdownChecks() {
+        if (!countryList) return;
+
         const selectedCountries = getSelectedCountries();
         const options = countryList.querySelectorAll('input[data-country-option="true"]');
 
@@ -220,9 +229,9 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function updateCountryButtonLabel() {
-        const selectedCountries = getSelectedCountries();
-
         if (!countryDropdownBtn) return;
+
+        const selectedCountries = getSelectedCountries();
 
         if (selectedCountries.length === 0) {
             countryDropdownBtn.textContent = "All countries (current scope)";
@@ -242,6 +251,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
         countryDropdownBtn.addEventListener("click", () => {
             countryDropdown.classList.toggle("hidden");
+            countryDropdownBtn.classList.toggle(
+                "is-active",
+                !countryDropdown.classList.contains("hidden")
+            );
             renderCountryDropdown(countrySearchInput ? countrySearchInput.value : "");
         });
 
@@ -252,6 +265,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             if (!clickedInside) {
                 countryDropdown.classList.add("hidden");
+                countryDropdownBtn.classList.remove("is-active");
             }
         });
 
@@ -328,10 +342,13 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function clearSelectedCountries() {
+        if (!selectedCountriesContainer) return;
         selectedCountriesContainer.innerHTML = "";
     }
 
     function pruneSelectedCountriesOutsideScope() {
+        if (!selectedCountriesContainer) return;
+
         const allowedCountries = getAvailableCountriesForSelectedRegions();
         const chips = Array.from(selectedCountriesContainer.querySelectorAll(".country-chip"));
 
@@ -461,6 +478,14 @@ document.addEventListener("DOMContentLoaded", () => {
             countrySearchInput.value = "";
         }
 
+        if (countryDropdown) {
+            countryDropdown.classList.add("hidden");
+        }
+
+        if (countryDropdownBtn) {
+            countryDropdownBtn.classList.remove("is-active");
+        }
+
         renderCountryDropdown();
         updateCountryButtonLabel();
         updateScopeChips();
@@ -477,10 +502,9 @@ document.addEventListener("DOMContentLoaded", () => {
             checkbox.addEventListener("change", () => {
                 if (getGeoCheckboxes().includes(checkbox)) {
                     handleWorldSelectionRule(checkbox);
-                } else {
-                    filterResultCards();
                 }
 
+                filterResultCards();
                 updateScopeChips();
             });
         });
