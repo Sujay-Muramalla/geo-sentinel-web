@@ -1,7 +1,4 @@
 document.addEventListener("DOMContentLoaded", () => {
-    // -----------------------------
-    // ELEMENTS
-    // -----------------------------
     const expandButtons = document.querySelectorAll(".expand-btn");
     const clearFiltersBtn = document.getElementById("clear-filters-btn");
 
@@ -14,10 +11,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const resultCards = Array.from(document.querySelectorAll(".result-card"));
     const resultsMiniSummary = document.getElementById("results-mini-summary");
+    const resultsEmptyState = document.getElementById("results-empty-state");
 
-    // -----------------------------
-    // COUNTRY DATA BY REGION
-    // -----------------------------
     const countriesByRegion = {
         europe: ["uk", "germany", "france", "italy", "spain", "poland"],
         asia: ["china", "taiwan", "japan", "india", "south korea", "singapore"],
@@ -28,9 +23,6 @@ document.addEventListener("DOMContentLoaded", () => {
         oceania: ["australia", "new zealand"],
     };
 
-    // -----------------------------
-    // HELPERS
-    // -----------------------------
     function normalizeText(value) {
         return String(value || "").trim().toLowerCase();
     }
@@ -108,9 +100,6 @@ document.addEventListener("DOMContentLoaded", () => {
             .sort();
     }
 
-    // -----------------------------
-    // EXPAND / COLLAPSE FILTER GROUPS
-    // -----------------------------
     function bindExpandButtons() {
         expandButtons.forEach((button) => {
             button.addEventListener("click", () => {
@@ -127,9 +116,6 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // -----------------------------
-    // COUNTRY DROPDOWN
-    // -----------------------------
     function renderCountryDropdown(searchTerm = "") {
         if (!countryList) return;
 
@@ -276,37 +262,34 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // -----------------------------
-    // ACTIVE SCOPE CHIPS
-    // -----------------------------
     function updateScopeChips() {
         if (!scopeChipsContainer) return;
-
+    
         const selectedRegions = getSelectedRegions();
         const selectedCountries = getSelectedCountries();
-
+    
         const chips = [];
-
-        if (selectedRegions.includes("world") || selectedRegions.length === 0) {
+    
+        const worldSelected = selectedRegions.includes("world") || selectedRegions.length === 0;
+        const hasCountries = selectedCountries.length > 0;
+    
+        if (worldSelected && !hasCountries) {
             chips.push("World");
-        } else {
+        } else if (!worldSelected) {
             selectedRegions.forEach((region) => {
                 chips.push(titleCase(region.replace(/-/g, " ")));
             });
         }
-
+    
         selectedCountries.forEach((country) => {
             chips.push(titleCase(country));
         });
-
+    
         scopeChipsContainer.innerHTML = chips
             .map((label) => `<span class="scope-chip">${label}</span>`)
             .join("");
     }
 
-    // -----------------------------
-    // WORLD CHECKBOX RULE
-    // -----------------------------
     function handleWorldSelectionRule(changedCheckbox) {
         const worldCheckbox = getWorldCheckbox();
         const regionCheckboxes = getSpecificRegionCheckboxes();
@@ -360,9 +343,6 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    // -----------------------------
-    // RESULT CARD FILTERING
-    // -----------------------------
     function cardMatchesRegions(cardRegion, selectedRegions) {
         if (!selectedRegions.length || selectedRegions.includes("world")) {
             return true;
@@ -397,21 +377,82 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function updateResultsSummary(visibleCount, selectedRegions, selectedCountries) {
         if (!resultsMiniSummary) return;
-
+    
+        const sourceLabel = visibleCount === 1 ? "1 source" : `${visibleCount} sources`;
+    
         let regionLabel = "world";
-
         if (selectedRegions.length > 0 && !selectedRegions.includes("world")) {
             regionLabel = selectedRegions
                 .map((region) => titleCase(region.replace(/-/g, " ")))
                 .join(", ");
         }
+    
+        let countryLabel = "all countries";
+        if (selectedCountries.length === 1) {
+            countryLabel = "1 country";
+        } else if (selectedCountries.length > 1) {
+            countryLabel = `${selectedCountries.length} countries`;
+        }
+    
+        const sentimentLabel = visibleCount === 0 ? "no live sentiment" : "mixed sentiment";
+    
+        resultsMiniSummary.textContent = `${sourceLabel} · ${sentimentLabel} · ${countryLabel} · ${regionLabel}`;
+    }
 
-        const countryLabel =
-            selectedCountries.length > 0
-                ? `${selectedCountries.length} countries`
-                : "all countries";
+    function updateSignalMetrics() {
+        const signalStrengthEl = document.getElementById("metric-signal-strength");
+        const dominantToneEl = document.getElementById("metric-dominant-tone");
+        const sourceSpreadEl = document.getElementById("metric-source-spread");
 
-        resultsMiniSummary.textContent = `${visibleCount} sources · mixed sentiment · ${countryLabel} · ${regionLabel}`;
+        if (!signalStrengthEl || !dominantToneEl || !sourceSpreadEl) return;
+
+        const visibleCards = resultCards.filter((card) => card.style.display !== "none");
+
+        if (visibleCards.length === 0) {
+            signalStrengthEl.textContent = "Low";
+            dominantToneEl.textContent = "No match";
+            sourceSpreadEl.textContent = "Narrow";
+            return;
+        }
+
+        const signalLevels = visibleCards.map((card) => normalizeText(card.dataset.signal || "medium"));
+
+        const positiveCount = visibleCards.filter((card) =>
+            card.querySelector(".sentiment-positive")
+        ).length;
+        const negativeCount = visibleCards.filter((card) =>
+            card.querySelector(".sentiment-negative")
+        ).length;
+        const neutralCount = visibleCards.filter((card) =>
+            card.querySelector(".sentiment-neutral")
+        ).length;
+
+        const highSignals = signalLevels.filter((level) => level === "high").length;
+        const mediumSignals = signalLevels.filter((level) => level === "medium").length;
+
+        if (highSignals >= 2) {
+            signalStrengthEl.textContent = "High";
+        } else if (highSignals >= 1 || mediumSignals >= 2) {
+            signalStrengthEl.textContent = "Medium";
+        } else {
+            signalStrengthEl.textContent = "Low";
+        }
+
+        if (negativeCount > positiveCount && negativeCount > neutralCount) {
+            dominantToneEl.textContent = "Risk-heavy";
+        } else if (positiveCount > negativeCount && positiveCount > neutralCount) {
+            dominantToneEl.textContent = "Constructive";
+        } else {
+            dominantToneEl.textContent = "Cautious";
+        }
+
+        if (visibleCards.length >= 3) {
+            sourceSpreadEl.textContent = "Broad";
+        } else if (visibleCards.length === 2) {
+            sourceSpreadEl.textContent = "Balanced";
+        } else {
+            sourceSpreadEl.textContent = "Focused";
+        }
     }
 
     function filterResultCards() {
@@ -442,12 +483,14 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         });
 
+        if (resultsEmptyState) {
+            resultsEmptyState.classList.toggle("hidden", visibleCount > 0);
+        }
+
         updateResultsSummary(visibleCount, selectedRegions, selectedCountries);
+        updateSignalMetrics();
     }
 
-    // -----------------------------
-    // CLEAR FILTERS
-    // -----------------------------
     function clearAllFilters() {
         document.querySelectorAll('.filter-group input[type="checkbox"]').forEach((checkbox) => {
             checkbox.checked = false;
@@ -492,9 +535,6 @@ document.addEventListener("DOMContentLoaded", () => {
         filterResultCards();
     }
 
-    // -----------------------------
-    // BIND FILTER EVENTS
-    // -----------------------------
     function bindFilterEvents() {
         const filterCheckboxes = document.querySelectorAll('.filter-group input[type="checkbox"]');
 
@@ -514,9 +554,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // -----------------------------
-    // INIT
-    // -----------------------------
     function init() {
         bindExpandButtons();
         bindCountryDropdown();

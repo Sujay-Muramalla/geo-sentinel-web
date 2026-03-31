@@ -170,11 +170,11 @@
 
                                     <div class="filter-extra" id="publication-filter-extra">
                                         <label class="filter-option">
-                                            <input type="checkbox">
+                                            <input type="checkbox" value="research">
                                             <span>Research and journals</span>
                                         </label>
                                         <label class="filter-option">
-                                            <input type="checkbox">
+                                            <input type="checkbox" value="editorial">
                                             <span>Editorial analysis</span>
                                         </label>
                                     </div>
@@ -238,7 +238,7 @@
                                     <p class="panel-label">Results Preview</p>
                                     <h3>Intelligence Signals</h3>
                                 </div>
-                                <div class="mini-summary" id="results-mini-summary">8 sources · mixed sentiment · world</div>
+                                <div class="mini-summary" id="results-mini-summary">4 sources · mixed sentiment · all countries · world</div>
                             </div>
 
                             <div class="signal-summary-bar">
@@ -252,7 +252,7 @@
                                 </div>
                                 <div class="signal-metric">
                                     <span class="signal-metric-label">Source Spread</span>
-                                    <strong id="metric-source-spread">Balanced</strong>
+                                    <strong id="metric-source-spread">Broad</strong>
                                 </div>
                             </div>
 
@@ -261,7 +261,7 @@
                                     class="result-card"
                                     data-region="europe"
                                     data-countries="uk,germany,france"
-                                    data-media-type="newspapers,news-channels,magazines"
+                                    data-media-type="newspapers"
                                     data-focus="international,policy"
                                     data-signal="high"
                                 >
@@ -282,12 +282,12 @@
                                         <span class="result-chip">Investor caution</span>
                                     </div>
                                 </div>
-                            
+
                                 <div
                                     class="result-card"
                                     data-region="middle-east"
-                                    data-countries="qatar,saudi-arabia,uae"
-                                    data-media-type="online-platforms"
+                                    data-countries="qatar,saudi arabia,uae"
+                                    data-media-type="online-platforms,news-channels"
                                     data-focus="regional,international"
                                     data-signal="medium"
                                 >
@@ -308,7 +308,7 @@
                                         <span class="result-chip">Supply concern</span>
                                     </div>
                                 </div>
-                            
+
                                 <div
                                     class="result-card"
                                     data-region="asia"
@@ -334,12 +334,12 @@
                                         <span class="result-chip">Policy resilience</span>
                                     </div>
                                 </div>
-                            
+
                                 <div
                                     class="result-card"
                                     data-region="north-america"
                                     data-countries="us,canada"
-                                    data-media-type="newspapers,news-channels,magazines"
+                                    data-media-type="news-channels"
                                     data-focus="international,editorial"
                                     data-signal="medium"
                                 >
@@ -359,6 +359,17 @@
                                         <span class="result-chip">Diplomatic watch</span>
                                         <span class="result-chip">Market reaction</span>
                                     </div>
+                                </div>
+                            </div>
+
+                            <div class="results-empty-state hidden" id="results-empty-state">
+                                <div class="results-empty-inner">
+                                    <p class="results-empty-kicker">No signal match</p>
+                                    <h4>No intelligence sources match the current scope.</h4>
+                                    <p>
+                                        Try expanding the geographic scope, removing country restrictions,
+                                        or enabling more media and publication types.
+                                    </p>
                                 </div>
                             </div>
                         </article>
