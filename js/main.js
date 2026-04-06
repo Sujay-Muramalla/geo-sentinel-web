@@ -79,6 +79,7 @@ document.addEventListener("DOMContentLoaded", () => {
         
         if (comparedItems.length === 0) {
             comparisonList.innerHTML = "";
+            syncSelectedComparisonCardStates();
             return;
         }
         
@@ -87,32 +88,33 @@ document.addEventListener("DOMContentLoaded", () => {
         comparisonList.innerHTML = comparedItems
         .map((item) => {
             return `
-            <article class="comparison-card" data-comparison-id="${item.id}">
-            <div class="comparison-card-head">
-            <div>
-            <h4>${item.title}</h4>
-            <p class="comparison-meta">${item.meta}</p>
-            </div>
-            <button
-            type="button"
-            class="comparison-remove-btn"
-            data-remove-comparison="${item.id}"
-            aria-label="Remove ${item.title} from comparison"
-            >
-            ×
-            </button>
-            </div>
-            
-            <div class="comparison-card-body">
-            <span class="sentiment-tag ${item.sentimentClass}">${item.sentimentText}</span>
-            <p>${item.description}</p>
-            </div>
-            </article>
+                <article class="comparison-card" data-comparison-id="${item.id}">
+                    <div class="comparison-card-head">
+                        <div>
+                            <h4>${item.title}</h4>
+                            <p class="comparison-meta">${item.meta}</p>
+                        </div>
+                        <button
+                            type="button"
+                            class="comparison-remove-btn"
+                            data-remove-comparison="${item.id}"
+                            aria-label="Remove ${item.title} from comparison"
+                        >
+                            ×
+                        </button>
+                    </div>
+
+                    <div class="comparison-card-body">
+                        <span class="sentiment-tag ${item.sentimentClass}">${item.sentimentText}</span>
+                        <p>${item.description}</p>
+                    </div>
+                </article>
             `;
         })
         .join("");
-    }
-    
+
+    syncSelectedComparisonCardStates();
+}    
     
     function addCardToComparison(card) {
         const comparisonItem = getComparisonDataFromCard(card);
@@ -127,6 +129,14 @@ document.addEventListener("DOMContentLoaded", () => {
     function removeComparisonItem(itemId) {
         comparedItems = comparedItems.filter((item) => item.id !== itemId);
         renderComparisonRail();
+    }
+
+    function syncSelectedComparisonCardStates() {
+        resultCards.forEach((card) => {
+            const comparisonItem = getComparisonDataFromCard(card);
+            const isSelected = comparedItems.some((item) => item.id === comparisonItem.id);
+            card.classList.toggle("is-compared", isSelected);
+        });
     }
     
     function bindResultCardComparisonEvents() {
@@ -144,6 +154,8 @@ document.addEventListener("DOMContentLoaded", () => {
         comparisonList.addEventListener("click", (event) => {
             const removeButton = event.target.closest("[data-remove-comparison]");
             if (!removeButton) return;
+    
+            event.stopPropagation();
     
             const itemId = removeButton.dataset.removeComparison;
             removeComparisonItem(itemId);
