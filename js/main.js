@@ -1,6 +1,6 @@
 document.addEventListener("DOMContentLoaded", () => {
     // -----------------------------
-    // SCENARIO STATE (Step 11 Block 1)
+    // SCENARIO STATE
     // -----------------------------
     let currentScenario = {
         query: "",
@@ -64,10 +64,24 @@ document.addEventListener("DOMContentLoaded", () => {
             .filter(Boolean);
     }
 
+    function normalizeToken(token) {
+        let value = normalizeText(token);
+
+        if (value.length > 4 && value.endsWith("ies")) {
+            value = `${value.slice(0, -3)}y`;
+        } else if (value.length > 5 && value.endsWith("ors")) {
+            value = value.slice(0, -1);
+        } else if (value.length > 4 && value.endsWith("s") && !value.endsWith("ss")) {
+            value = value.slice(0, -1);
+        }
+
+        return value;
+    }
+
     function tokenizeQuery(query) {
         return normalizeText(query)
             .split(/\s+/)
-            .map((token) => token.trim())
+            .map((token) => normalizeToken(token))
             .filter((token) => token.length > 1);
     }
 
@@ -138,7 +152,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function addCardToComparison(card) {
         const comparisonItem = getComparisonDataFromCard(card);
-
         const alreadyExists = comparedItems.some((item) => item.id === comparisonItem.id);
         if (alreadyExists) return;
 
@@ -161,7 +174,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function bindResultCardComparisonEvents() {
         resultCards.forEach((card) => {
-            card.addEventListener("click", () => {
+            card.addEventListener("click", (event) => {
+                const removeBtn = event.target.closest(".comparison-remove-btn");
+                if (removeBtn) return;
                 if (card.style.display === "none") return;
                 addCardToComparison(card);
             });
@@ -233,7 +248,6 @@ document.addEventListener("DOMContentLoaded", () => {
             publicationFocus: getCheckedValuesFromSection("Publication Focus")
         };
 
-        console.log("Current Scenario:", currentScenario);
         return currentScenario;
     }
 
@@ -312,18 +326,95 @@ document.addEventListener("DOMContentLoaded", () => {
         return normalizeText(`${title} ${meta} ${description} ${chips} ${datasetText}`);
     }
 
-    function cardMatchesScenarioQuery(card, query) {
-        const tokens = tokenizeQuery(query);
-        if (!tokens.length) return true;
+    function getNormalizedSearchableTokens(card) {
+        return getCardSearchText(card)
+            .split(/[\s,.;:/()+-]+/)
+            .map((token) => normalizeToken(token))
+            .filter(Boolean);
+    }
 
-        const searchableText = getCardSearchText(card);
-        const matchedCount = tokens.filter((token) => searchableText.includes(token)).length;
+    function tokenMatchesSearchableText(token, searchableText, searchableTokens) {
+        if (!token) return false;
 
-        if (tokens.length === 1) {
-            return matchedCount >= 1;
+        if (searchableTokens.includes(token)) {
+            return true;
         }
 
-        return matchedCount >= Math.ceil(tokens.length / 2);
+        return searchableTokens.some((searchableToken) => {
+            if (searchableToken.length < 3 || token.length < 3) {
+                return searchableToken === token;
+            }
+
+            return searchableToken.includes(token) || token.includes(searchableToken);
+        }) || searchableText.includes(token);
+    }
+
+    function calculateQueryRelevance(card, query) {
+        const tokens = tokenizeQuery(query);
+
+        if (!tokens.length) {
+            return {
+                isMatch: true,
+                score: 0,
+                matchedTokens: [],
+                totalTokens: 0
+            };
+        }
+
+        const searchableText = getCardSearchText(card);
+        const searchableTokens = getNormalizedSearchableTokens(card);
+
+        let score = 0;
+        const matchedTokens = [];
+
+        tokens.forEach((token) => {
+            const tokenMatched = tokenMatchesSearchableText(token, searchableText, searchableTokens);
+
+            if (!tokenMatched) return;
+
+            matchedTokens.push(token);
+
+            if (searchableTokens.includes(token)) {
+                score += 3;
+                return;
+            }
+
+            const strongPartial = searchableTokens.some(
+                (searchableToken) =>
+                    searchableToken.length >= 4 &&
+                    token.length >= 4 &&
+                    (searchableToken.includes(token) || token.includes(searchableToken))
+            );
+
+            if (strongPartial) {
+                score += 2;
+                return;
+            }
+
+            score += 1;
+        });
+
+        let bonus = 0;
+
+        const titleText = normalizeText(card.querySelector("h4")?.textContent || "");
+        const metaText = normalizeText(card.querySelector(".result-meta")?.textContent || "");
+
+        tokens.forEach((token) => {
+            if (titleText.includes(token)) {
+                bonus += 2;
+            } else if (metaText.includes(token)) {
+                bonus += 1;
+            }
+        });
+
+        const totalScore = score + bonus;
+
+        return {
+            isMatch: totalScore >= 2,
+            score: totalScore,
+            matchedTokens: [...new Set(matchedTokens)],
+            totalTokens: tokens.length
+        };
     }
 
     function syncScenarioEngine() {
@@ -537,7 +628,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const selectedRegions = getSelectedRegions();
         const selectedCountries = getSelectedCountries();
-
         const chips = [];
 
         const worldSelected = selectedRegions.includes("world") || selectedRegions.length === 0;
@@ -665,7 +755,6 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         const sentimentLabel = visibleCount === 0 ? "no live sentiment" : "mixed sentiment";
-
         const parts = [sourceLabel, sentimentLabel, countryLabel, regionLabel];
 
         if (normalizeText(query)) {
@@ -749,7 +838,9 @@ document.addEventListener("DOMContentLoaded", () => {
             const matchesCountry = cardMatchesCountries(cardCountries, countries);
             const matchesMedia = cardMatchesMediaTypes(cardMediaTypes, mediaTypes);
             const matchesFocus = cardMatchesFocus(cardFocusValues, publicationFocus);
-            const matchesQuery = cardMatchesScenarioQuery(card, query);
+
+            const queryRelevance = calculateQueryRelevance(card, query);
+            const matchesQuery = queryRelevance.isMatch;
 
             const shouldShow =
                 matchesRegion &&
