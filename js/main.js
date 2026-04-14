@@ -73,6 +73,15 @@ document.addEventListener("DOMContentLoaded", () => {
             .filter(Boolean);
     }
 
+    function escapeHtml(value) {
+        return String(value || "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#39;");
+    }
+
     function normalizeToken(token) {
         let value = normalizeText(token);
 
@@ -252,7 +261,8 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!tokens.length) {
             return {
                 isMatch: true,
-                score: 0,
+                rawScore: 0,
+                normalizedScore: 0,
                 matchedTokens: [],
                 totalTokens: 0
             };
@@ -261,7 +271,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const searchableText = getCardSearchText(card);
         const searchableTokens = getNormalizedSearchableTokens(card);
 
-        let score = 0;
+        let rawScore = 0;
         const matchedTokens = [];
 
         tokens.forEach((token) => {
@@ -271,7 +281,7 @@ document.addEventListener("DOMContentLoaded", () => {
             matchedTokens.push(token);
 
             if (searchableTokens.includes(token)) {
-                score += 4;
+                rawScore += 4;
                 return;
             }
 
@@ -283,11 +293,11 @@ document.addEventListener("DOMContentLoaded", () => {
             );
 
             if (strongPartial) {
-                score += 2.5;
+                rawScore += 2.5;
                 return;
             }
 
-            score += 1;
+            rawScore += 1;
         });
 
         let bonus = 0;
@@ -306,13 +316,18 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         });
 
-        const totalScore = score + bonus;
+        const totalRawScore = rawScore + bonus;
         const matchedCount = [...new Set(matchedTokens)].length;
         const minimumMatches = tokens.length === 1 ? 1 : Math.max(2, Math.ceil(tokens.length / 2));
 
+        const maxPerToken = 6.5; // 4 exact + 2.5 title bonus
+        const theoreticalMax = Math.max(tokens.length * maxPerToken, 1);
+        const normalizedScore = Math.min(100, Math.round((totalRawScore / theoreticalMax) * 100));
+
         return {
-            isMatch: matchedCount >= minimumMatches && totalScore >= 3.5,
-            score: totalScore,
+            isMatch: matchedCount >= minimumMatches && totalRawScore >= 3.5,
+            rawScore: totalRawScore,
+            normalizedScore,
             matchedTokens: [...new Set(matchedTokens)],
             totalTokens: tokens.length
         };
@@ -350,23 +365,93 @@ document.addEventListener("DOMContentLoaded", () => {
         return state.publicationFocus.some((focus) => cardFocusValues.includes(focus));
     }
 
-    function cardMatchesSentimentFilter(sentimentValue) {
-        if (state.sentimentFilter === "all") return true;
-        return normalizeText(sentimentValue) === state.sentimentFilter;
+    function getSentimentMetaFromScore(sentimentScore) {
+        if (sentimentScore > 0.2) {
+            return {
+                label: "Positive",
+                key: "positive",
+                className: "sentiment-positive"
+            };
+        }
+
+        if (sentimentScore < -0.2) {
+            return {
+                label: "Negative",
+                key: "negative",
+                className: "sentiment-negative"
+            };
+        }
+
+        return {
+            label: "Neutral",
+            key: "neutral",
+            className: "sentiment-neutral"
+        };
     }
 
-    function updateCardScoreDisplays(card, signalScore, sentimentScore) {
+    function cardMatchesSentimentFilter(sentimentKey) {
+        if (state.sentimentFilter === "all") return true;
+        return sentimentKey === state.sentimentFilter;
+    }
+
+    function highlightMatches(text, query) {
+        const safeText = escapeHtml(text);
+        const tokens = [...new Set(tokenizeQuery(query))];
+
+        if (!tokens.length) return safeText;
+
+        let highlighted = safeText;
+
+        tokens
+            .filter((token) => token.length > 1)
+            .sort((a, b) => b.length - a.length)
+            .forEach((token) => {
+                const escapedToken = token.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+                const regex = new RegExp(`(${escapedToken})`, "gi");
+                highlighted = highlighted.replace(regex, "<mark>$1</mark>");
+            });
+
+        return highlighted;
+    }
+
+    function updateCardTextHighlights(card, query) {
+        const titleEl = card.querySelector(".result-title");
+        const descriptionEl = card.querySelector(".result-description");
+
+        const baseTitle = card.dataset.title || titleEl?.textContent || "";
+        const baseDescription = card.dataset.description || descriptionEl?.textContent || "";
+
+        if (titleEl) {
+            titleEl.innerHTML = highlightMatches(baseTitle, query);
+        }
+
+        if (descriptionEl) {
+            descriptionEl.innerHTML = highlightMatches(baseDescription, query);
+        }
+    }
+
+    function updateCardDisplays(card, signalScore, sentimentScore, query) {
         const signalValueEl = card.querySelector(".signal-score-value");
         const sentimentValueEl = card.querySelector(".sentiment-score-value");
+        const sentimentTagEl = card.querySelector(".sentiment-tag");
 
         if (signalValueEl) {
-            signalValueEl.textContent = signalScore.toFixed(1);
+            signalValueEl.textContent = `${signalScore}/100`;
         }
 
         if (sentimentValueEl) {
             const formatted = sentimentScore > 0 ? `+${sentimentScore.toFixed(2)}` : sentimentScore.toFixed(2);
             sentimentValueEl.textContent = formatted;
         }
+
+        if (sentimentTagEl) {
+            const sentimentMeta = getSentimentMetaFromScore(sentimentScore);
+            sentimentTagEl.textContent = sentimentMeta.label;
+            sentimentTagEl.classList.remove("sentiment-positive", "sentiment-neutral", "sentiment-negative");
+            sentimentTagEl.classList.add(sentimentMeta.className);
+        }
+
+        updateCardTextHighlights(card, query);
     }
 
     function sortVisibleEntries(entries) {
@@ -453,8 +538,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 let negative = 0;
 
                 sortedEntries.forEach((entry) => {
-                    if (entry.sentimentScore > 0.1) positive += 1;
-                    else if (entry.sentimentScore < -0.1) negative += 1;
+                    if (entry.sentimentScore > 0.2) positive += 1;
+                    else if (entry.sentimentScore < -0.2) negative += 1;
                     else neutral += 1;
                 });
 
@@ -478,8 +563,8 @@ document.addEventListener("DOMContentLoaded", () => {
         const avgSignal =
             sortedEntries.reduce((sum, entry) => sum + entry.signalScore, 0) / sortedEntries.length;
 
-        if (avgSignal >= 8) signalStrengthEl.textContent = "High";
-        else if (avgSignal >= 4.5) signalStrengthEl.textContent = "Medium";
+        if (avgSignal >= 75) signalStrengthEl.textContent = "High";
+        else if (avgSignal >= 45) signalStrengthEl.textContent = "Medium";
         else signalStrengthEl.textContent = "Low";
 
         let positive = 0;
@@ -487,8 +572,8 @@ document.addEventListener("DOMContentLoaded", () => {
         let negative = 0;
 
         sortedEntries.forEach((entry) => {
-            if (entry.sentimentScore > 0.1) positive += 1;
-            else if (entry.sentimentScore < -0.1) negative += 1;
+            if (entry.sentimentScore > 0.2) positive += 1;
+            else if (entry.sentimentScore < -0.2) negative += 1;
             else neutral += 1;
         });
 
@@ -509,9 +594,9 @@ document.addEventListener("DOMContentLoaded", () => {
             const cardCountries = parseDatasetList(card.dataset.countries);
             const cardMediaTypes = parseDatasetList(card.dataset.mediaType);
             const cardFocusValues = parseDatasetList(card.dataset.focus);
+
             const sentimentScore = parseFloat(card.dataset.sentimentScore || "0");
-            const sentimentLabel =
-                sentimentScore > 0.1 ? "positive" : sentimentScore < -0.1 ? "negative" : "neutral";
+            const sentimentMeta = getSentimentMetaFromScore(sentimentScore);
 
             const queryRelevance = calculateQueryRelevance(card, state.query);
 
@@ -520,13 +605,12 @@ document.addEventListener("DOMContentLoaded", () => {
                 cardMatchesCountries(cardCountries) &&
                 cardMatchesMediaTypes(cardMediaTypes) &&
                 cardMatchesFocus(cardFocusValues) &&
-                cardMatchesSentimentFilter(sentimentLabel) &&
+                cardMatchesSentimentFilter(sentimentMeta.key) &&
                 queryRelevance.isMatch;
 
-            const signalScore = queryRelevance.score;
+            const signalScore = queryRelevance.normalizedScore;
 
-            updateCardScoreDisplays(card, signalScore, sentimentScore);
-
+            updateCardDisplays(card, signalScore, sentimentScore, state.query);
             card.style.display = shouldShow ? "" : "none";
 
             if (shouldShow) {
@@ -910,6 +994,13 @@ document.addEventListener("DOMContentLoaded", () => {
             countrySearchInput.value = "";
         }
 
+        if (scenarioInput) {
+            scenarioInput.value = "";
+        }
+
+        state.selectedTrend = "";
+        syncTrendSignalActiveState();
+
         if (countryDropdown) {
             countryDropdown.classList.add("hidden");
         }
@@ -954,7 +1045,7 @@ document.addEventListener("DOMContentLoaded", () => {
     function initializeCardDisplays() {
         resultCards.forEach((card) => {
             const sentimentScore = parseFloat(card.dataset.sentimentScore || "0");
-            updateCardScoreDisplays(card, 0, sentimentScore);
+            updateCardDisplays(card, 0, sentimentScore, "");
         });
     }
 
