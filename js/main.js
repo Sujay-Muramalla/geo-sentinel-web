@@ -1,13 +1,13 @@
 document.addEventListener("DOMContentLoaded", () => {
-    // -----------------------------
-    // SCENARIO STATE
-    // -----------------------------
-    let currentScenario = {
+    const state = {
         query: "",
-        regions: [],
+        regions: ["world"],
         countries: [],
-        mediaTypes: [],
-        publicationFocus: []
+        mediaTypes: ["newspapers", "news-channels"],
+        publicationFocus: ["international"],
+        sentimentFilter: "all",
+        sortBy: "signal-desc",
+        selectedTrend: ""
     };
 
     const expandButtons = document.querySelectorAll(".expand-btn");
@@ -25,15 +25,24 @@ document.addEventListener("DOMContentLoaded", () => {
     const primaryActionBtn = document.querySelector(".primary-action-btn");
     const exampleChips = Array.from(document.querySelectorAll(".example-chip"));
 
+    const sortResultsSelect = document.getElementById("sort-results-select");
+    const sentimentFilterInputs = Array.from(document.querySelectorAll('input[name="sentiment-filter"]'));
+
     const resultCards = Array.from(document.querySelectorAll(".result-card"));
+    const resultsList = document.querySelector(".results-list");
     const resultsMiniSummary = document.getElementById("results-mini-summary");
     const resultsEmptyState = document.getElementById("results-empty-state");
 
-    const comparisonCount = document.getElementById("comparison-count");
-    const comparisonEmptyState = document.getElementById("comparison-empty-state");
-    const comparisonList = document.getElementById("comparison-list");
+    const activeQueryLabel = document.getElementById("active-query-label");
+    const activeSortLabel = document.getElementById("active-sort-label");
+    const dominantSentimentLabel = document.getElementById("dominant-sentiment-label");
 
-    let comparedItems = [];
+    const signalStrengthEl = document.getElementById("metric-signal-strength");
+    const dominantToneEl = document.getElementById("metric-dominant-tone");
+    const sourceSpreadEl = document.getElementById("metric-source-spread");
+
+    const trendSignalList = document.getElementById("trend-signal-list");
+    const trendSignalItems = Array.from(document.querySelectorAll(".trend-signal-item"));
 
     const countriesByRegion = {
         europe: ["uk", "germany", "france", "italy", "spain", "poland"],
@@ -81,120 +90,8 @@ document.addEventListener("DOMContentLoaded", () => {
     function tokenizeQuery(query) {
         return normalizeText(query)
             .split(/\s+/)
-            .map((token) => normalizeToken(token))
+            .map(normalizeToken)
             .filter((token) => token.length > 1);
-    }
-
-    function getComparisonDataFromCard(card) {
-        const title = card.querySelector("h4")?.textContent.trim() || "Unknown Source";
-        const meta = card.querySelector(".result-meta")?.textContent.trim() || "";
-        const description = card.querySelector(".result-head + p")?.textContent.trim() || "";
-        const sentimentTag = card.querySelector(".sentiment-tag");
-        const sentimentText = sentimentTag?.textContent.trim() || "Unknown";
-        const sentimentClass = Array.from(sentimentTag?.classList || []).find((className) =>
-            className.startsWith("sentiment-")
-        ) || "";
-
-        return {
-            id: title.toLowerCase().replace(/\s+/g, "-"),
-            title,
-            meta,
-            description,
-            sentimentText,
-            sentimentClass
-        };
-    }
-
-    function renderComparisonRail() {
-        if (!comparisonCount || !comparisonEmptyState || !comparisonList) return;
-
-        comparisonCount.textContent =
-            comparedItems.length === 1 ? "1 selected" : `${comparedItems.length} selected`;
-
-        comparisonEmptyState.classList.toggle("hidden", comparedItems.length > 0);
-
-        if (comparedItems.length === 0) {
-            comparisonList.innerHTML = "";
-            syncSelectedComparisonCardStates();
-            return;
-        }
-
-        comparisonList.innerHTML = comparedItems
-            .map((item) => {
-                return `
-                    <article class="comparison-card" data-comparison-id="${item.id}">
-                        <div class="comparison-card-head">
-                            <div>
-                                <h4>${item.title}</h4>
-                                <p class="comparison-meta">${item.meta}</p>
-                            </div>
-                            <button
-                                type="button"
-                                class="comparison-remove-btn"
-                                data-remove-comparison="${item.id}"
-                                aria-label="Remove ${item.title} from comparison"
-                            >
-                                ×
-                            </button>
-                        </div>
-
-                        <div class="comparison-card-body">
-                            <span class="sentiment-tag ${item.sentimentClass}">${item.sentimentText}</span>
-                            <p>${item.description}</p>
-                        </div>
-                    </article>
-                `;
-            })
-            .join("");
-
-        syncSelectedComparisonCardStates();
-    }
-
-    function addCardToComparison(card) {
-        const comparisonItem = getComparisonDataFromCard(card);
-        const alreadyExists = comparedItems.some((item) => item.id === comparisonItem.id);
-        if (alreadyExists) return;
-
-        comparedItems.push(comparisonItem);
-        renderComparisonRail();
-    }
-
-    function removeComparisonItem(itemId) {
-        comparedItems = comparedItems.filter((item) => item.id !== itemId);
-        renderComparisonRail();
-    }
-
-    function syncSelectedComparisonCardStates() {
-        resultCards.forEach((card) => {
-            const comparisonItem = getComparisonDataFromCard(card);
-            const isSelected = comparedItems.some((item) => item.id === comparisonItem.id);
-            card.classList.toggle("is-compared", isSelected);
-        });
-    }
-
-    function bindResultCardComparisonEvents() {
-        resultCards.forEach((card) => {
-            card.addEventListener("click", (event) => {
-                const removeBtn = event.target.closest(".comparison-remove-btn");
-                if (removeBtn) return;
-                if (card.style.display === "none") return;
-                addCardToComparison(card);
-            });
-        });
-    }
-
-    function bindComparisonRailEvents() {
-        if (!comparisonList) return;
-
-        comparisonList.addEventListener("click", (event) => {
-            const removeButton = event.target.closest("[data-remove-comparison]");
-            if (!removeButton) return;
-
-            event.stopPropagation();
-
-            const itemId = removeButton.dataset.removeComparison;
-            removeComparisonItem(itemId);
-        });
     }
 
     function getFilterGroupByTitle(sectionTitle) {
@@ -227,10 +124,6 @@ document.addEventListener("DOMContentLoaded", () => {
         return getGeoCheckboxes().filter((checkbox) => checkbox.value !== "world");
     }
 
-    function getSelectedRegions() {
-        return getCheckedValuesFromSection("Geographic Scope");
-    }
-
     function getSelectedCountries() {
         if (!selectedCountriesContainer) return [];
 
@@ -239,51 +132,54 @@ document.addEventListener("DOMContentLoaded", () => {
             .filter(Boolean);
     }
 
-    function buildScenarioFromUI() {
-        currentScenario = {
-            query: scenarioInput ? scenarioInput.value.trim() : "",
-            regions: getSelectedRegions(),
-            countries: getSelectedCountries(),
-            mediaTypes: getCheckedValuesFromSection("Media Type"),
-            publicationFocus: getCheckedValuesFromSection("Publication Focus")
-        };
+    function syncStateFromUI() {
+        state.query = scenarioInput ? scenarioInput.value.trim() : "";
+        state.regions = getCheckedValuesFromSection("Geographic Scope");
+        state.countries = getSelectedCountries();
+        state.mediaTypes = getCheckedValuesFromSection("Media Type");
+        state.publicationFocus = getCheckedValuesFromSection("Publication Focus");
 
-        return currentScenario;
+        const sentimentChoice = document.querySelector('input[name="sentiment-filter"]:checked');
+        state.sentimentFilter = sentimentChoice ? sentimentChoice.value : "all";
+
+        state.sortBy = sortResultsSelect ? sortResultsSelect.value : "signal-desc";
     }
 
-    function isDefaultScenarioState(scenario) {
-        const defaultRegions =
-            scenario.regions.length === 1 && scenario.regions.includes("world");
-        const defaultCountries = scenario.countries.length === 0;
+    function isDefaultScenarioState() {
+        const defaultRegions = state.regions.length === 1 && state.regions.includes("world");
+        const defaultCountries = state.countries.length === 0;
 
         const defaultMediaTypes =
-            scenario.mediaTypes.length === 2 &&
-            scenario.mediaTypes.includes("newspapers") &&
-            scenario.mediaTypes.includes("news-channels");
+            state.mediaTypes.length === 2 &&
+            state.mediaTypes.includes("newspapers") &&
+            state.mediaTypes.includes("news-channels");
 
         const defaultPublicationFocus =
-            scenario.publicationFocus.length === 1 &&
-            scenario.publicationFocus.includes("international");
+            state.publicationFocus.length === 1 &&
+            state.publicationFocus.includes("international");
 
-        const emptyQuery = scenario.query === "";
+        const emptyQuery = state.query === "";
 
         return (
             emptyQuery &&
             defaultRegions &&
             defaultCountries &&
             defaultMediaTypes &&
-            defaultPublicationFocus
+            defaultPublicationFocus &&
+            state.sentimentFilter === "all" &&
+            state.sortBy === "signal-desc"
         );
     }
 
     function updateScenarioShellState() {
         if (!statusPill || !primaryActionBtn) return;
 
-        const hasQuery = currentScenario.query.length > 0;
-        const hasCountryScope = currentScenario.countries.length > 0;
+        const hasQuery = state.query.length > 0;
+        const hasCountryScope = state.countries.length > 0;
         const hasCustomRegionScope =
-            currentScenario.regions.length > 0 && !currentScenario.regions.includes("world");
-        const isDefaultState = isDefaultScenarioState(currentScenario);
+            state.regions.length > 0 && !state.regions.includes("world");
+        const hasSentimentFilter = state.sentimentFilter !== "all";
+        const isDefaultState = isDefaultScenarioState();
 
         if (isDefaultState) {
             statusPill.textContent = "Live Intelligence Shell";
@@ -297,7 +193,7 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
-        if (hasCountryScope || hasCustomRegionScope) {
+        if (hasCountryScope || hasCustomRegionScope || hasSentimentFilter) {
             statusPill.textContent = "Scope Ready";
             primaryActionBtn.textContent = "Refresh Intelligence";
             return;
@@ -308,9 +204,10 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function getCardSearchText(card) {
-        const title = card.querySelector("h4")?.textContent || "";
+        const source = card.dataset.source || "";
+        const title = card.dataset.title || card.querySelector(".result-title")?.textContent || "";
+        const description = card.dataset.description || card.querySelector(".result-description")?.textContent || "";
         const meta = card.querySelector(".result-meta")?.textContent || "";
-        const description = card.querySelector(".result-head + p")?.textContent || "";
         const chips = Array.from(card.querySelectorAll(".result-chip"))
             .map((chip) => chip.textContent)
             .join(" ");
@@ -323,13 +220,13 @@ document.addEventListener("DOMContentLoaded", () => {
             card.dataset.signal || ""
         ].join(" ");
 
-        return normalizeText(`${title} ${meta} ${description} ${chips} ${datasetText}`);
+        return normalizeText(`${source} ${title} ${description} ${meta} ${chips} ${datasetText}`);
     }
 
     function getNormalizedSearchableTokens(card) {
         return getCardSearchText(card)
             .split(/[\s,.;:/()+-]+/)
-            .map((token) => normalizeToken(token))
+            .map(normalizeToken)
             .filter(Boolean);
     }
 
@@ -369,13 +266,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
         tokens.forEach((token) => {
             const tokenMatched = tokenMatchesSearchableText(token, searchableText, searchableTokens);
-
             if (!tokenMatched) return;
 
             matchedTokens.push(token);
 
             if (searchableTokens.includes(token)) {
-                score += 3;
+                score += 4;
                 return;
             }
 
@@ -387,7 +283,7 @@ document.addEventListener("DOMContentLoaded", () => {
             );
 
             if (strongPartial) {
-                score += 2;
+                score += 2.5;
                 return;
             }
 
@@ -396,37 +292,272 @@ document.addEventListener("DOMContentLoaded", () => {
 
         let bonus = 0;
 
-        const titleText = normalizeText(card.querySelector("h4")?.textContent || "");
+        const titleText = normalizeText(card.dataset.title || card.querySelector(".result-title")?.textContent || "");
+        const sourceText = normalizeText(card.dataset.source || card.querySelector(".result-source")?.textContent || "");
         const metaText = normalizeText(card.querySelector(".result-meta")?.textContent || "");
 
         tokens.forEach((token) => {
             if (titleText.includes(token)) {
-                bonus += 2;
+                bonus += 2.5;
             } else if (metaText.includes(token)) {
                 bonus += 1;
+            } else if (sourceText.includes(token)) {
+                bonus += 0.5;
             }
         });
 
         const totalScore = score + bonus;
+        const matchedCount = [...new Set(matchedTokens)].length;
+        const minimumMatches = tokens.length === 1 ? 1 : Math.max(2, Math.ceil(tokens.length / 2));
 
         return {
-            isMatch: totalScore >= 2,
+            isMatch: matchedCount >= minimumMatches && totalScore >= 3.5,
             score: totalScore,
             matchedTokens: [...new Set(matchedTokens)],
             totalTokens: tokens.length
         };
     }
 
-    function syncScenarioEngine() {
-        buildScenarioFromUI();
-        updateScopeChips();
-        filterResultCards();
-        renderComparisonRail();
+    function cardMatchesRegions(cardRegion) {
+        if (!state.regions.length || state.regions.includes("world")) {
+            return true;
+        }
+
+        return state.regions.includes(cardRegion);
+    }
+
+    function cardMatchesCountries(cardCountries) {
+        if (!state.countries.length) {
+            return true;
+        }
+
+        return state.countries.some((country) => cardCountries.includes(country));
+    }
+
+    function cardMatchesMediaTypes(cardMediaTypes) {
+        if (!state.mediaTypes.length) {
+            return true;
+        }
+
+        return state.mediaTypes.some((mediaType) => cardMediaTypes.includes(mediaType));
+    }
+
+    function cardMatchesFocus(cardFocusValues) {
+        if (!state.publicationFocus.length) {
+            return true;
+        }
+
+        return state.publicationFocus.some((focus) => cardFocusValues.includes(focus));
+    }
+
+    function cardMatchesSentimentFilter(sentimentValue) {
+        if (state.sentimentFilter === "all") return true;
+        return normalizeText(sentimentValue) === state.sentimentFilter;
+    }
+
+    function updateCardScoreDisplays(card, signalScore, sentimentScore) {
+        const signalValueEl = card.querySelector(".signal-score-value");
+        const sentimentValueEl = card.querySelector(".sentiment-score-value");
+
+        if (signalValueEl) {
+            signalValueEl.textContent = signalScore.toFixed(1);
+        }
+
+        if (sentimentValueEl) {
+            const formatted = sentimentScore > 0 ? `+${sentimentScore.toFixed(2)}` : sentimentScore.toFixed(2);
+            sentimentValueEl.textContent = formatted;
+        }
+    }
+
+    function sortVisibleEntries(entries) {
+        const sortMode = state.sortBy;
+
+        entries.sort((a, b) => {
+            if (sortMode === "signal-desc") return b.signalScore - a.signalScore || a.originalIndex - b.originalIndex;
+            if (sortMode === "signal-asc") return a.signalScore - b.signalScore || a.originalIndex - b.originalIndex;
+            if (sortMode === "sentiment-desc") return b.sentimentScore - a.sentimentScore || a.originalIndex - b.originalIndex;
+            if (sortMode === "sentiment-asc") return a.sentimentScore - b.sentimentScore || a.originalIndex - b.originalIndex;
+            if (sortMode === "published-desc") return b.publishedTs - a.publishedTs || a.originalIndex - b.originalIndex;
+            if (sortMode === "published-asc") return a.publishedTs - b.publishedTs || a.originalIndex - b.originalIndex;
+            if (sortMode === "source-asc") return a.source.localeCompare(b.source) || a.originalIndex - b.originalIndex;
+            if (sortMode === "title-asc") return a.title.localeCompare(b.title) || a.originalIndex - b.originalIndex;
+            return b.signalScore - a.signalScore || a.originalIndex - b.originalIndex;
+        });
+
+        return entries;
+    }
+
+    function reorderVisibleCards(entries) {
+        if (!resultsList) return;
+        entries.forEach((entry) => resultsList.appendChild(entry.card));
+    }
+
+    function updateTopMatchState(entries) {
+        resultCards.forEach((card) => card.classList.remove("is-top-match"));
+
+        if (!entries.length) return;
+        if (!state.query.trim()) return;
+
+        entries[0].card.classList.add("is-top-match");
+    }
+
+    function updateResultsSummary(visibleCount) {
+        if (!resultsMiniSummary) return;
+
+        const sourceLabel = visibleCount === 1 ? "1 source" : `${visibleCount} sources`;
+
+        let regionLabel = "world";
+        if (state.regions.length > 0 && !state.regions.includes("world")) {
+            regionLabel = state.regions
+                .map((region) => titleCase(region.replace(/-/g, " ")))
+                .join(", ");
+        }
+
+        let countryLabel = "all countries";
+        if (state.countries.length === 1) {
+            countryLabel = "1 country";
+        } else if (state.countries.length > 1) {
+            countryLabel = `${state.countries.length} countries`;
+        }
+
+        const sentimentLabel =
+            state.sentimentFilter === "all"
+                ? "mixed sentiment"
+                : `${state.sentimentFilter} only`;
+
+        const parts = [sourceLabel, sentimentLabel, countryLabel, regionLabel];
+
+        if (normalizeText(state.query)) {
+            parts.push("query active");
+        }
+
+        resultsMiniSummary.textContent = parts.join(" · ");
+    }
+
+    function updateResultsToolbar(sortedEntries) {
+        if (activeQueryLabel) {
+            activeQueryLabel.textContent = state.query || "None";
+        }
+
+        if (activeSortLabel && sortResultsSelect) {
+            const selectedText = sortResultsSelect.options[sortResultsSelect.selectedIndex]?.text || "Signal Score: High to Low";
+            activeSortLabel.textContent = selectedText;
+        }
+
+        if (dominantSentimentLabel) {
+            if (!sortedEntries.length) {
+                dominantSentimentLabel.textContent = "No match";
+            } else {
+                let positive = 0;
+                let neutral = 0;
+                let negative = 0;
+
+                sortedEntries.forEach((entry) => {
+                    if (entry.sentimentScore > 0.1) positive += 1;
+                    else if (entry.sentimentScore < -0.1) negative += 1;
+                    else neutral += 1;
+                });
+
+                if (negative > positive && negative > neutral) dominantSentimentLabel.textContent = "Negative";
+                else if (positive > negative && positive > neutral) dominantSentimentLabel.textContent = "Positive";
+                else dominantSentimentLabel.textContent = "Mixed";
+            }
+        }
+    }
+
+    function updateSignalMetrics(sortedEntries) {
+        if (!signalStrengthEl || !dominantToneEl || !sourceSpreadEl) return;
+
+        if (!sortedEntries.length) {
+            signalStrengthEl.textContent = "Low";
+            dominantToneEl.textContent = "No match";
+            sourceSpreadEl.textContent = "0";
+            return;
+        }
+
+        const avgSignal =
+            sortedEntries.reduce((sum, entry) => sum + entry.signalScore, 0) / sortedEntries.length;
+
+        if (avgSignal >= 8) signalStrengthEl.textContent = "High";
+        else if (avgSignal >= 4.5) signalStrengthEl.textContent = "Medium";
+        else signalStrengthEl.textContent = "Low";
+
+        let positive = 0;
+        let neutral = 0;
+        let negative = 0;
+
+        sortedEntries.forEach((entry) => {
+            if (entry.sentimentScore > 0.1) positive += 1;
+            else if (entry.sentimentScore < -0.1) negative += 1;
+            else neutral += 1;
+        });
+
+        if (negative > positive && negative > neutral) dominantToneEl.textContent = "Risk-heavy";
+        else if (positive > negative && positive > neutral) dominantToneEl.textContent = "Constructive";
+        else dominantToneEl.textContent = "Cautious";
+
+        sourceSpreadEl.textContent = String(sortedEntries.length);
+    }
+
+    function filterAndRenderResults() {
+        syncStateFromUI();
+
+        const visibleEntries = [];
+
+        resultCards.forEach((card, index) => {
+            const cardRegion = normalizeText(card.dataset.region || "");
+            const cardCountries = parseDatasetList(card.dataset.countries);
+            const cardMediaTypes = parseDatasetList(card.dataset.mediaType);
+            const cardFocusValues = parseDatasetList(card.dataset.focus);
+            const sentimentScore = parseFloat(card.dataset.sentimentScore || "0");
+            const sentimentLabel =
+                sentimentScore > 0.1 ? "positive" : sentimentScore < -0.1 ? "negative" : "neutral";
+
+            const queryRelevance = calculateQueryRelevance(card, state.query);
+
+            const shouldShow =
+                cardMatchesRegions(cardRegion) &&
+                cardMatchesCountries(cardCountries) &&
+                cardMatchesMediaTypes(cardMediaTypes) &&
+                cardMatchesFocus(cardFocusValues) &&
+                cardMatchesSentimentFilter(sentimentLabel) &&
+                queryRelevance.isMatch;
+
+            const signalScore = queryRelevance.score;
+
+            updateCardScoreDisplays(card, signalScore, sentimentScore);
+
+            card.style.display = shouldShow ? "" : "none";
+
+            if (shouldShow) {
+                visibleEntries.push({
+                    card,
+                    signalScore,
+                    sentimentScore,
+                    publishedTs: new Date(card.dataset.published || 0).getTime(),
+                    source: normalizeText(card.dataset.source || ""),
+                    title: normalizeText(card.dataset.title || ""),
+                    originalIndex: index
+                });
+            }
+        });
+
+        const sortedEntries = sortVisibleEntries(visibleEntries);
+        reorderVisibleCards(sortedEntries);
+        updateTopMatchState(sortedEntries);
+
+        if (resultsEmptyState) {
+            resultsEmptyState.classList.toggle("hidden", sortedEntries.length > 0);
+        }
+
+        updateResultsSummary(sortedEntries.length);
+        updateResultsToolbar(sortedEntries);
+        updateSignalMetrics(sortedEntries);
         updateScenarioShellState();
     }
 
     function getAvailableCountriesForSelectedRegions() {
-        const selectedRegions = getSelectedRegions();
+        const selectedRegions = getCheckedValuesFromSection("Geographic Scope");
 
         if (selectedRegions.length === 0 || selectedRegions.includes("world")) {
             return Object.values(countriesByRegion)
@@ -505,7 +636,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 updateCountryButtonLabel();
                 updateScopeChips();
-                filterResultCards();
+                filterAndRenderResults();
             });
         });
     }
@@ -529,7 +660,7 @@ document.addEventListener("DOMContentLoaded", () => {
             syncCountryDropdownChecks();
             updateCountryButtonLabel();
             updateScopeChips();
-            filterResultCards();
+            filterAndRenderResults();
         });
 
         selectedCountriesContainer.appendChild(chip);
@@ -603,30 +734,10 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    function bindScenarioInputEvents() {
-        if (scenarioInput) {
-            scenarioInput.addEventListener("input", syncScenarioEngine);
-            scenarioInput.addEventListener("change", syncScenarioEngine);
-        }
-
-        exampleChips.forEach((chip) => {
-            chip.addEventListener("click", () => {
-                if (!scenarioInput) return;
-                scenarioInput.value = chip.textContent.trim();
-                syncScenarioEngine();
-                scenarioInput.focus();
-            });
-        });
-
-        if (primaryActionBtn) {
-            primaryActionBtn.addEventListener("click", syncScenarioEngine);
-        }
-    }
-
     function updateScopeChips() {
         if (!scopeChipsContainer) return;
 
-        const selectedRegions = getSelectedRegions();
+        const selectedRegions = getCheckedValuesFromSection("Geographic Scope");
         const selectedCountries = getSelectedCountries();
         const chips = [];
 
@@ -703,166 +814,61 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    function cardMatchesRegions(cardRegion, selectedRegions) {
-        if (!selectedRegions.length || selectedRegions.includes("world")) {
-            return true;
+    function bindScenarioInputEvents() {
+        if (scenarioInput) {
+            scenarioInput.addEventListener("input", () => {
+                state.selectedTrend = "";
+                syncTrendSignalActiveState();
+                filterAndRenderResults();
+            });
+
+            scenarioInput.addEventListener("change", () => {
+                state.selectedTrend = "";
+                syncTrendSignalActiveState();
+                filterAndRenderResults();
+            });
         }
 
-        return selectedRegions.includes(cardRegion);
-    }
-
-    function cardMatchesCountries(cardCountries, selectedCountries) {
-        if (!selectedCountries.length) {
-            return true;
-        }
-
-        return selectedCountries.some((country) => cardCountries.includes(country));
-    }
-
-    function cardMatchesMediaTypes(cardMediaTypes, selectedMediaTypes) {
-        if (!selectedMediaTypes.length) {
-            return true;
-        }
-
-        return selectedMediaTypes.some((mediaType) => cardMediaTypes.includes(mediaType));
-    }
-
-    function cardMatchesFocus(cardFocusValues, selectedFocusValues) {
-        if (!selectedFocusValues.length) {
-            return true;
-        }
-
-        return selectedFocusValues.some((focus) => cardFocusValues.includes(focus));
-    }
-
-    function updateResultsSummary(visibleCount, selectedRegions, selectedCountries, query) {
-        if (!resultsMiniSummary) return;
-
-        const sourceLabel = visibleCount === 1 ? "1 source" : `${visibleCount} sources`;
-
-        let regionLabel = "world";
-        if (selectedRegions.length > 0 && !selectedRegions.includes("world")) {
-            regionLabel = selectedRegions
-                .map((region) => titleCase(region.replace(/-/g, " ")))
-                .join(", ");
-        }
-
-        let countryLabel = "all countries";
-        if (selectedCountries.length === 1) {
-            countryLabel = "1 country";
-        } else if (selectedCountries.length > 1) {
-            countryLabel = `${selectedCountries.length} countries`;
-        }
-
-        const sentimentLabel = visibleCount === 0 ? "no live sentiment" : "mixed sentiment";
-        const parts = [sourceLabel, sentimentLabel, countryLabel, regionLabel];
-
-        if (normalizeText(query)) {
-            parts.push("query active");
-        }
-
-        resultsMiniSummary.textContent = parts.join(" · ");
-    }
-
-    function updateSignalMetrics() {
-        const signalStrengthEl = document.getElementById("metric-signal-strength");
-        const dominantToneEl = document.getElementById("metric-dominant-tone");
-        const sourceSpreadEl = document.getElementById("metric-source-spread");
-
-        if (!signalStrengthEl || !dominantToneEl || !sourceSpreadEl) return;
-
-        const visibleCards = resultCards.filter((card) => card.style.display !== "none");
-
-        if (visibleCards.length === 0) {
-            signalStrengthEl.textContent = "Low";
-            dominantToneEl.textContent = "No match";
-            sourceSpreadEl.textContent = "Narrow";
-            return;
-        }
-
-        const signalLevels = visibleCards.map((card) =>
-            normalizeText(card.dataset.signal || "medium")
-        );
-
-        const positiveCount = visibleCards.filter((card) =>
-            card.querySelector(".sentiment-positive")
-        ).length;
-        const negativeCount = visibleCards.filter((card) =>
-            card.querySelector(".sentiment-negative")
-        ).length;
-        const neutralCount = visibleCards.filter((card) =>
-            card.querySelector(".sentiment-neutral")
-        ).length;
-
-        const highSignals = signalLevels.filter((level) => level === "high").length;
-        const mediumSignals = signalLevels.filter((level) => level === "medium").length;
-
-        if (highSignals >= 2) {
-            signalStrengthEl.textContent = "High";
-        } else if (highSignals >= 1 || mediumSignals >= 2) {
-            signalStrengthEl.textContent = "Medium";
-        } else {
-            signalStrengthEl.textContent = "Low";
-        }
-
-        if (negativeCount > positiveCount && negativeCount > neutralCount) {
-            dominantToneEl.textContent = "Risk-heavy";
-        } else if (positiveCount > negativeCount && positiveCount > neutralCount) {
-            dominantToneEl.textContent = "Constructive";
-        } else {
-            dominantToneEl.textContent = "Cautious";
-        }
-
-        if (visibleCards.length >= 3) {
-            sourceSpreadEl.textContent = "Broad";
-        } else if (visibleCards.length === 2) {
-            sourceSpreadEl.textContent = "Balanced";
-        } else {
-            sourceSpreadEl.textContent = "Focused";
-        }
-    }
-
-    function filterResultCards() {
-        const scenario = buildScenarioFromUI();
-        const { query, regions, countries, mediaTypes, publicationFocus } = scenario;
-
-        let visibleCount = 0;
-
-        resultCards.forEach((card) => {
-            const cardRegion = normalizeText(card.dataset.region || "");
-            const cardCountries = parseDatasetList(card.dataset.countries);
-            const cardMediaTypes = parseDatasetList(card.dataset.mediaType);
-            const cardFocusValues = parseDatasetList(card.dataset.focus);
-
-            const matchesRegion = cardMatchesRegions(cardRegion, regions);
-            const matchesCountry = cardMatchesCountries(cardCountries, countries);
-            const matchesMedia = cardMatchesMediaTypes(cardMediaTypes, mediaTypes);
-            const matchesFocus = cardMatchesFocus(cardFocusValues, publicationFocus);
-
-            const queryRelevance = calculateQueryRelevance(card, query);
-            const matchesQuery = queryRelevance.isMatch;
-
-            const shouldShow =
-                matchesRegion &&
-                matchesCountry &&
-                matchesMedia &&
-                matchesFocus &&
-                matchesQuery;
-
-            card.style.display = shouldShow ? "" : "none";
-
-            if (shouldShow) {
-                visibleCount += 1;
-            }
+        exampleChips.forEach((chip) => {
+            chip.addEventListener("click", () => {
+                if (!scenarioInput) return;
+                scenarioInput.value = chip.textContent.trim();
+                state.selectedTrend = "";
+                syncTrendSignalActiveState();
+                filterAndRenderResults();
+                scenarioInput.focus();
+            });
         });
 
-        if (resultsEmptyState) {
-            resultsEmptyState.classList.toggle("hidden", visibleCount > 0);
+        if (primaryActionBtn) {
+            primaryActionBtn.addEventListener("click", () => {
+                filterAndRenderResults();
+            });
         }
+    }
 
-        updateResultsSummary(visibleCount, regions, countries, query);
-        updateSignalMetrics();
-        updateScenarioShellState();
+    function syncTrendSignalActiveState() {
+        trendSignalItems.forEach((item) => {
+            item.classList.toggle("is-active", item.dataset.trendQuery === state.selectedTrend);
+        });
+    }
+
+    function bindTrendSignalEvents() {
+        if (!trendSignalList) return;
+
+        trendSignalItems.forEach((item) => {
+            item.addEventListener("click", () => {
+                const trendQuery = item.dataset.trendQuery || "";
+                state.selectedTrend = trendQuery;
+
+                if (scenarioInput) {
+                    scenarioInput.value = trendQuery;
+                }
+
+                syncTrendSignalActiveState();
+                filterAndRenderResults();
+            });
+        });
     }
 
     function clearAllFilters() {
@@ -889,6 +895,15 @@ document.addEventListener("DOMContentLoaded", () => {
             if (international) international.checked = true;
         }
 
+        const allSentiment = document.querySelector('input[name="sentiment-filter"][value="all"]');
+        if (allSentiment) {
+            allSentiment.checked = true;
+        }
+
+        if (sortResultsSelect) {
+            sortResultsSelect.value = "signal-desc";
+        }
+
         clearSelectedCountries();
 
         if (countrySearchInput) {
@@ -906,7 +921,7 @@ document.addEventListener("DOMContentLoaded", () => {
         renderCountryDropdown();
         updateCountryButtonLabel();
         updateScopeChips();
-        filterResultCards();
+        filterAndRenderResults();
     }
 
     function bindFilterEvents() {
@@ -918,14 +933,29 @@ document.addEventListener("DOMContentLoaded", () => {
                     handleWorldSelectionRule(checkbox);
                 }
 
-                filterResultCards();
                 updateScopeChips();
+                filterAndRenderResults();
             });
         });
+
+        sentimentFilterInputs.forEach((input) => {
+            input.addEventListener("change", filterAndRenderResults);
+        });
+
+        if (sortResultsSelect) {
+            sortResultsSelect.addEventListener("change", filterAndRenderResults);
+        }
 
         if (clearFiltersBtn) {
             clearFiltersBtn.addEventListener("click", clearAllFilters);
         }
+    }
+
+    function initializeCardDisplays() {
+        resultCards.forEach((card) => {
+            const sentimentScore = parseFloat(card.dataset.sentimentScore || "0");
+            updateCardScoreDisplays(card, 0, sentimentScore);
+        });
     }
 
     function init() {
@@ -933,14 +963,12 @@ document.addEventListener("DOMContentLoaded", () => {
         bindCountryDropdown();
         bindFilterEvents();
         bindScenarioInputEvents();
-        bindResultCardComparisonEvents();
-        bindComparisonRailEvents();
+        bindTrendSignalEvents();
         renderCountryDropdown();
         updateCountryButtonLabel();
         updateScopeChips();
-        buildScenarioFromUI();
-        filterResultCards();
-        renderComparisonRail();
+        initializeCardDisplays();
+        filterAndRenderResults();
     }
 
     init();

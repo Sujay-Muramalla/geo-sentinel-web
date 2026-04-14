@@ -10,7 +10,7 @@
     <header class="site-header">
         <div class="container header-inner">
             <a href="#" class="brand">Geo-Sentinel</a>
-            
+
             <nav class="site-nav" aria-label="Main navigation">
                 <a href="#">Home</a>
                 <a href="#">Scenario</a>
@@ -19,19 +19,20 @@
             </nav>
         </div>
     </header>
-    
+
     <main>
         <section class="scenario-console premium-console" id="scenario-console">
             <div class="container">
                 <div class="section-heading">
                     <p class="section-kicker">GEO-31 · Intelligence Console</p>
-                    <h2>Define the scenario. Scope the sources. Compare the narrative.</h2>
+                    <h2>Define the scenario. Scope the sources. Track the signals.</h2>
                     <p class="section-intro">
-                        Geo-Sentinel’s console lets users enter a geopolitical scenario, refine the source universe,
-                        preview intelligence signals, and compare against pre-selected scenario patterns.
+                        Geo-Sentinel’s intelligence workspace lets users enter a geopolitical scenario,
+                        filter the source universe, rank relevant news signals, and pivot quickly using
+                        the latest trend indicators.
                     </p>
                 </div>
-                
+
                 <div class="console-grid">
                     <!-- LEFT PANEL -->
                     <aside class="console-panel console-left">
@@ -43,14 +44,14 @@
                                 </div>
                                 <button type="button" class="ghost-btn" id="clear-filters-btn">Clear</button>
                             </div>
-                            
+
                             <!-- Geographic Scope -->
                             <div class="filter-group">
                                 <div class="filter-group-head">
                                     <h4>Geographic Scope</h4>
                                     <button type="button" class="expand-btn" data-target="geo-filter-extra">Show more</button>
                                 </div>
-                                
+
                                 <div class="filter-list">
                                     <label class="filter-option">
                                         <input type="checkbox" value="world" checked>
@@ -64,7 +65,7 @@
                                         <input type="checkbox" value="asia">
                                         <span>Asia</span>
                                     </label>
-                                    
+
                                     <div class="filter-extra" id="geo-filter-extra">
                                         <label class="filter-option">
                                             <input type="checkbox" value="north-america">
@@ -89,37 +90,37 @@
                                     </div>
                                 </div>
                             </div>
-                            
+
                             <!-- Countries -->
                             <div class="filter-group">
                                 <div class="filter-group-head">
                                     <h4>Countries</h4>
                                 </div>
-                                
+
                                 <div class="country-filter">
                                     <button type="button" class="country-dropdown-btn" id="country-dropdown-btn">
                                         All countries (current scope)
                                     </button>
-                                    
+
                                     <div class="country-dropdown hidden" id="country-dropdown">
                                         <div class="country-search">
                                             <input type="text" id="country-search-input" placeholder="Search country...">
                                         </div>
-                                        
+
                                         <div class="country-list" id="country-list"></div>
                                     </div>
-                                    
+
                                     <div class="selected-countries" id="selected-countries"></div>
                                 </div>
                             </div>
-                            
+
                             <!-- Media Type -->
                             <div class="filter-group">
                                 <div class="filter-group-head">
                                     <h4>Media Type</h4>
                                     <button type="button" class="expand-btn" data-target="media-filter-extra">Show more</button>
                                 </div>
-                                
+
                                 <div class="filter-list">
                                     <label class="filter-option">
                                         <input type="checkbox" value="newspapers" checked>
@@ -133,7 +134,7 @@
                                         <input type="checkbox" value="magazines">
                                         <span>Magazines</span>
                                     </label>
-                                    
+
                                     <div class="filter-extra" id="media-filter-extra">
                                         <label class="filter-option">
                                             <input type="checkbox" value="online-platforms">
@@ -143,17 +144,21 @@
                                             <input type="checkbox" value="international-journals">
                                             <span>International Journals</span>
                                         </label>
+                                        <label class="filter-option">
+                                            <input type="checkbox" value="policy-thinktanks">
+                                            <span>Policy / Think Tank</span>
+                                        </label>
                                     </div>
                                 </div>
                             </div>
-                            
+
                             <!-- Publication Focus -->
                             <div class="filter-group">
                                 <div class="filter-group-head">
                                     <h4>Publication Focus</h4>
                                     <button type="button" class="expand-btn" data-target="publication-filter-extra">Show more</button>
                                 </div>
-                                
+
                                 <div class="filter-list">
                                     <label class="filter-option">
                                         <input type="checkbox" value="regional">
@@ -167,7 +172,7 @@
                                         <input type="checkbox" value="policy">
                                         <span>Policy outlets</span>
                                     </label>
-                                    
+
                                     <div class="filter-extra" id="publication-filter-extra">
                                         <label class="filter-option">
                                             <input type="checkbox" value="research">
@@ -180,9 +185,55 @@
                                     </div>
                                 </div>
                             </div>
+
+                            <!-- Sentiment Filter -->
+                            <div class="filter-group">
+                                <div class="filter-group-head">
+                                    <h4>Sentiment Filter</h4>
+                                </div>
+
+                                <div class="filter-list">
+                                    <label class="filter-option">
+                                        <input type="radio" name="sentiment-filter" value="all" checked>
+                                        <span>All</span>
+                                    </label>
+                                    <label class="filter-option">
+                                        <input type="radio" name="sentiment-filter" value="positive">
+                                        <span>Positive</span>
+                                    </label>
+                                    <label class="filter-option">
+                                        <input type="radio" name="sentiment-filter" value="neutral">
+                                        <span>Neutral</span>
+                                    </label>
+                                    <label class="filter-option">
+                                        <input type="radio" name="sentiment-filter" value="negative">
+                                        <span>Negative</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Sort -->
+                            <div class="filter-group">
+                                <div class="filter-group-head">
+                                    <h4>Sort Results</h4>
+                                </div>
+
+                                <div class="sort-control-wrap">
+                                    <select id="sort-results-select" class="sort-results-select">
+                                        <option value="signal-desc">Signal Score: High to Low</option>
+                                        <option value="signal-asc">Signal Score: Low to High</option>
+                                        <option value="sentiment-desc">Sentiment Score: High to Low</option>
+                                        <option value="sentiment-asc">Sentiment Score: Low to High</option>
+                                        <option value="published-desc">Latest First</option>
+                                        <option value="published-asc">Oldest First</option>
+                                        <option value="source-asc">Source A–Z</option>
+                                        <option value="title-asc">Title A–Z</option>
+                                    </select>
+                                </div>
+                            </div>
                         </div>
                     </aside>
-                    
+
                     <!-- CENTER PANEL -->
                     <section class="console-panel console-center">
                         <article class="panel-shell command-shell">
@@ -190,60 +241,78 @@
                                 <span class="variant-label">Scenario Command</span>
                                 <div class="status-pill">Live Intelligence Shell</div>
                             </div>
-                            
+
                             <div class="scenario-command-copy">
                                 <h3>
                                     What geopolitical situation<br>
                                     <span class="highlight">should Geo-Sentinel analyze?</span>
                                 </h3>
                                 <p>
-                                    Define the scenario, refine source scope, and prepare multi-source sentiment analysis
-                                    across selected regions and publication classes.
+                                    Enter a topic, filter the source universe, and review the strongest matching
+                                    intelligence signals ranked by similarity and sentiment.
                                 </p>
                             </div>
-                            
-                            <form class="scenario-command-form">
+
+                            <form class="scenario-command-form" onsubmit="return false;">
                                 <label for="scenario-command" class="sr-only">Enter geopolitical scenario</label>
                                 <input
-                                type="text"
-                                id="scenario-command"
-                                name="scenario-command"
-                                placeholder="e.g. US election impact on global oil prices"
+                                    type="text"
+                                    id="scenario-command"
+                                    name="scenario-command"
+                                    placeholder="e.g. Israel-Iran tensions"
+                                    autocomplete="off"
                                 >
-                                
+
                                 <div class="scenario-example-row">
                                     <span class="example-label">Suggested prompts</span>
                                     <div class="example-chips">
-                                        <span class="example-chip">India-China border tensions</span>
-                                        <span class="example-chip">Russia-NATO escalation risk</span>
-                                        <span class="example-chip">Taiwan semiconductor disruption</span>
+                                        <button type="button" class="example-chip">Israel-Iran tensions</button>
+                                        <button type="button" class="example-chip">Taiwan semiconductor disruption</button>
+                                        <button type="button" class="example-chip">Russia-NATO escalation risk</button>
                                     </div>
                                 </div>
-                                
+
                                 <div class="selected-scope">
                                     <p class="scope-title">Active source scope</p>
                                     <div class="scope-chips" id="scope-chips"></div>
                                 </div>
-                                
+
                                 <div class="scenario-command-actions">
                                     <button type="button" class="primary-action-btn">Generate Intelligence</button>
                                     <button type="button" class="secondary-action-btn">Save Query</button>
                                 </div>
                             </form>
                         </article>
-                        
+
                         <article class="panel-shell results-shell">
-                            <div class="panel-top">
+                            <div class="panel-top panel-top-results">
                                 <div>
                                     <p class="panel-label">Results Preview</p>
                                     <h3>Intelligence Signals</h3>
                                 </div>
-                                <div class="mini-summary" id="results-mini-summary">4 sources · mixed sentiment · all countries · world</div>
+                                <div class="mini-summary" id="results-mini-summary">
+                                    6 sources · mixed sentiment · all countries · world
+                                </div>
                             </div>
-                            
+
+                            <div class="results-toolbar">
+                                <div class="results-toolbar-item">
+                                    <span class="results-toolbar-label">Active Query</span>
+                                    <strong id="active-query-label">None</strong>
+                                </div>
+                                <div class="results-toolbar-item">
+                                    <span class="results-toolbar-label">Sort Mode</span>
+                                    <strong id="active-sort-label">Signal Score: High to Low</strong>
+                                </div>
+                                <div class="results-toolbar-item">
+                                    <span class="results-toolbar-label">Dominant Sentiment</span>
+                                    <strong id="dominant-sentiment-label">Mixed</strong>
+                                </div>
+                            </div>
+
                             <div class="signal-summary-bar">
                                 <div class="signal-metric">
-                                    <span class="signal-metric-label">Signal Strength</span>
+                                    <span class="signal-metric-label">Average Signal</span>
                                     <strong id="metric-signal-strength">High</strong>
                                 </div>
                                 <div class="signal-metric">
@@ -251,163 +320,400 @@
                                     <strong id="metric-dominant-tone">Cautious</strong>
                                 </div>
                                 <div class="signal-metric">
-                                    <span class="signal-metric-label">Source Spread</span>
-                                    <strong id="metric-source-spread">Broad</strong>
+                                    <span class="signal-metric-label">Matching Results</span>
+                                    <strong id="metric-source-spread">6</strong>
                                 </div>
                             </div>
-                            
+
                             <div class="results-list">
-                                <div
-                                class="result-card"
-                                data-region="europe"
-                                data-countries="uk,germany,france"
-                                data-media-type="newspapers"
-                                data-focus="international,policy"
-                                data-signal="high"
+                                <article
+                                    class="result-card"
+                                    data-region="middle-east"
+                                    data-countries="israel,iran"
+                                    data-media-type="news-channels,online-platforms"
+                                    data-focus="regional,international"
+                                    data-signal="high"
+                                    data-sentiment-score="-0.82"
+                                    data-published="2026-04-14T08:15:00Z"
+                                    data-source="Al Jazeera"
+                                    data-title="Iran and Israel exchange sharp warnings as regional tensions deepen"
+                                    data-description="Regional coverage frames the crisis as escalation-prone, highlighting military signaling, diplomatic breakdown, and broader instability risks."
                                 >
-                                <div class="result-head">
-                                    <div>
-                                        <h4>Financial Times</h4>
-                                        <p class="result-meta">Europe · Newspaper · Markets &amp; policy</p>
+                                    <div class="result-card-top">
+                                        <div class="result-top-left">
+                                            <span class="result-source">Al Jazeera</span>
+                                            <span class="result-date">14 Apr 2026</span>
+                                        </div>
+                                        <span class="sentiment-tag sentiment-negative">Negative</span>
                                     </div>
-                                    <span class="sentiment-tag sentiment-neutral">Neutral</span>
-                                </div>
-                                <p>
-                                    Coverage suggests cautious market interpretation with emphasis on oil sensitivity,
-                                    election uncertainty, and geopolitical spillover risk.
-                                </p>
-                                <div class="result-footer">
-                                    <span class="result-chip">Macro risk</span>
-                                    <span class="result-chip">Energy exposure</span>
-                                    <span class="result-chip">Investor caution</span>
-                                </div>
-                            </div>
-                            
-                            <div
-                            class="result-card"
-                            data-region="middle-east"
-                            data-countries="qatar,saudi arabia,uae"
-                            data-media-type="online-platforms,news-channels"
-                            data-focus="regional,international"
-                            data-signal="medium"
-                            >
-                            <div class="result-head">
-                                <div>
-                                    <h4>Al Jazeera</h4>
+
+                                    <h4 class="result-title">
+                                        Iran and Israel exchange sharp warnings as regional tensions deepen
+                                    </h4>
+
                                     <p class="result-meta">Middle East · Online platform · Regional analysis</p>
+
+                                    <p class="result-description">
+                                        Regional coverage frames the crisis as escalation-prone, highlighting military
+                                        signaling, diplomatic breakdown, and broader instability risks.
+                                    </p>
+
+                                    <div class="result-score-row">
+                                        <div class="score-badge score-badge-signal">
+                                            <span class="score-label">Signal Score</span>
+                                            <strong class="signal-score-value">0.00</strong>
+                                        </div>
+                                        <div class="score-badge score-badge-sentiment">
+                                            <span class="score-label">Sentiment Score</span>
+                                            <strong class="sentiment-score-value">-0.82</strong>
+                                        </div>
+                                    </div>
+
+                                    <div class="result-footer">
+                                        <span class="result-chip">Escalation risk</span>
+                                        <span class="result-chip">Military signaling</span>
+                                        <span class="result-chip">Regional instability</span>
+                                    </div>
+                                </article>
+
+                                <article
+                                    class="result-card"
+                                    data-region="middle-east"
+                                    data-countries="israel,iran,us"
+                                    data-media-type="news-channels"
+                                    data-focus="international,policy"
+                                    data-signal="high"
+                                    data-sentiment-score="-0.64"
+                                    data-published="2026-04-13T16:30:00Z"
+                                    data-source="Reuters"
+                                    data-title="Israel-Iran tensions keep oil traders and diplomats on edge"
+                                    data-description="Reporting remains balanced but clearly focused on the geopolitical and market impact of mounting Israel-Iran tensions."
+                                >
+                                    <div class="result-card-top">
+                                        <div class="result-top-left">
+                                            <span class="result-source">Reuters</span>
+                                            <span class="result-date">13 Apr 2026</span>
+                                        </div>
+                                        <span class="sentiment-tag sentiment-neutral">Neutral</span>
+                                    </div>
+
+                                    <h4 class="result-title">
+                                        Israel-Iran tensions keep oil traders and diplomats on edge
+                                    </h4>
+
+                                    <p class="result-meta">Middle East · News channel · International desk</p>
+
+                                    <p class="result-description">
+                                        Reporting remains balanced but clearly focused on the geopolitical and market
+                                        impact of mounting Israel-Iran tensions.
+                                    </p>
+
+                                    <div class="result-score-row">
+                                        <div class="score-badge score-badge-signal">
+                                            <span class="score-label">Signal Score</span>
+                                            <strong class="signal-score-value">0.00</strong>
+                                        </div>
+                                        <div class="score-badge score-badge-sentiment">
+                                            <span class="score-label">Sentiment Score</span>
+                                            <strong class="sentiment-score-value">-0.64</strong>
+                                        </div>
+                                    </div>
+
+                                    <div class="result-footer">
+                                        <span class="result-chip">Oil volatility</span>
+                                        <span class="result-chip">Diplomatic strain</span>
+                                        <span class="result-chip">Regional watch</span>
+                                    </div>
+                                </article>
+
+                                <article
+                                    class="result-card"
+                                    data-region="asia"
+                                    data-countries="taiwan,china,japan"
+                                    data-media-type="international-journals"
+                                    data-focus="policy,research"
+                                    data-signal="high"
+                                    data-sentiment-score="0.36"
+                                    data-published="2026-04-12T11:00:00Z"
+                                    data-source="Nikkei Asia"
+                                    data-title="Taiwan semiconductor disruption fears revive regional supply chain planning"
+                                    data-description="The analysis emphasizes semiconductor exposure, strategic resilience, and the long-term policy response to Taiwan-related supply risks."
+                                >
+                                    <div class="result-card-top">
+                                        <div class="result-top-left">
+                                            <span class="result-source">Nikkei Asia</span>
+                                            <span class="result-date">12 Apr 2026</span>
+                                        </div>
+                                        <span class="sentiment-tag sentiment-positive">Positive</span>
+                                    </div>
+
+                                    <h4 class="result-title">
+                                        Taiwan semiconductor disruption fears revive regional supply chain planning
+                                    </h4>
+
+                                    <p class="result-meta">Asia · International journal · Policy &amp; industry</p>
+
+                                    <p class="result-description">
+                                        The analysis emphasizes semiconductor exposure, strategic resilience, and the
+                                        long-term policy response to Taiwan-related supply risks.
+                                    </p>
+
+                                    <div class="result-score-row">
+                                        <div class="score-badge score-badge-signal">
+                                            <span class="score-label">Signal Score</span>
+                                            <strong class="signal-score-value">0.00</strong>
+                                        </div>
+                                        <div class="score-badge score-badge-sentiment">
+                                            <span class="score-label">Sentiment Score</span>
+                                            <strong class="sentiment-score-value">0.36</strong>
+                                        </div>
+                                    </div>
+
+                                    <div class="result-footer">
+                                        <span class="result-chip">Semiconductors</span>
+                                        <span class="result-chip">Supply chains</span>
+                                        <span class="result-chip">Policy resilience</span>
+                                    </div>
+                                </article>
+
+                                <article
+                                    class="result-card"
+                                    data-region="europe"
+                                    data-countries="uk,germany,france"
+                                    data-media-type="newspapers"
+                                    data-focus="international,policy"
+                                    data-signal="high"
+                                    data-sentiment-score="-0.28"
+                                    data-published="2026-04-11T09:20:00Z"
+                                    data-source="Financial Times"
+                                    data-title="Markets price in oil and election risk as geopolitical tensions widen"
+                                    data-description="Coverage suggests cautious market interpretation with emphasis on oil sensitivity, election uncertainty, and geopolitical spillover risk."
+                                >
+                                    <div class="result-card-top">
+                                        <div class="result-top-left">
+                                            <span class="result-source">Financial Times</span>
+                                            <span class="result-date">11 Apr 2026</span>
+                                        </div>
+                                        <span class="sentiment-tag sentiment-neutral">Neutral</span>
+                                    </div>
+
+                                    <h4 class="result-title">
+                                        Markets price in oil and election risk as geopolitical tensions widen
+                                    </h4>
+
+                                    <p class="result-meta">Europe · Newspaper · Markets &amp; policy</p>
+
+                                    <p class="result-description">
+                                        Coverage suggests cautious market interpretation with emphasis on oil sensitivity,
+                                        election uncertainty, and geopolitical spillover risk.
+                                    </p>
+
+                                    <div class="result-score-row">
+                                        <div class="score-badge score-badge-signal">
+                                            <span class="score-label">Signal Score</span>
+                                            <strong class="signal-score-value">0.00</strong>
+                                        </div>
+                                        <div class="score-badge score-badge-sentiment">
+                                            <span class="score-label">Sentiment Score</span>
+                                            <strong class="sentiment-score-value">-0.28</strong>
+                                        </div>
+                                    </div>
+
+                                    <div class="result-footer">
+                                        <span class="result-chip">Macro risk</span>
+                                        <span class="result-chip">Oil sensitivity</span>
+                                        <span class="result-chip">Election uncertainty</span>
+                                    </div>
+                                </article>
+
+                                <article
+                                    class="result-card"
+                                    data-region="north-america"
+                                    data-countries="us,canada"
+                                    data-media-type="news-channels"
+                                    data-focus="international,editorial"
+                                    data-signal="medium"
+                                    data-sentiment-score="-0.11"
+                                    data-published="2026-04-10T18:45:00Z"
+                                    data-source="Reuters"
+                                    data-title="Election-year uncertainty adds to global market caution"
+                                    data-description="Reporting remains measured, focusing on market reaction, diplomatic signaling, and scenario-based spillover effects."
+                                >
+                                    <div class="result-card-top">
+                                        <div class="result-top-left">
+                                            <span class="result-source">Reuters</span>
+                                            <span class="result-date">10 Apr 2026</span>
+                                        </div>
+                                        <span class="sentiment-tag sentiment-neutral">Neutral</span>
+                                    </div>
+
+                                    <h4 class="result-title">
+                                        Election-year uncertainty adds to global market caution
+                                    </h4>
+
+                                    <p class="result-meta">North America · News channel · International desk</p>
+
+                                    <p class="result-description">
+                                        Reporting remains measured, focusing on market reaction, diplomatic signaling,
+                                        and scenario-based spillover effects.
+                                    </p>
+
+                                    <div class="result-score-row">
+                                        <div class="score-badge score-badge-signal">
+                                            <span class="score-label">Signal Score</span>
+                                            <strong class="signal-score-value">0.00</strong>
+                                        </div>
+                                        <div class="score-badge score-badge-sentiment">
+                                            <span class="score-label">Sentiment Score</span>
+                                            <strong class="sentiment-score-value">-0.11</strong>
+                                        </div>
+                                    </div>
+
+                                    <div class="result-footer">
+                                        <span class="result-chip">Market reaction</span>
+                                        <span class="result-chip">Global caution</span>
+                                        <span class="result-chip">Political uncertainty</span>
+                                    </div>
+                                </article>
+
+                                <article
+                                    class="result-card"
+                                    data-region="europe"
+                                    data-countries="uk,poland,germany"
+                                    data-media-type="policy-thinktanks,international-journals"
+                                    data-focus="policy,research"
+                                    data-signal="high"
+                                    data-sentiment-score="-0.71"
+                                    data-published="2026-04-09T07:50:00Z"
+                                    data-source="Foreign Affairs"
+                                    data-title="Russia-NATO escalation scenarios test European deterrence planning"
+                                    data-description="The article outlines military signaling, deterrence challenges, and alliance risk calculations under an escalating Russia-NATO crisis."
+                                >
+                                    <div class="result-card-top">
+                                        <div class="result-top-left">
+                                            <span class="result-source">Foreign Affairs</span>
+                                            <span class="result-date">09 Apr 2026</span>
+                                        </div>
+                                        <span class="sentiment-tag sentiment-negative">Negative</span>
+                                    </div>
+
+                                    <h4 class="result-title">
+                                        Russia-NATO escalation scenarios test European deterrence planning
+                                    </h4>
+
+                                    <p class="result-meta">Europe · Policy / Think Tank · Strategic analysis</p>
+
+                                    <p class="result-description">
+                                        The article outlines military signaling, deterrence challenges, and alliance
+                                        risk calculations under an escalating Russia-NATO crisis.
+                                    </p>
+
+                                    <div class="result-score-row">
+                                        <div class="score-badge score-badge-signal">
+                                            <span class="score-label">Signal Score</span>
+                                            <strong class="signal-score-value">0.00</strong>
+                                        </div>
+                                        <div class="score-badge score-badge-sentiment">
+                                            <span class="score-label">Sentiment Score</span>
+                                            <strong class="sentiment-score-value">-0.71</strong>
+                                        </div>
+                                    </div>
+
+                                    <div class="result-footer">
+                                        <span class="result-chip">Deterrence</span>
+                                        <span class="result-chip">Alliance risk</span>
+                                        <span class="result-chip">Escalation planning</span>
+                                    </div>
+                                </article>
+                            </div>
+
+                            <div class="results-empty-state hidden" id="results-empty-state">
+                                <div class="results-empty-inner">
+                                    <p class="results-empty-kicker">No signal match</p>
+                                    <h4>No intelligence sources match the current scenario.</h4>
+                                    <p>
+                                        Try broadening the geographic scope, adjusting filters,
+                                        or refining the prompt with clearer topic keywords.
+                                    </p>
                                 </div>
-                                <span class="sentiment-tag sentiment-negative">Negative</span>
                             </div>
-                            <p>
-                                Reporting frames the scenario as escalation-prone, with stronger concern around
-                                diplomatic friction, supply disruption, and downstream instability.
-                            </p>
-                            <div class="result-footer">
-                                <span class="result-chip">Escalation risk</span>
-                                <span class="result-chip">Regional pressure</span>
-                                <span class="result-chip">Supply concern</span>
+                        </article>
+                    </section>
+
+                    <!-- RIGHT PANEL -->
+                    <aside class="console-panel console-right">
+                        <div class="panel-shell trend-shell">
+                            <div class="panel-top">
+                                <div>
+                                    <p class="panel-label">Latest Trend Signals</p>
+                                    <h3>Trending Intelligence</h3>
+                                </div>
+                            </div>
+
+                            <div class="trend-signals-copy">
+                                <p>Click a trend signal to load a relevant scenario and refresh the strongest matching results.</p>
+                            </div>
+
+                            <div class="trend-signal-list" id="trend-signal-list">
+                                <button
+                                    type="button"
+                                    class="trend-signal-item"
+                                    data-trend-query="Israel-Iran tensions"
+                                >
+                                    <span class="trend-signal-title">Israel-Iran tensions</span>
+                                    <span class="trend-signal-meta">14 signals · negative tone</span>
+                                </button>
+
+                                <button
+                                    type="button"
+                                    class="trend-signal-item"
+                                    data-trend-query="Taiwan semiconductor disruption"
+                                >
+                                    <span class="trend-signal-title">Taiwan semiconductor disruption</span>
+                                    <span class="trend-signal-meta">9 signals · positive tone</span>
+                                </button>
+
+                                <button
+                                    type="button"
+                                    class="trend-signal-item"
+                                    data-trend-query="Russia-NATO escalation risk"
+                                >
+                                    <span class="trend-signal-title">Russia-NATO escalation risk</span>
+                                    <span class="trend-signal-meta">11 signals · negative tone</span>
+                                </button>
+
+                                <button
+                                    type="button"
+                                    class="trend-signal-item"
+                                    data-trend-query="Oil election market risk"
+                                >
+                                    <span class="trend-signal-title">Oil election market risk</span>
+                                    <span class="trend-signal-meta">8 signals · cautious tone</span>
+                                </button>
+
+                                <button
+                                    type="button"
+                                    class="trend-signal-item"
+                                    data-trend-query="Red Sea shipping threats"
+                                >
+                                    <span class="trend-signal-title">Red Sea shipping threats</span>
+                                    <span class="trend-signal-meta">6 signals · negative tone</span>
+                                </button>
                             </div>
                         </div>
-                        
-                        <div
-                        class="result-card"
-                        data-region="asia"
-                        data-countries="china,taiwan,japan"
-                        data-media-type="international-journals"
-                        data-focus="policy,research"
-                        data-signal="high"
-                        >
-                        <div class="result-head">
-                            <div>
-                                <h4>Nikkei Asia</h4>
-                                <p class="result-meta">Asia · International journal · Policy &amp; industry</p>
-                            </div>
-                            <span class="sentiment-tag sentiment-positive">Positive</span>
-                        </div>
-                        <p>
-                            The analysis highlights resilience planning, strategic diversification, and strong
-                            long-term policy positioning despite immediate pressure points.
-                        </p>
-                        <div class="result-footer">
-                            <span class="result-chip">Supply chains</span>
-                            <span class="result-chip">Semiconductors</span>
-                            <span class="result-chip">Policy resilience</span>
-                        </div>
-                    </div>
-                    
-                    <div
-                    class="result-card"
-                    data-region="north-america"
-                    data-countries="us,canada"
-                    data-media-type="news-channels"
-                    data-focus="international,editorial"
-                    data-signal="medium"
-                    >
-                    <div class="result-head">
-                        <div>
-                            <h4>Reuters</h4>
-                            <p class="result-meta">North America · News channel · International desk</p>
-                        </div>
-                        <span class="sentiment-tag sentiment-neutral">Neutral</span>
-                    </div>
-                    <p>
-                        Reporting remains balanced, focusing on cross-border political signaling, market
-                        reaction, and scenario-based diplomatic developments.
-                    </p>
-                    <div class="result-footer">
-                        <span class="result-chip">Balanced tone</span>
-                        <span class="result-chip">Diplomatic watch</span>
-                        <span class="result-chip">Market reaction</span>
-                    </div>
+                    </aside>
                 </div>
             </div>
-            
-            <div class="results-empty-state hidden" id="results-empty-state">
-                <div class="results-empty-inner">
-                    <p class="results-empty-kicker">No signal match</p>
-                    <h4>No intelligence sources match the current scope.</h4>
-                    <p>
-                        Try expanding the geographic scope, removing country restrictions,
-                        or enabling more media and publication types.
-                    </p>
-                </div>
-            </div>
-        </article>
-    </section>
-    
-    <!-- RIGHT PANEL -->
-    <aside class="console-panel console-right">
-        <div class="panel-shell compare-shell">
-            <div class="panel-top">
-                <div>
-                    <p class="panel-label">Comparison Rail</p>
-                    <h3>Scenario Comparison</h3>
-                </div>
-                <span id="comparison-count" class="comparison-count">0 selected</span>
-            </div>
-            
-            <div id="comparison-rail" class="comparison-rail">
-                <div id="comparison-empty-state" class="comparison-empty-state">
-                    <p>No items selected yet.</p>
-                    <span>Click any intelligence card to pin it here for comparison.</span>
-                </div>
-                
-                <div id="comparison-list" class="comparison-list"></div>
-            </div>
+        </section>
+    </main>
+
+    <footer class="site-footer">
+        <div class="container footer-inner">
+            <p>Geo-Sentinel — geopolitical intelligence, structured clearly.</p>
+            <p class="footer-note">Sprint 1 · GEO-31 Intelligence Console</p>
         </div>
-    </aside>
-</div>
-</div>
-</section>
-</main>
+    </footer>
 
-<footer class="site-footer">
-    <div class="container footer-inner">
-        <p>Geo-Sentinel — geopolitical intelligence, structured clearly.</p>
-        <p class="footer-note">Sprint 1 · GEO-31 Intelligence Console</p>
-    </div>
-</footer>
-
-<script src="js/main.js"></script>
+    <script src="js/main.js"></script>
 </body>
 </html>
