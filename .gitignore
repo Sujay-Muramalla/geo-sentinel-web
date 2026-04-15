@@ -1,0 +1,5 @@
+node_modules/
+backend/node_modules/
+venv/
+.venv/
+sentiment-engine/venv/
