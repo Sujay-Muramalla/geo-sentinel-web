@@ -1,21 +1,20 @@
-const { buildIntelligenceResponse } = require("../services/intelligenceService");
+const { analyzeIntelligence } = require("../services/intelligenceService");
 
-function analyzeScenario(req, res) {
+async function analyzeIntelligenceController(req, res) {
     try {
-        const payload = req.body || {};
-        const response = buildIntelligenceResponse(payload);
-
-        return res.status(200).json(response);
+        const result = await analyzeIntelligence(req.body || {});
+        return res.status(200).json(result);
     } catch (error) {
-        console.error("Error analyzing scenario:", error);
+        console.error("Intelligence analysis failed:", error.message);
 
         return res.status(500).json({
-            error: "Failed to analyze scenario",
-            details: error.message
+            success: false,
+            message: "Intelligence analysis failed",
+            error: error.message
         });
     }
 }
 
 module.exports = {
-    analyzeScenario
+    analyzeIntelligenceController
 };
