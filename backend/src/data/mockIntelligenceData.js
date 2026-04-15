@@ -4,6 +4,7 @@ module.exports = [
         source: "Reuters",
         title: "Naval movements raise tensions in disputed waters",
         date: "2026-04-15",
+        publishedAt: "2026-04-15T08:20:00Z",
         description:
             "Regional deployments and diplomatic signaling are increasing concern among neighboring states.",
         region: "Asia-Pacific",
@@ -18,6 +19,7 @@ module.exports = [
         source: "Al Jazeera",
         title: "Maritime dispute fuels renewed diplomatic friction",
         date: "2026-04-14",
+        publishedAt: "2026-04-14T14:15:00Z",
         description:
             "Officials exchanged strong statements following new activity in contested sea lanes.",
         region: "Asia-Pacific",
@@ -32,6 +34,7 @@ module.exports = [
         source: "BBC",
         title: "Leaders call for restraint amid regional military posturing",
         date: "2026-04-13",
+        publishedAt: "2026-04-13T10:05:00Z",
         description:
             "International observers are urging restraint while monitoring fast-moving developments.",
         region: "Asia-Pacific",
@@ -46,6 +49,7 @@ module.exports = [
         source: "The Diplomat",
         title: "Strategic sea corridors remain under pressure",
         date: "2026-04-12",
+        publishedAt: "2026-04-12T07:30:00Z",
         description:
             "Analysts say trade and security concerns are becoming increasingly intertwined.",
         region: "Asia-Pacific",
@@ -60,6 +64,7 @@ module.exports = [
         source: "Nikkei Asia",
         title: "Business markets watch regional instability closely",
         date: "2026-04-11",
+        publishedAt: "2026-04-11T09:40:00Z",
         description:
             "Economic stakeholders are evaluating potential supply-chain impacts from prolonged instability.",
         region: "Asia-Pacific",
@@ -74,6 +79,7 @@ module.exports = [
         source: "Reuters",
         title: "Israel-Iran tensions escalate after regional security warnings",
         date: "2026-04-15",
+        publishedAt: "2026-04-15T11:10:00Z",
         description:
             "Diplomatic rhetoric hardened after officials warned of retaliatory action and wider regional fallout.",
         region: "Middle East",
@@ -88,6 +94,7 @@ module.exports = [
         source: "Al Jazeera",
         title: "Iran signals response as Israel strengthens defense posture",
         date: "2026-04-14",
+        publishedAt: "2026-04-14T18:25:00Z",
         description:
             "State media and regional observers reported heightened alert levels following new military statements.",
         region: "Middle East",
@@ -102,6 +109,7 @@ module.exports = [
         source: "BBC",
         title: "Middle East capitals brace for fallout from Israel-Iran confrontation",
         date: "2026-04-13",
+        publishedAt: "2026-04-13T13:00:00Z",
         description:
             "Governments across the region are reviewing contingency planning amid fears of broader escalation.",
         region: "Middle East",
@@ -116,6 +124,7 @@ module.exports = [
         source: "Financial Times",
         title: "Oil markets react to Israel-Iran escalation concerns",
         date: "2026-04-12",
+        publishedAt: "2026-04-12T16:45:00Z",
         description:
             "Energy traders are pricing in geopolitical risk as fears grow over shipping and supply disruption.",
         region: "Middle East",
@@ -130,6 +139,7 @@ module.exports = [
         source: "The Guardian",
         title: "Analysts warn Israel-Iran tensions could destabilize regional diplomacy",
         date: "2026-04-11",
+        publishedAt: "2026-04-11T12:00:00Z",
         description:
             "Policy experts say sustained confrontation could affect trade routes, diplomacy, and energy confidence.",
         region: "Middle East",
