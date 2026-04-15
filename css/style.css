@@ -835,6 +835,10 @@ button {
     color: var(--danger-text);
 }
 
+/* ==========================================
+   Top Match Premium Styling
+========================================== */
+
 .result-card.is-top-match {
     border-color: rgba(43, 76, 185, 0.4);
     box-shadow: 0 16px 30px rgba(34, 58, 122, 0.12);
@@ -859,6 +863,20 @@ button {
     background: rgba(29, 63, 141, 0.08);
     border: 1px solid rgba(29, 63, 141, 0.14);
 }
+
+.result-card.is-top-match .result-title {
+    display: block;
+    margin: 0 0 0.45rem;
+    padding: 0;
+    border-radius: 0;
+    background: transparent;
+    color: #16233a;
+    font-weight: 700;
+    box-shadow: none;
+}
+/* ==========================================
+   Highlight Styling
+========================================== */
 
 .result-title mark,
 .result-description mark {
