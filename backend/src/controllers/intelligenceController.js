@@ -1,20 +1,11 @@
-const {
-    getIntelligenceResults
-} = require("../services/intelligenceService");
+const { generateIntelligence } = require("../services/intelligenceService");
 
-async function generateIntelligence(req, res) {
+async function handleGenerateIntelligence(req, res) {
     try {
-        const payload = req.body || {};
-
-        const result = await getIntelligenceResults(payload);
-
-        return res.status(200).json({
-            success: true,
-            ...result
-        });
+        const result = await generateIntelligence(req.body || {});
+        return res.status(200).json(result);
     } catch (error) {
-        console.error("generateIntelligence error:", error);
-
+        console.error("generateIntelligence controller error:", error);
         return res.status(500).json({
             success: false,
             message: "Failed to generate intelligence",
@@ -24,5 +15,5 @@ async function generateIntelligence(req, res) {
 }
 
 module.exports = {
-    generateIntelligence
+    handleGenerateIntelligence
 };

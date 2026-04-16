@@ -1,341 +1,450 @@
 const path = require("path");
 const { spawn } = require("child_process");
+const { URL } = require("url");
+const {
+    SOURCE_REGISTRY,
+    normalizeKey,
+    resolveRegionFromCountry
+} = require("../config/sourceRegistry");
 
-const PYTHON_WORKER_TIMEOUT_MS = Number(process.env.PYTHON_WORKER_TIMEOUT_MS || 20000);
+const PYTHON_WORKER_TIMEOUT_MS = Number(process.env.PYTHON_WORKER_TIMEOUT_MS || 25000);
 
 function normalizePayload(payload = {}) {
     return {
         query: typeof payload.query === "string" ? payload.query.trim() : "",
-        regions: Array.isArray(payload.regions) ? payload.regions : ["world"],
+        regions: Array.isArray(payload.regions) && payload.regions.length ? payload.regions : ["world"],
         countries: Array.isArray(payload.countries) ? payload.countries : [],
-        mediaTypes: Array.isArray(payload.mediaTypes) ? payload.mediaTypes : ["newspapers", "news-channels"],
-        publicationFocus: Array.isArray(payload.publicationFocus) ? payload.publicationFocus : ["international"],
+        mediaTypes: Array.isArray(payload.mediaTypes) && payload.mediaTypes.length
+            ? payload.mediaTypes
+            : ["newspapers", "news-channels"],
+        publicationFocus: Array.isArray(payload.publicationFocus) && payload.publicationFocus.length
+            ? payload.publicationFocus
+            : ["international"],
         sentimentFilter: payload.sentimentFilter || "all",
         sortBy: payload.sortBy || "final-desc",
         selectedTrend: payload.selectedTrend || ""
     };
 }
 
-function resolveWorkerPath() {
-    return path.resolve(__dirname, "../python/rss_intelligence_worker.py");
-}
-
-function resolvePythonInvocation() {
-    const configured = process.env.PYTHON_BIN;
-
-    if (configured && configured.trim()) {
-        return {
-            command: configured.trim(),
-            argsPrefix: []
-        };
+function resolvePythonCommand() {
+    if (process.env.PYTHON_COMMAND && process.env.PYTHON_COMMAND.trim()) {
+        return process.env.PYTHON_COMMAND.trim();
     }
 
     if (process.platform === "win32") {
-        return {
-            command: "py",
-            argsPrefix: ["-3"]
-        };
+        return "python";
     }
 
+    return "python3";
+}
+
+function resolveWorkerPath() {
+    return process.env.PYTHON_INTELLIGENCE_WORKER
+        ? path.resolve(process.env.PYTHON_INTELLIGENCE_WORKER)
+        : path.resolve(__dirname, "../python/rss_intelligence_worker.py");
+}
+
+function parseJsonSafe(value, fallback) {
+    try {
+        return JSON.parse(value);
+    } catch {
+        return fallback;
+    }
+}
+
+function toNumber(value, fallback = 0) {
+    const num = Number(value);
+    return Number.isFinite(num) ? num : fallback;
+}
+
+function clamp(value, min, max) {
+    return Math.max(min, Math.min(max, value));
+}
+
+function normalizeText(value = "") {
+    return String(value || "").trim();
+}
+
+function normalizeList(values = []) {
+    return (Array.isArray(values) ? values : [])
+        .map((item) => normalizeText(item))
+        .filter(Boolean);
+}
+
+function extractDomain(url = "") {
+    try {
+        return new URL(url).hostname.replace(/^www\./i, "").toLowerCase();
+    } catch {
+        return "";
+    }
+}
+
+function findSourceRegistryEntry(article = {}) {
+    const sourceName = normalizeKey(article.source || article.outlet || article.publisher || "");
+    const domain = extractDomain(article.url || article.link || "");
+
+    return SOURCE_REGISTRY.find((entry) => {
+        const matchesDomain = Array.isArray(entry.matchers)
+            && entry.matchers.some((matcher) => domain.includes(normalizeKey(matcher)));
+        const matchesName = sourceName && sourceName.includes(normalizeKey(entry.name));
+        return matchesDomain || matchesName;
+    }) || null;
+}
+
+function annotateSourceMetadata(article = {}) {
+    const registryEntry = findSourceRegistryEntry(article);
+
+    const sourceName = normalizeText(article.source || article.outlet || article.publisher || "Unknown Source");
+    const sourceCountry = normalizeText(
+        article.sourceCountry || article.country || (registryEntry ? registryEntry.country : "")
+    );
+    const sourceRegion = normalizeText(
+        article.sourceRegion || article.region || (registryEntry ? registryEntry.region : "") || resolveRegionFromCountry(sourceCountry)
+    );
+    const sourceTier = normalizeText(
+        article.sourceTier || (registryEntry ? registryEntry.tier : "") || "standard"
+    ).toLowerCase();
+
+    const influenceWeight = toNumber(
+        article.influenceWeight || (registryEntry ? registryEntry.influenceWeight : 1.0),
+        1.0
+    );
+
+    const publicationFocus = normalizeText(
+        article.publicationFocus || (registryEntry ? registryEntry.focus : "") || "international"
+    ).toLowerCase();
+
     return {
-        command: "python3",
-        argsPrefix: []
+        ...article,
+        source: sourceName,
+        sourceCountry: sourceCountry || "Unknown",
+        sourceRegion: sourceRegion || "Unknown",
+        sourceTier,
+        influenceWeight,
+        publicationFocus,
+        sourceId: registryEntry ? registryEntry.id : null,
+        domain: extractDomain(article.url || article.link || "")
     };
 }
 
-function buildMockFallback(query) {
-    const safeQuery = query || "global tensions";
-    const now = Date.now();
+function matchesSelectedCountries(article, payload) {
+    const selectedCountries = normalizeList(payload.countries).map(normalizeKey);
+    if (!selectedCountries.length) {
+        return true;
+    }
 
-    return [
-        {
-            id: `mock-1-${now}`,
-            title: `Fallback intelligence: ${safeQuery} remains active across multiple regions`,
-            source: "Geo-Sentinel Fallback Feed",
-            sourceType: "mock",
-            publishedAt: new Date(now).toISOString(),
-            summary: `Fallback result shown because the live Python RSS worker was unavailable while processing "${safeQuery}".`,
-            url: "https://news.google.com/",
-            sentimentLabel: "neutral",
-            sentimentScore: 0,
-            signalScore: 68,
-            relevanceScore: 84,
-            freshnessScore: 72,
-            finalScore: 77,
-            region: "Global",
-            country: "Multiple",
-            topic: safeQuery
-        },
-        {
-            id: `mock-2-${now}`,
-            title: `${safeQuery} continues to drive policy, security, and market narratives`,
-            source: "Geo-Sentinel Fallback Feed",
-            sourceType: "mock",
-            publishedAt: new Date(now - 60 * 60 * 1000).toISOString(),
-            summary: `Fallback intelligence keeps the interface responsive while the live ingestion layer recovers.`,
-            url: "https://news.google.com/",
-            sentimentLabel: "slightly-negative",
-            sentimentScore: -0.18,
-            signalScore: 64,
-            relevanceScore: 80,
-            freshnessScore: 66,
-            finalScore: 71,
-            region: "Global",
-            country: "Multiple",
-            topic: safeQuery
-        },
-        {
-            id: `mock-3-${now}`,
-            title: `Analysts continue monitoring escalation risks tied to ${safeQuery}`,
-            source: "Geo-Sentinel Fallback Feed",
-            sourceType: "mock",
-            publishedAt: new Date(now - 2 * 60 * 60 * 1000).toISOString(),
-            summary: `This fallback card is intended to preserve a useful UX when live RSS sources fail temporarily.`,
-            url: "https://news.google.com/",
-            sentimentLabel: "negative",
-            sentimentScore: -0.31,
-            signalScore: 61,
-            relevanceScore: 78,
-            freshnessScore: 61,
-            finalScore: 67,
-            region: "Global",
-            country: "Multiple",
-            topic: safeQuery
+    const articleCountries = [
+        article.sourceCountry,
+        article.country,
+        ...(Array.isArray(article.countries) ? article.countries : [])
+    ]
+        .map(normalizeText)
+        .filter(Boolean)
+        .map(normalizeKey);
+
+    return articleCountries.some((country) => selectedCountries.includes(country));
+}
+
+function matchesSelectedRegions(article, payload) {
+    const selectedRegions = normalizeList(payload.regions)
+        .map(normalizeKey)
+        .filter((region) => region !== "world");
+
+    if (!selectedRegions.length) {
+        return true;
+    }
+
+    const articleRegions = [
+        article.sourceRegion,
+        article.region,
+        ...(Array.isArray(article.regions) ? article.regions : [])
+    ]
+        .map(normalizeText)
+        .filter(Boolean)
+        .map(normalizeKey);
+
+    return articleRegions.some((region) => selectedRegions.includes(region));
+}
+
+function matchesPublicationFocus(article, payload) {
+    const selectedFocus = normalizeList(payload.publicationFocus).map(normalizeKey);
+    if (!selectedFocus.length) {
+        return true;
+    }
+
+    if (selectedFocus.includes("all")) {
+        return true;
+    }
+
+    return selectedFocus.includes(normalizeKey(article.publicationFocus || "international"));
+}
+
+function matchesSentimentFilter(article, payload) {
+    const filter = normalizeKey(payload.sentimentFilter || "all");
+    if (filter === "all") {
+        return true;
+    }
+
+    return normalizeKey(article.sentiment || article.sentimentLabel || "neutral") === filter;
+}
+
+function computeGeoAlignmentScore(article, payload) {
+    const selectedCountries = normalizeList(payload.countries).map(normalizeKey);
+    const selectedRegions = normalizeList(payload.regions).map(normalizeKey);
+
+    let score = 0;
+
+    if (selectedCountries.length) {
+        if (selectedCountries.includes(normalizeKey(article.sourceCountry))) {
+            score += 2.5;
         }
-    ];
+    } else if (selectedRegions.length && !selectedRegions.includes("world")) {
+        if (selectedRegions.includes(normalizeKey(article.sourceRegion))) {
+            score += 1.75;
+        }
+    } else if (selectedRegions.includes("world")) {
+        score += 0.4;
+    }
+
+    return score;
 }
 
-/* ---------------------------
-   GEO-39 QUALITY HELPERS
-----------------------------*/
-
-function normalizeText(text = "") {
-    return String(text)
-        .toLowerCase()
-        .replace(/[^a-z0-9 ]/g, " ")
-        .replace(/\s+/g, " ")
-        .trim();
+function computeTierScore(article) {
+    const tier = normalizeKey(article.sourceTier || "standard");
+    if (tier === "top") return 1.4;
+    if (tier === "high") return 1.0;
+    if (tier === "regional") return 0.75;
+    return 0.45;
 }
 
-function calculateRelevance(article, query) {
-    if (!query) return 50;
+function computeRecencyScore(article) {
+    const publishedAt = article.publishedAt || article.pubDate || article.isoDate || "";
+    const timestamp = Date.parse(publishedAt);
+    if (!Number.isFinite(timestamp)) {
+        return 0.25;
+    }
 
-    const words = normalizeText(query).split(" ").filter(Boolean);
-    if (!words.length) return 50;
+    const hoursOld = Math.max(0, (Date.now() - timestamp) / (1000 * 60 * 60));
 
-    const articleText = normalizeText(`${article.title || ""} ${article.summary || ""}`);
+    if (hoursOld <= 6) return 1.5;
+    if (hoursOld <= 24) return 1.2;
+    if (hoursOld <= 72) return 0.9;
+    if (hoursOld <= 168) return 0.55;
+    return 0.2;
+}
+
+function computeQueryRelevance(article, payload) {
+    const query = normalizeKey(payload.query || payload.selectedTrend || "");
+    if (!query) {
+        return 0;
+    }
+
+    const title = normalizeKey(article.title || "");
+    const summary = normalizeKey(article.summary || article.description || "");
+    const combined = `${title} ${summary}`;
+
+    const queryTerms = query.split(/\s+/).filter((term) => term.length > 2);
+    if (!queryTerms.length) {
+        return 0;
+    }
 
     let matches = 0;
-    for (const word of words) {
-        if (articleText.includes(word)) {
+    for (const term of queryTerms) {
+        if (combined.includes(term)) {
             matches += 1;
         }
     }
 
-    return Math.min(100, Math.round((matches / words.length) * 100));
+    return clamp(matches / queryTerms.length, 0, 1.5) * 2.0;
 }
 
-function cleanArticles(articles = []) {
+function computeSentimentScore(article) {
+    const numeric = toNumber(article.sentimentScore, null);
+    if (numeric === null) {
+        return 0.1;
+    }
+
+    return clamp(Math.abs(numeric), 0, 1);
+}
+
+function scoreArticle(article, payload) {
+    const geoAlignment = computeGeoAlignmentScore(article, payload);
+    const tierScore = computeTierScore(article);
+    const recencyScore = computeRecencyScore(article);
+    const queryRelevance = computeQueryRelevance(article, payload);
+    const sentimentStrength = computeSentimentScore(article);
+    const influenceWeight = toNumber(article.influenceWeight, 1);
+
+    const finalScore =
+        (queryRelevance * 2.0) +
+        (geoAlignment * 2.4) +
+        (tierScore * 1.0) +
+        (recencyScore * 1.0) +
+        (sentimentStrength * 0.35) +
+        ((influenceWeight - 1) * 2.2);
+
+    return {
+        ...article,
+        geoAlignment,
+        tierScore,
+        recencyScore,
+        queryRelevance,
+        sentimentStrength,
+        finalScore: Number(finalScore.toFixed(4))
+    };
+}
+
+function sortArticles(articles = [], sortBy = "final-desc") {
+    const sorted = [...articles];
+
+    switch (sortBy) {
+        case "published-desc":
+            return sorted.sort((a, b) => Date.parse(b.publishedAt || "") - Date.parse(a.publishedAt || ""));
+        case "source-weight-desc":
+            return sorted.sort((a, b) => toNumber(b.influenceWeight, 1) - toNumber(a.influenceWeight, 1));
+        case "sentiment-desc":
+            return sorted.sort((a, b) => toNumber(b.sentimentScore, 0) - toNumber(a.sentimentScore, 0));
+        case "signal-desc":
+        case "final-desc":
+        default:
+            return sorted.sort((a, b) => toNumber(b.finalScore, 0) - toNumber(a.finalScore, 0));
+    }
+}
+
+function transformRawArticle(raw = {}, payload) {
+    const annotated = annotateSourceMetadata({
+        id: raw.id || raw.guid || raw.link || `${raw.source || "source"}-${raw.title || "title"}`,
+        title: normalizeText(raw.title),
+        summary: normalizeText(raw.summary || raw.description || raw.contentSnippet || ""),
+        url: normalizeText(raw.url || raw.link),
+        source: normalizeText(raw.source || raw.outlet || raw.publisher || ""),
+        publishedAt: raw.publishedAt || raw.pubDate || raw.isoDate || "",
+        sentiment: normalizeText(raw.sentiment || raw.sentimentLabel || "neutral").toLowerCase(),
+        sentimentScore: toNumber(raw.sentimentScore, 0),
+        mediaType: normalizeText(raw.mediaType || "news-article").toLowerCase(),
+        region: normalizeText(raw.region || ""),
+        country: normalizeText(raw.country || ""),
+        regions: Array.isArray(raw.regions) ? raw.regions : [],
+        countries: Array.isArray(raw.countries) ? raw.countries : []
+    });
+
+    return scoreArticle(annotated, payload);
+}
+
+function strictGeographicFilter(articles = [], payload) {
     return articles.filter((article) => {
-        return (
-            article &&
-            typeof article.title === "string" &&
-            typeof article.summary === "string" &&
-            article.title.trim().length > 10 &&
-            article.summary.trim().length > 10
-        );
+        const countryMatch = matchesSelectedCountries(article, payload);
+        const regionMatch = matchesSelectedRegions(article, payload);
+        const focusMatch = matchesPublicationFocus(article, payload);
+        const sentimentMatch = matchesSentimentFilter(article, payload);
+
+        return countryMatch && regionMatch && focusMatch && sentimentMatch;
     });
 }
 
-function deduplicateArticles(articles = []) {
-    const seen = new Set();
+function buildFallbackResults(payload) {
+    const base = [
+        {
+            title: `Regional coverage: ${payload.query || "selected topic"} in India`,
+            summary: "Fallback intelligence card showing India-aligned source coverage when the Python worker is unavailable.",
+            source: "NDTV",
+            url: "https://www.ndtv.com",
+            publishedAt: new Date().toISOString(),
+            sentiment: "neutral",
+            sentimentScore: 0.08,
+            mediaType: "news-article"
+        },
+        {
+            title: `Regional coverage: ${payload.query || "selected topic"} in Europe`,
+            summary: "Fallback intelligence card showing Europe-aligned source coverage when the Python worker is unavailable.",
+            source: "DW",
+            url: "https://www.dw.com",
+            publishedAt: new Date().toISOString(),
+            sentiment: "negative",
+            sentimentScore: -0.21,
+            mediaType: "news-article"
+        },
+        {
+            title: `Regional coverage: ${payload.query || "selected topic"} in the global press`,
+            summary: "Fallback intelligence card showing world/global source coverage when the Python worker is unavailable.",
+            source: "Reuters",
+            url: "https://www.reuters.com",
+            publishedAt: new Date().toISOString(),
+            sentiment: "neutral",
+            sentimentScore: 0.02,
+            mediaType: "news-article"
+        }
+    ];
 
-    return articles.filter((article) => {
-        const key = normalizeText(article.title || "").slice(0, 100);
-
-        if (!key) return false;
-        if (seen.has(key)) return false;
-
-        seen.add(key);
-        return true;
-    });
-}
-
-function computeFinalScore(article) {
-    const relevance = Number(article.relevanceScore || 50);
-    const freshness = Number(article.freshnessScore || 50);
-    const signal = Number(article.signalScore || 50);
-    const sentimentMagnitude = Math.abs(Number(article.sentimentScore || 0)) * 100;
-
-    return Math.round(
-        relevance * 0.4 +
-        freshness * 0.25 +
-        signal * 0.2 +
-        sentimentMagnitude * 0.15
+    return strictGeographicFilter(
+        base.map((item) => transformRawArticle(item, payload)),
+        payload
     );
 }
 
-function enhanceArticles(articles = [], query = "") {
-    return articles.map((article) => {
-        const relevanceScore = calculateRelevance(article, query);
-
-        return {
-            ...article,
-            relevanceScore,
-            finalScore: computeFinalScore({
-                ...article,
-                relevanceScore
-            })
-        };
-    });
-}
-
-/* ---------------------------
-   FILTER / SORT HELPERS
-----------------------------*/
-
-function collapseSentimentLabel(label = "") {
-    const normalized = String(label).toLowerCase();
-
-    if (normalized.includes("positive")) return "positive";
-    if (normalized.includes("negative")) return "negative";
-    return "neutral";
-}
-
-function filterBySentiment(results, sentimentFilter = "all") {
-    if (!sentimentFilter || sentimentFilter === "all") {
-        return results;
-    }
-
-    return results.filter((item) => {
-        const normalized = collapseSentimentLabel(item.sentimentLabel || "");
-        return normalized === sentimentFilter;
-    });
-}
-
-function compareDatesDesc(a, b) {
-    return new Date(b.publishedAt || 0) - new Date(a.publishedAt || 0);
-}
-
-function compareDatesAsc(a, b) {
-    return new Date(a.publishedAt || 0) - new Date(b.publishedAt || 0);
-}
-
-function sortResults(results, sortBy = "final-desc") {
-    const cloned = [...results];
-
-    switch (sortBy) {
-        case "signal-desc":
-            return cloned.sort((a, b) => (b.signalScore || 0) - (a.signalScore || 0));
-
-        case "signal-asc":
-            return cloned.sort((a, b) => (a.signalScore || 0) - (b.signalScore || 0));
-
-        case "sentiment-desc":
-            return cloned.sort((a, b) => (b.sentimentScore || 0) - (a.sentimentScore || 0));
-
-        case "sentiment-asc":
-            return cloned.sort((a, b) => (a.sentimentScore || 0) - (b.sentimentScore || 0));
-
-        case "freshness-desc":
-            return cloned.sort((a, b) => (b.freshnessScore || 0) - (a.freshnessScore || 0));
-
-        case "relevance-desc":
-            return cloned.sort((a, b) => (b.relevanceScore || 0) - (a.relevanceScore || 0));
-
-        case "published-desc":
-            return cloned.sort(compareDatesDesc);
-
-        case "published-asc":
-            return cloned.sort(compareDatesAsc);
-
-        case "source-asc":
-            return cloned.sort((a, b) => String(a.source || "").localeCompare(String(b.source || "")));
-
-        case "title-asc":
-            return cloned.sort((a, b) => String(a.title || "").localeCompare(String(b.title || "")));
-
-        case "final-desc":
-        default:
-            return cloned.sort((a, b) => (b.finalScore || 0) - (a.finalScore || 0));
-    }
-}
-
-/* ---------------------------
-   PYTHON WORKER
-----------------------------*/
-
 function runPythonWorker(payload) {
-    return new Promise((resolve, reject) => {
-        const workerPath = resolveWorkerPath();
-        const { command, argsPrefix } = resolvePythonInvocation();
-        const childArgs = [...argsPrefix, workerPath];
+    const pythonCommand = resolvePythonCommand();
+    const workerPath = resolveWorkerPath();
 
-        const child = spawn(command, childArgs, {
-            stdio: ["pipe", "pipe", "pipe"],
+    return new Promise((resolve, reject) => {
+        const child = spawn(pythonCommand, [workerPath], {
             env: {
                 ...process.env,
                 PYTHONIOENCODING: "utf-8"
-            }
+            },
+            stdio: ["pipe", "pipe", "pipe"]
         });
 
         let stdout = "";
         let stderr = "";
-        let finished = false;
+        let settled = false;
 
-        const timeoutHandle = setTimeout(() => {
-            if (finished) return;
-
-            finished = true;
-            child.kill("SIGTERM");
-            reject(new Error(`Python worker timed out after ${PYTHON_WORKER_TIMEOUT_MS}ms`));
+        const timeout = setTimeout(() => {
+            if (!settled) {
+                settled = true;
+                child.kill("SIGTERM");
+                reject(new Error(`Python worker timed out after ${PYTHON_WORKER_TIMEOUT_MS} ms`));
+            }
         }, PYTHON_WORKER_TIMEOUT_MS);
 
-        child.stdout.on("data", (data) => {
-            stdout += data.toString();
+        child.stdout.on("data", (chunk) => {
+            stdout += chunk.toString();
         });
 
-        child.stderr.on("data", (data) => {
-            stderr += data.toString();
+        child.stderr.on("data", (chunk) => {
+            stderr += chunk.toString();
         });
 
         child.on("error", (error) => {
-            if (finished) return;
-
-            finished = true;
-            clearTimeout(timeoutHandle);
-
-            reject(
-                new Error(
-                    `Failed to start Python worker using command "${command}": ${error.message}`
-                )
-            );
+            clearTimeout(timeout);
+            if (!settled) {
+                settled = true;
+                reject(error);
+            }
         });
 
         child.on("close", (code) => {
-            if (finished) return;
-
-            finished = true;
-            clearTimeout(timeoutHandle);
+            clearTimeout(timeout);
+            if (settled) {
+                return;
+            }
 
             if (code !== 0) {
-                return reject(
-                    new Error(
-                        `Python worker exited with code ${code}: ${stderr || "No stderr output"}`
-                    )
-                );
+                settled = true;
+                reject(new Error(stderr || `Python worker exited with code ${code}`));
+                return;
             }
 
-            try {
-                const parsed = JSON.parse(stdout);
-                resolve(parsed);
-            } catch (parseError) {
-                reject(
-                    new Error(
-                        `Failed to parse Python worker JSON: ${parseError.message}. Raw stdout: ${stdout}`
-                    )
-                );
+            const parsed = parseJsonSafe(stdout, null);
+
+            if (!parsed) {
+                settled = true;
+                reject(new Error(`Python worker returned invalid JSON. stderr=${stderr}`));
+                return;
             }
+
+            settled = true;
+            resolve(parsed);
         });
 
         child.stdin.write(JSON.stringify(payload));
@@ -343,57 +452,65 @@ function runPythonWorker(payload) {
     });
 }
 
-/* ---------------------------
-   MAIN SERVICE
-----------------------------*/
-
-async function getIntelligenceResults(rawPayload = {}) {
-    const payload = normalizePayload(rawPayload);
-
-    let workerOutput;
-    let usedFallback = false;
+async function generateIntelligence(payload = {}) {
+    const normalizedPayload = normalizePayload(payload);
 
     try {
-        workerOutput = await runPythonWorker(payload);
-    } catch (error) {
-        console.error("Python worker failed, switching to mock fallback:", error.message);
+        const workerResponse = await runPythonWorker(normalizedPayload);
+        const rawResults = Array.isArray(workerResponse.results)
+            ? workerResponse.results
+            : Array.isArray(workerResponse)
+                ? workerResponse
+                : [];
 
-        usedFallback = true;
-        workerOutput = {
+        const transformed = rawResults.map((item) => transformRawArticle(item, normalizedPayload));
+        const filtered = strictGeographicFilter(transformed, normalizedPayload);
+        const sorted = sortArticles(filtered, normalizedPayload.sortBy);
+
+        const finalResults = sorted.length ? sorted : buildFallbackResults(normalizedPayload);
+
+        return {
+            success: true,
+            mode: workerResponse.mode || "live",
+            query: normalizedPayload.query,
+            appliedFilters: {
+                regions: normalizedPayload.regions,
+                countries: normalizedPayload.countries,
+                publicationFocus: normalizedPayload.publicationFocus,
+                sentimentFilter: normalizedPayload.sentimentFilter
+            },
+            counts: {
+                raw: rawResults.length,
+                filtered: filtered.length,
+                returned: finalResults.length
+            },
+            results: finalResults
+        };
+    } catch (error) {
+        const fallbackResults = buildFallbackResults(normalizedPayload);
+
+        return {
             success: true,
             mode: "fallback",
-            source: "mock",
-            articles: buildMockFallback(payload.query)
+            query: normalizedPayload.query,
+            warning: error.message,
+            appliedFilters: {
+                regions: normalizedPayload.regions,
+                countries: normalizedPayload.countries,
+                publicationFocus: normalizedPayload.publicationFocus,
+                sentimentFilter: normalizedPayload.sentimentFilter
+            },
+            counts: {
+                raw: 0,
+                filtered: fallbackResults.length,
+                returned: fallbackResults.length
+            },
+            results: fallbackResults
         };
     }
-
-    let articles = Array.isArray(workerOutput.articles) ? workerOutput.articles : [];
-
-    articles = cleanArticles(articles);
-    articles = deduplicateArticles(articles);
-    articles = enhanceArticles(articles, payload.query);
-    articles = filterBySentiment(articles, payload.sentimentFilter);
-    articles = sortResults(articles, payload.sortBy);
-    articles = articles.slice(0, 10);
-
-    return {
-        query: payload.query,
-        source: usedFallback ? "mock-fallback" : workerOutput.source || "rss-live",
-        mode: usedFallback ? "fallback" : workerOutput.mode || "live",
-        total: articles.length,
-        results: articles,
-        meta: {
-            sortBy: payload.sortBy,
-            sentimentFilter: payload.sentimentFilter,
-            regions: payload.regions,
-            countries: payload.countries,
-            mediaTypes: payload.mediaTypes,
-            publicationFocus: payload.publicationFocus,
-            selectedTrend: payload.selectedTrend || null
-        }
-    };
 }
 
 module.exports = {
-    getIntelligenceResults
+    generateIntelligence,
+    normalizePayload
 };
