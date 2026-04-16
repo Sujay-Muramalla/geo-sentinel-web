@@ -16,99 +16,125 @@ function normalizePayload(payload = {}) {
     };
 }
 
-function resolvePythonCommand() {
-    return process.env.PYTHON_BIN || "python3";
-}
-
 function resolveWorkerPath() {
     return path.resolve(__dirname, "../python/rss_intelligence_worker.py");
+}
+
+function resolvePythonInvocation() {
+    const configured = process.env.PYTHON_BIN;
+
+    if (configured && configured.trim()) {
+        return {
+            command: configured.trim(),
+            argsPrefix: []
+        };
+    }
+
+    if (process.platform === "win32") {
+        return {
+            command: "py",
+            argsPrefix: ["-3"]
+        };
+    }
+
+    return {
+        command: "python3",
+        argsPrefix: []
+    };
 }
 
 /* ---------------------------
    GEO-39 CORE IMPROVEMENTS
 ----------------------------*/
 
-// Normalize text safely
 function normalizeText(text = "") {
-    return String(text).toLowerCase().replace(/[^a-z0-9 ]/g, " ");
+    return String(text)
+        .toLowerCase()
+        .replace(/[^a-z0-9 ]/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
 }
 
-// Basic keyword relevance scoring
 function calculateRelevance(article, query) {
     if (!query) return 50;
 
-    const q = normalizeText(query).split(" ").filter(Boolean);
-    const text = normalizeText(article.title + " " + article.summary);
+    const words = normalizeText(query).split(" ").filter(Boolean);
+    if (!words.length) return 50;
+
+    const articleText = normalizeText(`${article.title || ""} ${article.summary || ""}`);
 
     let matches = 0;
-    q.forEach(word => {
-        if (text.includes(word)) matches++;
-    });
+    for (const word of words) {
+        if (articleText.includes(word)) {
+            matches += 1;
+        }
+    }
 
-    return Math.min(100, Math.round((matches / q.length) * 100));
+    return Math.min(100, Math.round((matches / words.length) * 100));
 }
 
-// Remove weak / broken articles
 function cleanArticles(articles = []) {
-    return articles.filter(a =>
-        a &&
-        a.title &&
-        a.summary &&
-        a.title.length > 10
-    );
+    return articles.filter((article) => {
+        return (
+            article &&
+            typeof article.title === "string" &&
+            typeof article.summary === "string" &&
+            article.title.trim().length > 10 &&
+            article.summary.trim().length > 10
+        );
+    });
 }
 
-// Remove duplicates (same title similarity)
 function deduplicateArticles(articles = []) {
     const seen = new Set();
 
-    return articles.filter(a => {
-        const key = normalizeText(a.title).slice(0, 80);
+    return articles.filter((article) => {
+        const key = normalizeText(article.title || "").slice(0, 100);
 
+        if (!key) return false;
         if (seen.has(key)) return false;
+
         seen.add(key);
         return true;
     });
 }
 
-// Recalculate final score (weighted)
 function computeFinalScore(article) {
-    const relevance = article.relevanceScore || 50;
-    const freshness = article.freshnessScore || 50;
-    const sentiment = Math.abs(article.sentimentScore || 0) * 100;
-    const signal = article.signalScore || 50;
+    const relevance = Number(article.relevanceScore || 50);
+    const freshness = Number(article.freshnessScore || 50);
+    const signal = Number(article.signalScore || 50);
+    const sentimentMagnitude = Math.abs(Number(article.sentimentScore || 0)) * 100;
 
     return Math.round(
-        (relevance * 0.4) +
-        (freshness * 0.25) +
-        (signal * 0.2) +
-        (sentiment * 0.15)
+        relevance * 0.4 +
+        freshness * 0.25 +
+        signal * 0.2 +
+        sentimentMagnitude * 0.15
     );
 }
 
-function enhanceArticles(articles, query) {
-    return articles.map(a => {
-        const relevanceScore = calculateRelevance(a, query);
+function enhanceArticles(articles = [], query = "") {
+    return articles.map((article) => {
+        const relevanceScore = calculateRelevance(article, query);
 
-        const enhanced = {
-            ...a,
+        return {
+            ...article,
             relevanceScore,
             finalScore: computeFinalScore({
-                ...a,
+                ...article,
                 relevanceScore
             })
         };
-
-        return enhanced;
     });
 }
 
 /* ---------------------------
-   EXISTING FUNCTIONS
+   EXISTING FILTER/SORT HELPERS
 ----------------------------*/
 
 function collapseSentimentLabel(label = "") {
     const normalized = String(label).toLowerCase();
+
     if (normalized.includes("positive")) return "positive";
     if (normalized.includes("negative")) return "negative";
     return "neutral";
@@ -129,18 +155,43 @@ function compareDatesDesc(a, b) {
     return new Date(b.publishedAt || 0) - new Date(a.publishedAt || 0);
 }
 
+function compareDatesAsc(a, b) {
+    return new Date(a.publishedAt || 0) - new Date(b.publishedAt || 0);
+}
+
 function sortResults(results, sortBy = "final-desc") {
     const cloned = [...results];
 
     switch (sortBy) {
-        case "published-desc":
-            return cloned.sort(compareDatesDesc);
-
         case "signal-desc":
             return cloned.sort((a, b) => (b.signalScore || 0) - (a.signalScore || 0));
 
+        case "signal-asc":
+            return cloned.sort((a, b) => (a.signalScore || 0) - (b.signalScore || 0));
+
+        case "sentiment-desc":
+            return cloned.sort((a, b) => (b.sentimentScore || 0) - (a.sentimentScore || 0));
+
+        case "sentiment-asc":
+            return cloned.sort((a, b) => (a.sentimentScore || 0) - (b.sentimentScore || 0));
+
+        case "freshness-desc":
+            return cloned.sort((a, b) => (b.freshnessScore || 0) - (a.freshnessScore || 0));
+
         case "relevance-desc":
             return cloned.sort((a, b) => (b.relevanceScore || 0) - (a.relevanceScore || 0));
+
+        case "published-desc":
+            return cloned.sort(compareDatesDesc);
+
+        case "published-asc":
+            return cloned.sort(compareDatesAsc);
+
+        case "source-asc":
+            return cloned.sort((a, b) => String(a.source || "").localeCompare(String(b.source || "")));
+
+        case "title-asc":
+            return cloned.sort((a, b) => String(a.title || "").localeCompare(String(b.title || "")));
 
         case "final-desc":
         default:
@@ -154,10 +205,11 @@ function sortResults(results, sortBy = "final-desc") {
 
 function runPythonWorker(payload) {
     return new Promise((resolve, reject) => {
-        const pythonBin = resolvePythonCommand();
         const workerPath = resolveWorkerPath();
+        const { command, argsPrefix } = resolvePythonInvocation();
+        const childArgs = [...argsPrefix, workerPath];
 
-        const child = spawn(pythonBin, [workerPath], {
+        const child = spawn(command, childArgs, {
             stdio: ["pipe", "pipe", "pipe"],
             env: {
                 ...process.env,
@@ -185,20 +237,42 @@ function runPythonWorker(payload) {
             stderr += data.toString();
         });
 
+        child.on("error", (error) => {
+            if (finished) return;
+
+            finished = true;
+            clearTimeout(timeoutHandle);
+
+            reject(
+                new Error(
+                    `Failed to start Python worker using command "${command}": ${error.message}`
+                )
+            );
+        });
+
         child.on("close", (code) => {
             if (finished) return;
+
             finished = true;
             clearTimeout(timeoutHandle);
 
             if (code !== 0) {
-                return reject(new Error(`Python worker exited with code ${code}: ${stderr}`));
+                return reject(
+                    new Error(
+                        `Python worker exited with code ${code}: ${stderr || "No stderr output"}`
+                    )
+                );
             }
 
             try {
                 const parsed = JSON.parse(stdout);
                 resolve(parsed);
-            } catch (e) {
-                reject(new Error(`JSON parse failed: ${e.message}`));
+            } catch (parseError) {
+                reject(
+                    new Error(
+                        `Failed to parse Python worker JSON: ${parseError.message}. Raw stdout: ${stdout}`
+                    )
+                );
             }
         });
 
@@ -220,7 +294,7 @@ async function getIntelligenceResults(rawPayload = {}) {
     try {
         workerOutput = await runPythonWorker(payload);
     } catch (error) {
-        console.error("Python worker failed:", error.message);
+        console.error("Python worker failed, switching to mock fallback:", error.message);
 
         usedFallback = true;
         workerOutput = {
@@ -233,15 +307,11 @@ async function getIntelligenceResults(rawPayload = {}) {
 
     let articles = Array.isArray(workerOutput.articles) ? workerOutput.articles : [];
 
-    // GEO-39 PIPELINE
     articles = cleanArticles(articles);
     articles = deduplicateArticles(articles);
     articles = enhanceArticles(articles, payload.query);
-
     articles = filterBySentiment(articles, payload.sentimentFilter);
     articles = sortResults(articles, payload.sortBy);
-
-    // Limit results (UI friendly)
     articles = articles.slice(0, 10);
 
     return {
@@ -252,7 +322,12 @@ async function getIntelligenceResults(rawPayload = {}) {
         results: articles,
         meta: {
             sortBy: payload.sortBy,
-            sentimentFilter: payload.sentimentFilter
+            sentimentFilter: payload.sentimentFilter,
+            regions: payload.regions,
+            countries: payload.countries,
+            mediaTypes: payload.mediaTypes,
+            publicationFocus: payload.publicationFocus,
+            selectedTrend: payload.selectedTrend || null
         }
     };
 }
