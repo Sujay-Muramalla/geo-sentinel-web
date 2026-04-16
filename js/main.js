@@ -1,5 +1,5 @@
 document.addEventListener("DOMContentLoaded", () => {
-    const API_URL = "http://localhost:3000/api/intelligence";
+    const API_URL = "http://localhost:3000/api/intelligence/generate";
 
     const COUNTRY_SCOPE = {
         world: [
@@ -50,6 +50,48 @@ document.addEventListener("DOMContentLoaded", () => {
         results: []
     };
 
+    function normalizeUiText(value = "") {
+        return String(value).trim().toLowerCase().replace(/\s+/g, " ");
+    }
+
+    function getCheckboxesForFilterGroup(groupTitle) {
+        const groups = Array.from(document.querySelectorAll(".filter-group"));
+
+        const match = groups.find((group) => {
+            const titleText = normalizeUiText(group.textContent || "");
+            return titleText.includes(normalizeUiText(groupTitle));
+        });
+
+        return match ? Array.from(match.querySelectorAll("input[type='checkbox']")) : [];
+    }
+
+    function mapPublicationFocusValues(values = []) {
+        const normalized = (Array.isArray(values) ? values : [])
+            .map((value) => String(value || "").trim().toLowerCase());
+
+        if (!normalized.length) {
+            return ["international"];
+        }
+
+        if (normalized.includes("international")) {
+            return ["international"];
+        }
+
+        if (normalized.includes("international-publications")) {
+            return ["international"];
+        }
+
+        if (normalized.includes("regional")) {
+            return ["regional"];
+        }
+
+        if (normalized.includes("regional-publications")) {
+            return ["regional"];
+        }
+
+        return ["all"];
+    }
+
     const dom = {
         clearFiltersBtn: document.getElementById("clear-filters-btn"),
         scenarioInput: document.getElementById("scenario-command"),
@@ -63,7 +105,7 @@ document.addEventListener("DOMContentLoaded", () => {
         metricSourceSpread: document.getElementById("metric-source-spread"),
         resultsList: document.querySelector(".results-list"),
         resultsEmptyState: document.getElementById("results-empty-state"),
-        generateBtn: document.querySelector(".primary-action-btn"),
+        generateBtn: document.querySelector(".scenario-command-actions .primary-action-btn"),
         saveQueryBtn: document.querySelector(".secondary-action-btn"),
         exampleChips: Array.from(document.querySelectorAll(".example-chip")),
         trendSignalItems: Array.from(document.querySelectorAll(".trend-signal-item")),
@@ -75,14 +117,16 @@ document.addEventListener("DOMContentLoaded", () => {
         selectedCountries: document.getElementById("selected-countries"),
         sortResultsSelect: document.getElementById("sort-results-select"),
         sentimentRadios: Array.from(document.querySelectorAll("input[name='sentiment-filter']")),
-        regionCheckboxes: Array.from(document.querySelectorAll(".filter-group:nth-of-type(1) input[type='checkbox']")),
-        mediaCheckboxes: Array.from(document.querySelectorAll(".filter-group:nth-of-type(3) input[type='checkbox']")),
-        publicationCheckboxes: Array.from(document.querySelectorAll(".filter-group:nth-of-type(4) input[type='checkbox']"))
+        regionCheckboxes: getCheckboxesForFilterGroup("geographic scope"),
+        mediaCheckboxes: getCheckboxesForFilterGroup("media type"),
+        publicationCheckboxes: getCheckboxesForFilterGroup("publication focus")
     };
 
     init();
 
     function init() {
+        console.log("Generate button:", dom.generateBtn);
+
         bindExpandButtons();
         bindScenarioInput();
         bindGenerateAction();
@@ -119,6 +163,8 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function bindScenarioInput() {
+        if (!dom.scenarioInput) return;
+
         dom.scenarioInput.addEventListener("input", (event) => {
             state.query = event.target.value.trim();
             state.selectedTrend = state.query;
@@ -135,12 +181,22 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function bindGenerateAction() {
+        console.log("bindGenerateAction called");
+
+        if (!dom.generateBtn) {
+            console.error("❌ Generate button not found");
+            return;
+        }
+
         dom.generateBtn.addEventListener("click", async () => {
+            console.log("✅ Generate button clicked");
             await generateIntelligence();
         });
     }
 
     function bindClearFilters() {
+        if (!dom.clearFiltersBtn) return;
+
         dom.clearFiltersBtn.addEventListener("click", () => {
             resetAllFilters();
         });
@@ -150,7 +206,9 @@ document.addEventListener("DOMContentLoaded", () => {
         dom.exampleChips.forEach((chip) => {
             chip.addEventListener("click", async () => {
                 const query = chip.textContent.trim();
-                dom.scenarioInput.value = query;
+                if (dom.scenarioInput) {
+                    dom.scenarioInput.value = query;
+                }
                 state.query = query;
                 state.selectedTrend = query;
                 renderScopeChips();
@@ -164,7 +222,9 @@ document.addEventListener("DOMContentLoaded", () => {
         dom.trendSignalItems.forEach((item) => {
             item.addEventListener("click", async () => {
                 const query = item.dataset.trendQuery || item.textContent.trim();
-                dom.scenarioInput.value = query;
+                if (dom.scenarioInput) {
+                    dom.scenarioInput.value = query;
+                }
                 state.query = query;
                 state.selectedTrend = query;
 
@@ -179,13 +239,17 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function bindCountryDropdown() {
+        if (!dom.countryDropdownBtn || !dom.countryDropdown) return;
+
         dom.countryDropdownBtn.addEventListener("click", () => {
             dom.countryDropdown.classList.toggle("hidden");
         });
 
-        dom.countrySearchInput.addEventListener("input", () => {
-            renderCountryList(dom.countrySearchInput.value.trim().toLowerCase());
-        });
+        if (dom.countrySearchInput) {
+            dom.countrySearchInput.addEventListener("input", () => {
+                renderCountryList(dom.countrySearchInput.value.trim().toLowerCase());
+            });
+        }
 
         document.addEventListener("click", (event) => {
             const clickedInside =
@@ -202,13 +266,14 @@ document.addEventListener("DOMContentLoaded", () => {
         dom.regionCheckboxes.forEach((checkbox) => {
             checkbox.addEventListener("change", () => {
                 state.regions = getCheckedValues(dom.regionCheckboxes);
+
                 if (!state.regions.length) {
                     checkbox.checked = true;
                     state.regions = getCheckedValues(dom.regionCheckboxes);
                 }
 
                 pruneSelectedCountriesToScope();
-                renderCountryList(dom.countrySearchInput.value.trim().toLowerCase());
+                renderCountryList(dom.countrySearchInput?.value.trim().toLowerCase() || "");
                 renderSelectedCountries();
                 renderScopeChips();
                 renderResultsMiniSummary();
@@ -220,10 +285,12 @@ document.addEventListener("DOMContentLoaded", () => {
         dom.mediaCheckboxes.forEach((checkbox) => {
             checkbox.addEventListener("change", () => {
                 state.mediaTypes = getCheckedValues(dom.mediaCheckboxes);
+
                 if (!state.mediaTypes.length) {
                     checkbox.checked = true;
                     state.mediaTypes = getCheckedValues(dom.mediaCheckboxes);
                 }
+
                 renderScopeChips();
                 renderResultsMiniSummary();
             });
@@ -233,11 +300,7 @@ document.addEventListener("DOMContentLoaded", () => {
     function bindPublicationFilters() {
         dom.publicationCheckboxes.forEach((checkbox) => {
             checkbox.addEventListener("change", () => {
-                state.publicationFocus = getCheckedValues(dom.publicationCheckboxes);
-                if (!state.publicationFocus.length) {
-                    checkbox.checked = true;
-                    state.publicationFocus = getCheckedValues(dom.publicationCheckboxes);
-                }
+                state.publicationFocus = mapPublicationFocusValues(getCheckedValues(dom.publicationCheckboxes));
                 renderScopeChips();
                 renderResultsMiniSummary();
             });
@@ -255,6 +318,8 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function bindSortControl() {
+        if (!dom.sortResultsSelect) return;
+
         dom.sortResultsSelect.addEventListener("change", () => {
             state.sortBy = dom.sortResultsSelect.value || "final-desc";
             applyClientFiltersAndRender();
@@ -262,15 +327,15 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function syncStateFromUI() {
-        state.query = dom.scenarioInput.value.trim();
+        state.query = dom.scenarioInput ? dom.scenarioInput.value.trim() : "";
         state.regions = getCheckedValues(dom.regionCheckboxes);
         state.countries = [...state.countries];
         state.mediaTypes = getCheckedValues(dom.mediaCheckboxes);
-        state.publicationFocus = getCheckedValues(dom.publicationCheckboxes);
+        state.publicationFocus = mapPublicationFocusValues(getCheckedValues(dom.publicationCheckboxes));
 
         const checkedSentiment = dom.sentimentRadios.find((node) => node.checked);
-        state.sentimentFilter = checkedSentiment ? checkedSentiment.value : "all";
-        state.sortBy = dom.sortResultsSelect.value || "final-desc";
+        state.sentimentFilter = checkedSentiment ? checked.value : "all";
+        state.sortBy = dom.sortResultsSelect ? (dom.sortResultsSelect.value || "final-desc") : "final-desc";
 
         if (!state.regions.length) state.regions = ["world"];
         if (!state.mediaTypes.length) state.mediaTypes = ["newspapers", "news-channels"];
@@ -335,6 +400,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     async function generateIntelligence() {
+        console.log("🔥 generateIntelligence triggered");
         syncStateFromUI();
 
         if (!state.query) {
@@ -358,6 +424,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 selectedTrend: state.selectedTrend
             };
 
+            console.log("📤 Payload:", payload);
+
             const response = await fetch(API_URL, {
                 method: "POST",
                 headers: {
@@ -371,6 +439,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
             const data = await response.json();
+            console.log("📦 API response:", data);
 
             if (!data.success) {
                 throw new Error(data.message || "Backend returned unsuccessful response");
@@ -380,35 +449,51 @@ document.addEventListener("DOMContentLoaded", () => {
             applyClientFiltersAndRender(data);
         } catch (error) {
             console.error("Failed to generate intelligence:", error);
-            updateMiniSummary("Live request failed · check backend on localhost:3000");
             state.results = [];
-            renderResults([]);
+            if (dom.resultsList) {
+                dom.resultsList.innerHTML = "";
+            }
+            if (dom.resultsEmptyState) {
+                dom.resultsEmptyState.classList.remove("hidden");
+            }
+            renderToolbarFromResults([]);
+            updateMiniSummary(`Live request failed · ${error.message}`);
         } finally {
             setGenerateButtonState(false);
         }
     }
 
     function normalizeBackendResult(item) {
+        const sentimentScore = Number(item.sentimentScore || 0);
+        const finalScore = Number(item.finalScore || 0);
+        const signalScore = Number(item.signalScore || item.finalScore || 0);
+        const sourceRegion = item.sourceRegion || item.region || "Global";
+        const sourceCountry = item.sourceCountry || item.country || "Multiple";
+        const sourceType = item.mediaType || item.sourceType || "rss-live";
+
         return {
             id: item.id || `live-${Math.random().toString(36).slice(2, 10)}`,
             title: item.title || "Untitled result",
             source: item.source || "Unknown Source",
-            sourceType: item.sourceType || "rss-live",
+            sourceType,
             publishedAt: item.publishedAt || new Date().toISOString(),
             summary: item.summary || "No summary available.",
             url: item.url || "#",
-            sentimentLabel: normalizeSentimentLabel(item.sentimentLabel ?? item.sentimentScore),
-            sentimentScore: Number(item.sentimentScore || 0),
-            signalScore: Number(item.signalScore || 0),
-            relevanceScore: Number(item.relevanceScore || 0),
-            freshnessScore: Number(item.freshnessScore || 0),
-            finalScore: Number(item.finalScore || 0),
-            region: item.region || "Global",
-            country: item.country || "Multiple",
+            sentimentLabel: normalizeSentimentLabel(item.sentiment ?? item.sentimentLabel ?? sentimentScore),
+            sentimentScore,
+            signalScore,
+            relevanceScore: Number(item.queryRelevance || item.relevanceScore || 0),
+            freshnessScore: Number(item.recencyScore || item.freshnessScore || 0),
+            finalScore,
+            region: sourceRegion,
+            country: sourceCountry,
             topic: item.topic || state.query,
-            rawCountries: splitCountryString(item.country),
-            rawMediaTypes: item.sourceType ? [item.sourceType] : [],
-            rawFocus: []
+            rawCountries: splitCountryString(sourceCountry),
+            rawMediaTypes: sourceType ? [sourceType] : [],
+            rawFocus: item.publicationFocus ? [item.publicationFocus] : [],
+            sourceTier: item.sourceTier || "standard",
+            influenceWeight: Number(item.influenceWeight || 1),
+            domain: item.domain || ""
         };
     }
 
@@ -420,21 +505,26 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         filtered = sortResults(filtered, state.sortBy);
-
         renderResults(filtered, responseMeta);
     }
 
     function renderResults(results, responseMeta = null) {
+        if (!dom.resultsList) return;
+
         dom.resultsList.innerHTML = "";
 
         if (!results.length) {
-            dom.resultsEmptyState.classList.remove("hidden");
+            if (dom.resultsEmptyState) {
+                dom.resultsEmptyState.classList.remove("hidden");
+            }
             renderToolbarFromResults([]);
-            updateMiniSummary("0 sources · no matching results");
+            renderResultsMiniSummary([], responseMeta);
             return;
         }
 
-        dom.resultsEmptyState.classList.add("hidden");
+        if (dom.resultsEmptyState) {
+            dom.resultsEmptyState.classList.add("hidden");
+        }
 
         const fragment = document.createDocumentFragment();
 
@@ -485,6 +575,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 <div class="result-footer">
                     <span class="result-chip">${escapeHtml(shortTopic(item.topic || state.query || "Geo topic"))}</span>
                     <span class="result-chip">${escapeHtml(item.region || "Global")}</span>
+                    <span class="result-chip">${escapeHtml(humanize(item.sourceTier || "standard"))}</span>
                     <a
                         class="result-chip result-chip-link"
                         href="${escapeAttribute(item.url || "#")}"
@@ -522,18 +613,38 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function renderToolbarFromResults(results) {
-        dom.activeQueryLabel.textContent = state.query || "None";
-        dom.activeSortLabel.textContent = displaySortLabel(state.sortBy);
-        dom.dominantSentimentLabel.textContent = getDominantSentiment(results);
+        if (dom.activeQueryLabel) {
+            dom.activeQueryLabel.textContent = state.query || "None";
+        }
 
-        dom.metricSignalStrength.textContent = getAverageSignalText(results);
-        dom.metricDominantTone.textContent = getDominantTone(results);
-        dom.metricSourceSpread.textContent = String(results.length);
+        if (dom.activeSortLabel) {
+            dom.activeSortLabel.textContent = displaySortLabel(state.sortBy);
+        }
+
+        if (dom.dominantSentimentLabel) {
+            dom.dominantSentimentLabel.textContent = getDominantSentiment(results);
+        }
+
+        if (dom.metricSignalStrength) {
+            dom.metricSignalStrength.textContent = getAverageSignalText(results);
+        }
+
+        if (dom.metricDominantTone) {
+            dom.metricDominantTone.textContent = getDominantTone(results);
+        }
+
+        if (dom.metricSourceSpread) {
+            dom.metricSourceSpread.textContent = String(results.length);
+        }
     }
 
     function renderResultsMiniSummary(results = state.results, responseMeta = null) {
         if (!results.length) {
-            updateMiniSummary(`0 sources · no matching results · ${state.countries.length ? state.countries.join(", ") : "all countries"} · ${state.regions.join(", ")}`);
+            updateMiniSummary(
+                `0 sources · no matching results · ${
+                    state.countries.length ? state.countries.map(humanize).join(", ") : "all countries"
+                } · ${state.regions.map(humanize).join(", ")}`
+            );
             return;
         }
 
@@ -546,12 +657,19 @@ document.addEventListener("DOMContentLoaded", () => {
             ? state.regions.map(humanize).join(", ")
             : "world";
 
-        const sourceSuffix = responseMeta?.source ? ` · ${responseMeta.source}` : "";
+        const modeText = responseMeta?.mode ? ` · ${responseMeta.mode}` : "";
+        const countText = responseMeta?.counts?.returned !== undefined
+            ? ` · ${responseMeta.counts.returned} returned`
+            : "";
 
-        updateMiniSummary(`${results.length} sources · ${dominant} sentiment · ${countryText} · ${regionText}${sourceSuffix}`);
+        updateMiniSummary(
+            `${results.length} sources · ${dominant} sentiment · ${countryText} · ${regionText}${modeText}${countText}`
+        );
     }
 
     function renderScopeChips() {
+        if (!dom.scopeChips) return;
+
         const chips = [];
 
         if (state.query) chips.push(makeChip(`Topic:${state.query}`));
@@ -565,6 +683,8 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function renderCountryList(searchTerm = "") {
+        if (!dom.countryList) return;
+
         const scopedCountries = getScopedCountries();
         const filtered = scopedCountries.filter((country) =>
             humanize(country).toLowerCase().includes(searchTerm)
@@ -600,7 +720,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 renderSelectedCountries();
                 renderScopeChips();
                 renderResultsMiniSummary();
-                renderCountryList(dom.countrySearchInput.value.trim().toLowerCase());
+                renderCountryList(dom.countrySearchInput?.value.trim().toLowerCase() || "");
             });
 
             const span = document.createElement("span");
@@ -616,6 +736,8 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function renderSelectedCountries() {
+        if (!dom.selectedCountries) return;
+
         if (!state.countries.length) {
             dom.selectedCountries.innerHTML = `<p class="selected-countries-empty">No country selected</p>`;
             updateCountryButtonLabel();
@@ -633,7 +755,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 const country = button.dataset.country;
                 state.countries = state.countries.filter((item) => item !== country);
                 renderSelectedCountries();
-                renderCountryList(dom.countrySearchInput.value.trim().toLowerCase());
+                renderCountryList(dom.countrySearchInput?.value.trim().toLowerCase() || "");
                 renderScopeChips();
                 renderResultsMiniSummary();
             });
@@ -643,6 +765,8 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function updateCountryButtonLabel() {
+        if (!dom.countryDropdownBtn) return;
+
         if (!state.countries.length) {
             dom.countryDropdownBtn.textContent = "All countries (current scope)";
             return;
@@ -675,7 +799,10 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function resetAllFilters() {
-        dom.scenarioInput.value = "";
+        if (dom.scenarioInput) {
+            dom.scenarioInput.value = "";
+        }
+
         state.query = "";
         state.selectedTrend = "";
         state.countries = [];
@@ -690,16 +817,26 @@ document.addEventListener("DOMContentLoaded", () => {
         });
 
         dom.publicationCheckboxes.forEach((checkbox) => {
-            checkbox.checked = checkbox.value === "international";
+            const value = String(checkbox.value || "").toLowerCase();
+            checkbox.checked = value === "international" || value === "international-publications";
         });
 
         dom.sentimentRadios.forEach((radio) => {
             radio.checked = radio.value === "all";
         });
 
-        dom.sortResultsSelect.value = "final-desc";
-        dom.countrySearchInput.value = "";
-        dom.countryDropdown.classList.add("hidden");
+        if (dom.sortResultsSelect) {
+            dom.sortResultsSelect.value = "final-desc";
+        }
+
+        if (dom.countrySearchInput) {
+            dom.countrySearchInput.value = "";
+        }
+
+        if (dom.countryDropdown) {
+            dom.countryDropdown.classList.add("hidden");
+        }
+
         dom.trendSignalItems.forEach((node) => node.classList.remove("is-active"));
 
         syncStateFromUI();
@@ -716,12 +853,16 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function setGenerateButtonState(isLoading) {
+        if (!dom.generateBtn) return;
+
         dom.generateBtn.disabled = isLoading;
         dom.generateBtn.textContent = isLoading ? "Generating..." : "Generate Intelligence";
     }
 
     function updateMiniSummary(text) {
-        dom.resultsMiniSummary.textContent = text;
+        if (dom.resultsMiniSummary) {
+            dom.resultsMiniSummary.textContent = text;
+        }
     }
 
     function getCheckedValues(nodes) {
