@@ -1,1 +1,5 @@
 feedparser==6.0.12
+requests
+beautifulsoup4
+textblob
+nltk
