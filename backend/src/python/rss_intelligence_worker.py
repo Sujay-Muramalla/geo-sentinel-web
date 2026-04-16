@@ -1,316 +1,237 @@
 import json
-import math
 import re
 import sys
-import time
-import urllib.parse
-import urllib.request
-import xml.sax.saxutils as saxutils
+import traceback
+from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
-from typing import Any, Dict, List, Optional, Tuple
+from urllib.parse import urlparse
+from xml.etree import ElementTree as ET
 
-import feedparser
+import requests
 
-USER_AGENT = "Geo-Sentinel/1.0 (+RSS Intelligence Worker)"
-DEFAULT_HL = "en-US"
-DEFAULT_GL = "US"
-DEFAULT_CEID = "US:en"
-MAX_ARTICLES = 10
+USER_AGENT = "Geo-Sentinel/1.0 (+RSS intelligence worker)"
+REQUEST_TIMEOUT = 12
 
-IGNORE_KEYWORDS = [
-    "podcast",
-    "bbc news app",
-    "5 live",
-    "sounds",
-    "listen live"
+RSS_FEEDS = [
+    # Global / International
+    {"source": "Reuters", "url": "https://feeds.reuters.com/reuters/worldNews", "mediaType": "news-article"},
+    {"source": "BBC", "url": "http://feeds.bbci.co.uk/news/world/rss.xml", "mediaType": "news-article"},
+    {"source": "CNN", "url": "http://rss.cnn.com/rss/edition_world.rss", "mediaType": "news-article"},
+    {"source": "Al Jazeera", "url": "https://www.aljazeera.com/xml/rss/all.xml", "mediaType": "news-article"},
+    {"source": "DW", "url": "https://rss.dw.com/xml/rss-en-world", "mediaType": "news-article"},
+    {"source": "France 24", "url": "https://www.france24.com/en/rss", "mediaType": "news-article"},
+
+    # India
+    {"source": "NDTV", "url": "https://feeds.feedburner.com/ndtvnews-top-stories", "mediaType": "news-article"},
+    {"source": "Republic TV", "url": "https://www.republicworld.com/rss/feed.xml", "mediaType": "news-article"},
+    {"source": "Times of India", "url": "https://timesofindia.indiatimes.com/rssfeeds/-2128936835.cms", "mediaType": "news-article"},
+    {"source": "The Hindu", "url": "https://www.thehindu.com/news/international/feeder/default.rss", "mediaType": "news-article"},
+
+    # Europe
+    {"source": "The Guardian", "url": "https://www.theguardian.com/world/rss", "mediaType": "news-article"},
+    {"source": "Euronews", "url": "https://www.euronews.com/rss?level=theme&name=news", "mediaType": "news-article"},
+
+    # Asia
+    {"source": "SCMP", "url": "https://www.scmp.com/rss/91/feed", "mediaType": "news-article"},
+    {"source": "CNA", "url": "https://www.channelnewsasia.com/rssfeeds/8395986", "mediaType": "news-article"},
+    {"source": "Nikkei Asia", "url": "https://asia.nikkei.com/rss/feed/nar", "mediaType": "news-article"},
 ]
-
-PUBLISHER_FEEDS = [
-    "https://feeds.bbci.co.uk/news/world/rss.xml",
-    "https://rss.nytimes.com/services/xml/rss/nyt/World.xml",
-    "https://feeds.reuters.com/Reuters/worldNews"
-]
-
-
-def read_stdin_payload() -> Dict[str, Any]:
-    raw = sys.stdin.read().strip()
-    if not raw:
-        return {}
-    try:
-        return json.loads(raw)
-    except json.JSONDecodeError:
-        return {}
-
-
-def safe_text(value: Any) -> str:
-    if value is None:
-        return ""
-    return str(value).strip()
-
-
-def build_google_news_rss_url(query: str, hl: str = DEFAULT_HL, gl: str = DEFAULT_GL, ceid: str = DEFAULT_CEID) -> str:
-    encoded_query = urllib.parse.quote_plus(query)
-    return f"https://news.google.com/rss/search?q={encoded_query}&hl={hl}&gl={gl}&ceid={ceid}"
-
-
-def fetch_feed(url: str) -> feedparser.FeedParserDict:
-    request = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
-    with urllib.request.urlopen(request, timeout=15) as response:
-        content = response.read()
-    return feedparser.parse(content)
-
-
-def strip_html(text: str) -> str:
-    text = re.sub(r"<[^>]+>", " ", safe_text(text))
-    return re.sub(r"\s+", " ", text).strip()
-
-
-def extract_summary(entry: Dict[str, Any]) -> str:
-    summary = safe_text(entry.get("summary") or entry.get("description"))
-    return strip_html(summary)
-
-
-def extract_source(entry: Dict[str, Any]) -> str:
-    source = entry.get("source")
-    if isinstance(source, dict):
-        return safe_text(source.get("title")) or "Unknown Source"
-    return "Unknown Source"
-
-
-def parse_published(entry: Dict[str, Any]) -> Tuple[str, float]:
-    published_raw = safe_text(entry.get("published") or entry.get("updated"))
-    if not published_raw:
-        now_iso = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-        return now_iso, time.time()
-
-    try:
-        dt = parsedate_to_datetime(published_raw)
-        timestamp = dt.timestamp()
-        iso_value = dt.isoformat()
-        return iso_value, timestamp
-    except Exception:
-        now_iso = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
-        return now_iso, time.time()
-
-
-def normalize_label(score: float) -> str:
-    if score >= 0.35:
-        return "positive"
-    if score >= 0.08:
-        return "slightly-positive"
-    if score <= -0.35:
-        return "negative"
-    if score <= -0.08:
-        return "slightly-negative"
-    return "neutral"
-
 
 POSITIVE_WORDS = {
-    "progress", "agreement", "deal", "growth", "support", "stable", "success",
-    "cooperation", "recover", "recovery", "calm", "improve", "improvement",
-    "breakthrough", "win", "secure", "secured"
+    "success", "peace", "growth", "agreement", "win", "stable", "progress",
+    "improve", "strong", "support", "cooperation", "benefit", "recover"
 }
 
 NEGATIVE_WORDS = {
-    "war", "attack", "strike", "crisis", "sanction", "conflict", "tension",
-    "collapse", "fear", "risk", "violent", "violence", "threat", "threatens",
-    "escalation", "escalate", "missile", "dead", "killed", "injured",
-    "instability", "panic", "dispute"
+    "war", "conflict", "attack", "strike", "sanction", "crisis", "protest",
+    "collapse", "threat", "violence", "kill", "killed", "dead", "injured",
+    "tension", "tensions", "retaliation", "escalation"
 }
 
 
-def score_sentiment(text: str) -> float:
-    words = re.findall(r"\b[a-zA-Z\-]+\b", text.lower())
+def normalize_text(value):
+    return str(value or "").strip()
+
+
+def parse_iso_or_rfc_date(value):
+    value = normalize_text(value)
+    if not value:
+        return ""
+
+    try:
+        dt = parsedate_to_datetime(value)
+        return dt.astimezone(timezone.utc).isoformat()
+    except Exception:
+        pass
+
+    try:
+        dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        return dt.astimezone(timezone.utc).isoformat()
+    except Exception:
+        return ""
+
+
+def simple_sentiment(text):
+    text = normalize_text(text).lower()
+    if not text:
+        return "neutral", 0.0
+
+    words = re.findall(r"[a-zA-Z][a-zA-Z\-]+", text)
     if not words:
-        return 0.0
+        return "neutral", 0.0
 
     positive_hits = sum(1 for word in words if word in POSITIVE_WORDS)
     negative_hits = sum(1 for word in words if word in NEGATIVE_WORDS)
 
-    raw_score = (positive_hits - negative_hits) / max(len(words), 8)
-    bounded = max(min(raw_score * 6, 1.0), -1.0)
-    return round(bounded, 3)
+    score = 0.0
+    if positive_hits or negative_hits:
+        score = (positive_hits - negative_hits) / max(1, positive_hits + negative_hits)
+
+    if score > 0.12:
+        label = "positive"
+    elif score < -0.12:
+        label = "negative"
+    else:
+        label = "neutral"
+
+    return label, round(score, 4)
 
 
-def compute_relevance_score(query: str, title: str, summary: str) -> int:
-    query_terms = [term.lower() for term in re.findall(r"\w+", query) if len(term) > 2]
-    if not query_terms:
-        return 50
-
-    haystack = f"{title} {summary}".lower()
-    hits = sum(1 for term in query_terms if term in haystack)
-    ratio = hits / len(query_terms)
-    return int(round(min(max(ratio * 100, 25), 100)))
-
-
-def compute_freshness_score(published_ts: float) -> int:
-    age_hours = max((time.time() - published_ts) / 3600, 0)
-    decay = math.exp(-age_hours / 48)
-    return int(round(decay * 100))
+def fetch_feed(url):
+    response = requests.get(
+        url,
+        headers={"User-Agent": USER_AGENT},
+        timeout=REQUEST_TIMEOUT
+    )
+    response.raise_for_status()
+    return response.text
 
 
-def compute_signal_score(sentiment_score: float, relevance_score: int, freshness_score: int) -> int:
-    intensity = abs(sentiment_score) * 100
-    value = (0.45 * relevance_score) + (0.35 * freshness_score) + (0.20 * intensity)
-    return int(round(min(value, 100)))
+def parse_rss(xml_text, source_name, media_type):
+    items = []
 
+    root = ET.fromstring(xml_text)
 
-def compute_final_score(signal_score: int, relevance_score: int, freshness_score: int) -> int:
-    value = (0.50 * signal_score) + (0.30 * relevance_score) + (0.20 * freshness_score)
-    return int(round(min(value, 100)))
+    for item in root.findall(".//item"):
+        title = normalize_text(item.findtext("title"))
+        link = normalize_text(item.findtext("link"))
+        description = normalize_text(item.findtext("description"))
+        pub_date = normalize_text(item.findtext("pubDate"))
 
-
-def infer_region_and_country(payload: Dict[str, Any]) -> Tuple[str, str]:
-    countries = payload.get("countries") or []
-    regions = payload.get("regions") or []
-
-    country = countries[0] if countries else "Multiple"
-    region = regions[0].title() if regions else "Global"
-
-    if region.lower() == "world":
-        region = "Global"
-
-    return region, country
-
-
-def should_ignore(title: str, summary: str) -> bool:
-    text = f"{title} {summary}".lower()
-    return any(keyword in text for keyword in IGNORE_KEYWORDS)
-
-
-def dedupe_articles(articles: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    seen = set()
-    unique = []
-
-    for article in articles:
-        key = (
-            safe_text(article.get("url")).lower(),
-            safe_text(article.get("title")).lower()
-        )
-        if key in seen:
+        if not title or not link:
             continue
-        seen.add(key)
-        unique.append(article)
 
-    return unique
+        sentiment_label, sentiment_score = simple_sentiment(f"{title} {description}")
 
+        items.append({
+            "title": title,
+            "summary": description,
+            "url": link,
+            "source": source_name,
+            "publishedAt": parse_iso_or_rfc_date(pub_date),
+            "sentiment": sentiment_label,
+            "sentimentScore": sentiment_score,
+            "mediaType": media_type
+        })
 
-def normalize_entry(entry: Dict[str, Any], query: str, payload: Dict[str, Any], source_type: str) -> Optional[Dict[str, Any]]:
-    title = saxutils.unescape(safe_text(entry.get("title")))
-    summary = extract_summary(entry)
-    url = safe_text(entry.get("link"))
-    source = extract_source(entry)
-    published_at, published_ts = parse_published(entry)
-    region, country = infer_region_and_country(payload)
-
-    if not title or not url:
-        return None
-
-    if should_ignore(title, summary):
-        return None
-
-    sentiment_text = f"{title}. {summary}"
-    sentiment_score = score_sentiment(sentiment_text)
-    sentiment_label = normalize_label(sentiment_score)
-    relevance_score = compute_relevance_score(query, title, summary)
-    freshness_score = compute_freshness_score(published_ts)
-    signal_score = compute_signal_score(sentiment_score, relevance_score, freshness_score)
-    final_score = compute_final_score(signal_score, relevance_score, freshness_score)
-
-    return {
-        "id": f"{source_type}-{abs(hash(url))}",
-        "title": title,
-        "source": source,
-        "sourceType": source_type,
-        "publishedAt": published_at,
-        "summary": summary[:280],
-        "url": url,
-        "sentimentLabel": sentiment_label,
-        "sentimentScore": sentiment_score,
-        "signalScore": signal_score,
-        "relevanceScore": relevance_score,
-        "freshnessScore": freshness_score,
-        "finalScore": final_score,
-        "region": region,
-        "country": country,
-        "topic": query
-    }
+    return items
 
 
-def fetch_articles_from_google_news(query: str, payload: Dict[str, Any]) -> List[Dict[str, Any]]:
-    url = build_google_news_rss_url(query)
-    parsed = fetch_feed(url)
-    articles: List[Dict[str, Any]] = []
+def term_match_score(query, text):
+    query = normalize_text(query).lower()
+    text = normalize_text(text).lower()
 
-    for entry in parsed.entries:
-        normalized = normalize_entry(entry, query, payload, "google-news-rss")
-        if normalized:
-            articles.append(normalized)
+    if not query:
+        return 1.0
 
-    return articles
+    terms = [term for term in re.split(r"\s+", query) if len(term) > 2]
+    if not terms:
+        return 1.0
+
+    matched = sum(1 for term in terms if term in text)
+    return matched / max(1, len(terms))
 
 
-def fetch_articles_from_publishers(query: str, payload: Dict[str, Any]) -> List[Dict[str, Any]]:
-    collected: List[Dict[str, Any]] = []
-    query_terms = [term.lower() for term in re.findall(r"\w+", query) if len(term) > 2]
+def filter_by_query(items, query):
+    if not normalize_text(query):
+        return items
 
-    for feed_url in PUBLISHER_FEEDS:
+    results = []
+    for item in items:
+        haystack = f"{item.get('title', '')} {item.get('summary', '')}"
+        score = term_match_score(query, haystack)
+        if score > 0:
+            item["queryMatchScore"] = round(score, 4)
+            results.append(item)
+
+    return results
+
+
+def rank_items(items, query):
+    ranked = []
+
+    for item in items:
+        query_score = item.get("queryMatchScore", 0.0)
+        sentiment_score = abs(float(item.get("sentimentScore", 0.0)))
+
+        recency_score = 0.1
+        published_at = normalize_text(item.get("publishedAt"))
+        if published_at:
+            try:
+                dt = datetime.fromisoformat(published_at.replace("Z", "+00:00"))
+                age_hours = max(0, (datetime.now(timezone.utc) - dt).total_seconds() / 3600)
+                if age_hours <= 6:
+                    recency_score = 1.0
+                elif age_hours <= 24:
+                    recency_score = 0.8
+                elif age_hours <= 72:
+                    recency_score = 0.55
+                else:
+                    recency_score = 0.25
+            except Exception:
+                pass
+
+        score = (query_score * 2.5) + (recency_score * 1.2) + (sentiment_score * 0.2)
+        item["workerScore"] = round(score, 4)
+        ranked.append(item)
+
+    ranked.sort(key=lambda x: x.get("workerScore", 0), reverse=True)
+    return ranked[:40]
+
+
+def main():
+    raw_input = sys.stdin.read()
+    payload = json.loads(raw_input or "{}")
+
+    query = normalize_text(payload.get("query") or payload.get("selectedTrend") or "")
+    results = []
+
+    for feed in RSS_FEEDS:
         try:
-            parsed = fetch_feed(feed_url)
-            for entry in parsed.entries:
-                title = safe_text(entry.get("title"))
-                summary = extract_summary(entry)
-                haystack = f"{title} {summary}".lower()
-
-                if query_terms and not any(term in haystack for term in query_terms):
-                    continue
-
-                normalized = normalize_entry(entry, query, payload, "publisher-rss")
-                if normalized:
-                    collected.append(normalized)
+            xml_text = fetch_feed(feed["url"])
+            parsed_items = parse_rss(xml_text, feed["source"], feed["mediaType"])
+            results.extend(parsed_items)
         except Exception:
             continue
 
-    return collected
+    filtered = filter_by_query(results, query)
+    ranked = rank_items(filtered, query)
 
+    response = {
+        "mode": "live",
+        "results": ranked
+    }
 
-def main() -> None:
-    payload = read_stdin_payload()
-    query = safe_text(payload.get("query"))
-
-    if not query:
-        print(json.dumps({
-            "success": True,
-            "mode": "empty",
-            "source": "none",
-            "articles": []
-        }))
-        return
-
-    try:
-        google_articles = fetch_articles_from_google_news(query, payload)
-        publisher_articles = fetch_articles_from_publishers(query, payload)
-
-        merged = dedupe_articles(google_articles + publisher_articles)
-        merged.sort(key=lambda item: item.get("finalScore", 0), reverse=True)
-        merged = merged[:MAX_ARTICLES]
-
-        print(json.dumps({
-            "success": True,
-            "mode": "live",
-            "source": "rss-live",
-            "articles": merged
-        }))
-    except Exception as exc:
-        print(json.dumps({
-            "success": False,
-            "mode": "error",
-            "source": "rss-live",
-            "articles": [],
-            "error": str(exc)
-        }))
-        sys.exit(1)
+    sys.stdout.write(json.dumps(response, ensure_ascii=False))
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as exc:
+        error_response = {
+            "mode": "error",
+            "error": str(exc),
+            "trace": traceback.format_exc()
+        }
+        sys.stdout.write(json.dumps(error_response, ensure_ascii=False))

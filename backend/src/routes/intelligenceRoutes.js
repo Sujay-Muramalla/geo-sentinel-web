@@ -1,10 +1,8 @@
 const express = require("express");
-const {
-    generateIntelligence
-} = require("../controllers/intelligenceController");
+const { handleGenerateIntelligence } = require("../controllers/intelligenceController");
 
 const router = express.Router();
 
-router.post("/", generateIntelligence);
+router.post("/generate", handleGenerateIntelligence);
 
 module.exports = router;
