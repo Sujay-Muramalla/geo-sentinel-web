@@ -43,8 +43,70 @@ function resolvePythonInvocation() {
     };
 }
 
+function buildMockFallback(query) {
+    const safeQuery = query || "global tensions";
+    const now = Date.now();
+
+    return [
+        {
+            id: `mock-1-${now}`,
+            title: `Fallback intelligence: ${safeQuery} remains active across multiple regions`,
+            source: "Geo-Sentinel Fallback Feed",
+            sourceType: "mock",
+            publishedAt: new Date(now).toISOString(),
+            summary: `Fallback result shown because the live Python RSS worker was unavailable while processing "${safeQuery}".`,
+            url: "https://news.google.com/",
+            sentimentLabel: "neutral",
+            sentimentScore: 0,
+            signalScore: 68,
+            relevanceScore: 84,
+            freshnessScore: 72,
+            finalScore: 77,
+            region: "Global",
+            country: "Multiple",
+            topic: safeQuery
+        },
+        {
+            id: `mock-2-${now}`,
+            title: `${safeQuery} continues to drive policy, security, and market narratives`,
+            source: "Geo-Sentinel Fallback Feed",
+            sourceType: "mock",
+            publishedAt: new Date(now - 60 * 60 * 1000).toISOString(),
+            summary: `Fallback intelligence keeps the interface responsive while the live ingestion layer recovers.`,
+            url: "https://news.google.com/",
+            sentimentLabel: "slightly-negative",
+            sentimentScore: -0.18,
+            signalScore: 64,
+            relevanceScore: 80,
+            freshnessScore: 66,
+            finalScore: 71,
+            region: "Global",
+            country: "Multiple",
+            topic: safeQuery
+        },
+        {
+            id: `mock-3-${now}`,
+            title: `Analysts continue monitoring escalation risks tied to ${safeQuery}`,
+            source: "Geo-Sentinel Fallback Feed",
+            sourceType: "mock",
+            publishedAt: new Date(now - 2 * 60 * 60 * 1000).toISOString(),
+            summary: `This fallback card is intended to preserve a useful UX when live RSS sources fail temporarily.`,
+            url: "https://news.google.com/",
+            sentimentLabel: "negative",
+            sentimentScore: -0.31,
+            signalScore: 61,
+            relevanceScore: 78,
+            freshnessScore: 61,
+            finalScore: 67,
+            region: "Global",
+            country: "Multiple",
+            topic: safeQuery
+        }
+    ];
+}
+
 /* ---------------------------
-   GEO-39 CORE IMPROVEMENTS
+   GEO-39 QUALITY HELPERS
 ----------------------------*/
 
 function normalizeText(text = "") {
@@ -129,7 +191,7 @@ function enhanceArticles(articles = [], query = "") {
 }
 
 /* ---------------------------
-   EXISTING FILTER/SORT HELPERS
+   FILTER / SORT HELPERS
 ----------------------------*/
 
 function collapseSentimentLabel(label = "") {
@@ -301,7 +363,7 @@ async function getIntelligenceResults(rawPayload = {}) {
             success: true,
             mode: "fallback",
             source: "mock",
-            articles: []
+            articles: buildMockFallback(payload.query)
         };
     }
 
