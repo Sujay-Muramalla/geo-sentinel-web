@@ -1,269 +1,248 @@
 const path = require("path");
 const { spawn } = require("child_process");
-const mockIntelligenceData = require("../data/mockIntelligenceData");
 
-const PYTHON_BIN = process.env.PYTHON_BIN || "python3";
-const PYTHON_SCRIPT_PATH = path.resolve(
-    __dirname,
-    "../../../sentiment-engine/analyze.py"
-    );
-    
-    function normalizeDataset(source) {
-        if (Array.isArray(source)) {
-            return source;
+const PYTHON_WORKER_TIMEOUT_MS = Number(process.env.PYTHON_WORKER_TIMEOUT_MS || 20000);
+
+function normalizePayload(payload = {}) {
+    return {
+        query: typeof payload.query === "string" ? payload.query.trim() : "",
+        regions: Array.isArray(payload.regions) ? payload.regions : ["world"],
+        countries: Array.isArray(payload.countries) ? payload.countries : [],
+        mediaTypes: Array.isArray(payload.mediaTypes) ? payload.mediaTypes : ["newspapers", "news-channels"],
+        publicationFocus: Array.isArray(payload.publicationFocus) ? payload.publicationFocus : ["international"],
+        sentimentFilter: payload.sentimentFilter || "all",
+        sortBy: payload.sortBy || "final-desc",
+        selectedTrend: payload.selectedTrend || ""
+    };
+}
+
+function resolvePythonCommand() {
+    return process.env.PYTHON_BIN || "python3";
+}
+
+function resolveWorkerPath() {
+    return path.resolve(__dirname, "../python/rss_intelligence_worker.py");
+}
+
+function buildMockFallback(query) {
+    const safeQuery = query || "global tensions";
+
+    return [
+        {
+            id: `mock-1-${Date.now()}`,
+            title: `Live feed fallback: ${safeQuery} remains volatile across multiple regions`,
+            source: "Mock Intelligence Feed",
+            sourceType: "mock",
+            publishedAt: new Date().toISOString(),
+            summary: `Fallback intelligence result used because live RSS returned no stable article set for "${safeQuery}".`,
+            url: "https://news.google.com/",
+            sentimentLabel: "neutral",
+            sentimentScore: 0,
+            signalScore: 67,
+            relevanceScore: 82,
+            freshnessScore: 70,
+            finalScore: 75,
+            region: "Global",
+            country: "Multiple",
+            topic: safeQuery
+        },
+        {
+            id: `mock-2-${Date.now()}`,
+            title: `Policy and security narratives continue to shape the ${safeQuery} storyline`,
+            source: "Mock Intelligence Feed",
+            sourceType: "mock",
+            publishedAt: new Date(Date.now() - 3600 * 1000).toISOString(),
+            summary: `Fallback intelligence keeps the frontend responsive while the ingestion layer retries live feeds.`,
+            url: "https://news.google.com/",
+            sentimentLabel: "slightly-negative",
+            sentimentScore: -0.18,
+            signalScore: 61,
+            relevanceScore: 78,
+            freshnessScore: 64,
+            finalScore: 69,
+            region: "Global",
+            country: "Multiple",
+            topic: safeQuery
         }
-        
-        if (Array.isArray(source?.results)) {
-            return source.results;
-        }
-        
-        if (Array.isArray(source?.items)) {
-            return source.items;
-        }
-        
-        if (Array.isArray(source?.data)) {
-            return source.data;
-        }
-        
-        if (Array.isArray(source?.articles)) {
-            return source.articles;
-        }
-        
-        return [];
+    ];
+}
+
+function collapseSentimentLabel(label = "") {
+    const normalized = String(label).toLowerCase();
+
+    if (normalized.includes("positive")) return "positive";
+    if (normalized.includes("negative")) return "negative";
+    return "neutral";
+}
+
+function filterBySentiment(results, sentimentFilter = "all") {
+    if (!sentimentFilter || sentimentFilter === "all") {
+        return results;
     }
-    
-    function runPythonSentiment(text) {
-        return new Promise((resolve, reject) => {
-            const safeText = typeof text === "string" ? text.trim() : "";
-            
-            if (!safeText) {
-                return resolve({
-                    sentiment: "neutral",
-                    score: 0,
-                    breakdown: {
-                        neg: 0,
-                        neu: 1,
-                        pos: 0,
-                        compound: 0
-                    }
-                });
+
+    return results.filter((item) => {
+        const normalized = collapseSentimentLabel(item.sentimentLabel || "");
+        return normalized === sentimentFilter;
+    });
+}
+
+function compareDatesDesc(a, b) {
+    return new Date(b.publishedAt || 0) - new Date(a.publishedAt || 0);
+}
+
+function compareDatesAsc(a, b) {
+    return new Date(a.publishedAt || 0) - new Date(b.publishedAt || 0);
+}
+
+function sortResults(results, sortBy = "final-desc") {
+    const cloned = [...results];
+
+    switch (sortBy) {
+        case "signal-desc":
+            return cloned.sort((a, b) => (b.signalScore || 0) - (a.signalScore || 0));
+
+        case "signal-asc":
+            return cloned.sort((a, b) => (a.signalScore || 0) - (b.signalScore || 0));
+
+        case "sentiment-desc":
+            return cloned.sort((a, b) => (b.sentimentScore || 0) - (a.sentimentScore || 0));
+
+        case "sentiment-asc":
+            return cloned.sort((a, b) => (a.sentimentScore || 0) - (b.sentimentScore || 0));
+
+        case "freshness-desc":
+            return cloned.sort((a, b) => (b.freshnessScore || 0) - (a.freshnessScore || 0));
+
+        case "relevance-desc":
+            return cloned.sort((a, b) => (b.relevanceScore || 0) - (a.relevanceScore || 0));
+
+        case "published-desc":
+            return cloned.sort(compareDatesDesc);
+
+        case "published-asc":
+            return cloned.sort(compareDatesAsc);
+
+        case "source-asc":
+            return cloned.sort((a, b) => String(a.source || "").localeCompare(String(b.source || "")));
+
+        case "title-asc":
+            return cloned.sort((a, b) => String(a.title || "").localeCompare(String(b.title || "")));
+
+        case "final-desc":
+        default:
+            return cloned.sort((a, b) => (b.finalScore || 0) - (a.finalScore || 0));
+    }
+}
+
+function runPythonWorker(payload) {
+    return new Promise((resolve, reject) => {
+        const pythonBin = resolvePythonCommand();
+        const workerPath = resolveWorkerPath();
+
+        const child = spawn(pythonBin, [workerPath], {
+            stdio: ["pipe", "pipe", "pipe"],
+            env: {
+                ...process.env,
+                PYTHONIOENCODING: "utf-8"
             }
-            
-            const python = spawn(PYTHON_BIN, [PYTHON_SCRIPT_PATH, safeText], {
-                stdio: ["ignore", "pipe", "pipe"]
-            });
-            
-            let stdout = "";
-            let stderr = "";
-            
-            python.stdout.on("data", (chunk) => {
-                stdout += chunk.toString();
-            });
-            
-            python.stderr.on("data", (chunk) => {
-                stderr += chunk.toString();
-            });
-            
-            python.on("error", (error) => {
-                reject(new Error(`Failed to start Python process: ${error.message}`));
-            });
-            
-            python.on("close", (code) => {
-                if (code !== 0) {
-                    return reject(
-                        new Error(`Python script exited with code ${code}. ${stderr.trim()}`)
-                        );
-                    }
-                    
-                    try {
-                        const parsed = JSON.parse(stdout.trim());
-                        resolve(parsed);
-                    } catch (error) {
-                        reject(
-                            new Error(`Invalid JSON from Python script: ${stdout.trim()}`)
-                            );
-                        }
-                    });
-                });
+        });
+
+        let stdout = "";
+        let stderr = "";
+        let finished = false;
+
+        const timeoutHandle = setTimeout(() => {
+            if (finished) return;
+
+            finished = true;
+            child.kill("SIGTERM");
+            reject(new Error(`Python worker timed out after ${PYTHON_WORKER_TIMEOUT_MS}ms`));
+        }, PYTHON_WORKER_TIMEOUT_MS);
+
+        child.stdout.on("data", (data) => {
+            stdout += data.toString();
+        });
+
+        child.stderr.on("data", (data) => {
+            stderr += data.toString();
+        });
+
+        child.on("error", (error) => {
+            if (finished) return;
+            finished = true;
+            clearTimeout(timeoutHandle);
+            reject(new Error(`Failed to start Python worker: ${error.message}`));
+        });
+
+        child.on("close", (code) => {
+            if (finished) return;
+            finished = true;
+            clearTimeout(timeoutHandle);
+
+            if (code !== 0) {
+                return reject(new Error(`Python worker exited with code ${code}: ${stderr}`));
             }
-            
-            function getTextForSentiment(item) {
-                const parts = [
-                    item.title,
-                    item.headline,
-                    item.summary,
-                    item.description,
-                    item.content,
-                    item.snippet,
-                    item.topic,
-                    item.scenario
-                ];
-                
-                return parts.filter(Boolean).join(". ").trim();
+
+            try {
+                const parsed = JSON.parse(stdout);
+                resolve(parsed);
+            } catch (parseError) {
+                reject(
+                    new Error(
+                        `Failed to parse Python worker JSON: ${parseError.message}. Raw stdout: ${stdout}`
+                    )
+                );
             }
-            
-            function normalizeSentimentScore(score) {
-                const numeric = Number(score);
-                
-                if (Number.isNaN(numeric)) {
-                    return 0;
-                }
-                
-                return Number(numeric.toFixed(3));
-            }
-            
-            function matchesQuery(item, query) {
-                if (!query) {
-                    return true;
-                }
-            
-                const haystack = [
-                    item.title,
-                    item.headline,
-                    item.summary,
-                    item.description,
-                    item.content,
-                    item.snippet,
-                    item.topic,
-                    item.scenario,
-                    item.region,
-                    item.country,
-                    item.source,
-                    item.sourceName,
-                    ...(Array.isArray(item.keywords) ? item.keywords : [])
-                ]
-                    .filter(Boolean)
-                    .join(" ")
-                    .toLowerCase();
-            
-                const queryTerms = query
-                    .toLowerCase()
-                    .split(/[\s,.-]+/)
-                    .map((term) => term.trim())
-                    .filter((term) => term.length > 2);
-            
-                if (queryTerms.length === 0) {
-                    return true;
-                }
-            
-                const matchedTerms = queryTerms.filter((term) => haystack.includes(term));
-                const matchRatio = matchedTerms.length / queryTerms.length;
-            
-                return matchRatio >= 0.5;
-            }
-            
-            function sortResults(results, sortBy = "signal-desc") {
-                const items = [...results];
-                
-                switch (sortBy) {
-                    case "signal-asc":
-                    return items.sort((a, b) => (a.signalScore || 0) - (b.signalScore || 0));
-                    
-                    case "sentiment-desc":
-                    return items.sort(
-                        (a, b) => (b.sentimentScore || 0) - (a.sentimentScore || 0)
-                        );
-                        
-                        case "sentiment-asc":
-                        return items.sort(
-                            (a, b) => (a.sentimentScore || 0) - (b.sentimentScore || 0)
-                            );
-                            
-                            case "latest":
-                            return items.sort((a, b) => {
-                                const aDate = new Date(a.publishedAt || a.date || 0).getTime();
-                                const bDate = new Date(b.publishedAt || b.date || 0).getTime();
-                                return bDate - aDate;
-                            });
-                            
-                            case "signal-desc":
-                            default:
-                            return items.sort((a, b) => (b.signalScore || 0) - (a.signalScore || 0));
-                        }
-                    }
-                    
-                    function ensureSignalScore(item, index) {
-                        if (typeof item.signalScore === "number") {
-                            return item.signalScore;
-                        }
-                        
-                        if (typeof item.signal_score === "number") {
-                            return item.signal_score;
-                        }
-                        
-                        return Math.max(50 - index, 1);
-                    }
-                    
-                    async function enrichItemWithSentiment(item, index) {
-                        const text = getTextForSentiment(item);
-                        const sentimentResult = await runPythonSentiment(text);
-                        
-                        return {
-                            ...item,
-                            signalScore: ensureSignalScore(item, index),
-                            sentiment: sentimentResult.sentiment || "neutral",
-                            sentimentScore: normalizeSentimentScore(sentimentResult.score),
-                            sentimentBreakdown: sentimentResult.breakdown || {
-                                neg: 0,
-                                neu: 1,
-                                pos: 0,
-                                compound: 0
-                            }
-                        };
-                    }
-                    
-                    async function analyzeIntelligence(payload = {}) {
-                        const query = (payload.query || "").trim();
-                        const sortBy = payload.sortBy || "signal-desc";
-                        
-                        const dataset = normalizeDataset(mockIntelligenceData);
-                        
-                        console.log("Mock dataset type:", typeof mockIntelligenceData);
-                        console.log("Normalized dataset length:", dataset.length);
-                        
-                        const matchedItems = dataset.filter((item) => matchesQuery(item, query));
-                        
-                        const enrichedItems = await Promise.all(
-                            matchedItems.map((item, index) => enrichItemWithSentiment(item, index))
-                            );
-                            
-                            const sortedResults = sortResults(enrichedItems, sortBy);
-                            
-                            const metrics = {
-                                totalResults: sortedResults.length,
-                                averageSignalScore:
-                                sortedResults.length > 0
-                                ? Number(
-                                    (
-                                        sortedResults.reduce(
-                                            (sum, item) => sum + Number(item.signalScore || 0),
-                                            0
-                                            ) / sortedResults.length
-                                            ).toFixed(2)
-                                            )
-                                            : 0,
-                                            averageSentimentScore:
-                                            sortedResults.length > 0
-                                            ? Number(
-                                                (
-                                                    sortedResults.reduce(
-                                                        (sum, item) => sum + Number(item.sentimentScore || 0),
-                                                        0
-                                                        ) / sortedResults.length
-                                                        ).toFixed(3)
-                                                        )
-                                                        : 0
-                                                    };
-                                                    
-                                                    return {
-                                                        success: true,
-                                                        query,
-                                                        sortBy,
-                                                        metrics,
-                                                        results: sortedResults
-                                                    };
-                                                }
-                                                
-                                                module.exports = {
-                                                    analyzeIntelligence
-                                                };
+        });
+
+        child.stdin.write(JSON.stringify(payload));
+        child.stdin.end();
+    });
+}
+
+async function getIntelligenceResults(rawPayload = {}) {
+    const payload = normalizePayload(rawPayload);
+
+    let workerOutput;
+    let usedFallback = false;
+
+    try {
+        workerOutput = await runPythonWorker(payload);
+    } catch (error) {
+        console.error("Python worker failed, switching to mock fallback:", error.message);
+
+        usedFallback = true;
+        workerOutput = {
+            success: true,
+            mode: "fallback",
+            source: "mock",
+            articles: buildMockFallback(payload.query)
+        };
+    }
+
+    const sourceArticles = Array.isArray(workerOutput.articles) ? workerOutput.articles : [];
+
+    let filtered = filterBySentiment(sourceArticles, payload.sentimentFilter);
+    filtered = sortResults(filtered, payload.sortBy);
+
+    return {
+        query: payload.query,
+        source: usedFallback ? "mock-fallback" : workerOutput.source || "rss-live",
+        mode: usedFallback ? "fallback" : workerOutput.mode || "live",
+        total: filtered.length,
+        results: filtered,
+        meta: {
+            sortBy: payload.sortBy,
+            sentimentFilter: payload.sentimentFilter,
+            regions: payload.regions,
+            countries: payload.countries,
+            mediaTypes: payload.mediaTypes,
+            publicationFocus: payload.publicationFocus,
+            selectedTrend: payload.selectedTrend || null
+        }
+    };
+}
+
+module.exports = {
+    getIntelligenceResults
+};
