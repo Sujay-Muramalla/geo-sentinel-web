@@ -1,6 +1,8 @@
 const path = require("path");
 const { spawn } = require("child_process");
 
+const PYTHON_WORKER_TIMEOUT_MS = Number(process.env.PYTHON_WORKER_TIMEOUT_MS || 20000);
+
 function normalizePayload(payload = {}) {
     return {
         query: typeof payload.query === "string" ? payload.query.trim() : "",
@@ -65,22 +67,12 @@ function buildMockFallback(query) {
     ];
 }
 
-function sortResults(results, sortBy = "final-desc") {
-    const cloned = [...results];
+function collapseSentimentLabel(label = "") {
+    const normalized = String(label).toLowerCase();
 
-    switch (sortBy) {
-        case "signal-desc":
-            return cloned.sort((a, b) => (b.signalScore || 0) - (a.signalScore || 0));
-        case "sentiment-desc":
-            return cloned.sort((a, b) => (b.sentimentScore || 0) - (a.sentimentScore || 0));
-        case "freshness-desc":
-            return cloned.sort((a, b) => (b.freshnessScore || 0) - (a.freshnessScore || 0));
-        case "relevance-desc":
-            return cloned.sort((a, b) => (b.relevanceScore || 0) - (a.relevanceScore || 0));
-        case "final-desc":
-        default:
-            return cloned.sort((a, b) => (b.finalScore || 0) - (a.finalScore || 0));
-    }
+    if (normalized.includes("positive")) return "positive";
+    if (normalized.includes("negative")) return "negative";
+    return "neutral";
 }
 
 function filterBySentiment(results, sentimentFilter = "all") {
@@ -88,7 +80,58 @@ function filterBySentiment(results, sentimentFilter = "all") {
         return results;
     }
 
-    return results.filter((item) => item.sentimentLabel === sentimentFilter);
+    return results.filter((item) => {
+        const normalized = collapseSentimentLabel(item.sentimentLabel || "");
+        return normalized === sentimentFilter;
+    });
+}
+
+function compareDatesDesc(a, b) {
+    return new Date(b.publishedAt || 0) - new Date(a.publishedAt || 0);
+}
+
+function compareDatesAsc(a, b) {
+    return new Date(a.publishedAt || 0) - new Date(b.publishedAt || 0);
+}
+
+function sortResults(results, sortBy = "final-desc") {
+    const cloned = [...results];
+
+    switch (sortBy) {
+        case "signal-desc":
+            return cloned.sort((a, b) => (b.signalScore || 0) - (a.signalScore || 0));
+
+        case "signal-asc":
+            return cloned.sort((a, b) => (a.signalScore || 0) - (b.signalScore || 0));
+
+        case "sentiment-desc":
+            return cloned.sort((a, b) => (b.sentimentScore || 0) - (a.sentimentScore || 0));
+
+        case "sentiment-asc":
+            return cloned.sort((a, b) => (a.sentimentScore || 0) - (b.sentimentScore || 0));
+
+        case "freshness-desc":
+            return cloned.sort((a, b) => (b.freshnessScore || 0) - (a.freshnessScore || 0));
+
+        case "relevance-desc":
+            return cloned.sort((a, b) => (b.relevanceScore || 0) - (a.relevanceScore || 0));
+
+        case "published-desc":
+            return cloned.sort(compareDatesDesc);
+
+        case "published-asc":
+            return cloned.sort(compareDatesAsc);
+
+        case "source-asc":
+            return cloned.sort((a, b) => String(a.source || "").localeCompare(String(b.source || "")));
+
+        case "title-asc":
+            return cloned.sort((a, b) => String(a.title || "").localeCompare(String(b.title || "")));
+
+        case "final-desc":
+        default:
+            return cloned.sort((a, b) => (b.finalScore || 0) - (a.finalScore || 0));
+    }
 }
 
 function runPythonWorker(payload) {
@@ -106,6 +149,15 @@ function runPythonWorker(payload) {
 
         let stdout = "";
         let stderr = "";
+        let finished = false;
+
+        const timeoutHandle = setTimeout(() => {
+            if (finished) return;
+
+            finished = true;
+            child.kill("SIGTERM");
+            reject(new Error(`Python worker timed out after ${PYTHON_WORKER_TIMEOUT_MS}ms`));
+        }, PYTHON_WORKER_TIMEOUT_MS);
 
         child.stdout.on("data", (data) => {
             stdout += data.toString();
@@ -116,10 +168,17 @@ function runPythonWorker(payload) {
         });
 
         child.on("error", (error) => {
+            if (finished) return;
+            finished = true;
+            clearTimeout(timeoutHandle);
             reject(new Error(`Failed to start Python worker: ${error.message}`));
         });
 
         child.on("close", (code) => {
+            if (finished) return;
+            finished = true;
+            clearTimeout(timeoutHandle);
+
             if (code !== 0) {
                 return reject(new Error(`Python worker exited with code ${code}: ${stderr}`));
             }
@@ -162,6 +221,7 @@ async function getIntelligenceResults(rawPayload = {}) {
     }
 
     const sourceArticles = Array.isArray(workerOutput.articles) ? workerOutput.articles : [];
+
     let filtered = filterBySentiment(sourceArticles, payload.sentimentFilter);
     filtered = sortResults(filtered, payload.sortBy);
 
