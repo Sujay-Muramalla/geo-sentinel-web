@@ -24,52 +24,91 @@ function resolveWorkerPath() {
     return path.resolve(__dirname, "../python/rss_intelligence_worker.py");
 }
 
-function buildMockFallback(query) {
-    const safeQuery = query || "global tensions";
+/* ---------------------------
+   GEO-39 CORE IMPROVEMENTS
+----------------------------*/
 
-    return [
-        {
-            id: `mock-1-${Date.now()}`,
-            title: `Live feed fallback: ${safeQuery} remains volatile across multiple regions`,
-            source: "Mock Intelligence Feed",
-            sourceType: "mock",
-            publishedAt: new Date().toISOString(),
-            summary: `Fallback intelligence result used because live RSS returned no stable article set for "${safeQuery}".`,
-            url: "https://news.google.com/",
-            sentimentLabel: "neutral",
-            sentimentScore: 0,
-            signalScore: 67,
-            relevanceScore: 82,
-            freshnessScore: 70,
-            finalScore: 75,
-            region: "Global",
-            country: "Multiple",
-            topic: safeQuery
-        },
-        {
-            id: `mock-2-${Date.now()}`,
-            title: `Policy and security narratives continue to shape the ${safeQuery} storyline`,
-            source: "Mock Intelligence Feed",
-            sourceType: "mock",
-            publishedAt: new Date(Date.now() - 3600 * 1000).toISOString(),
-            summary: `Fallback intelligence keeps the frontend responsive while the ingestion layer retries live feeds.`,
-            url: "https://news.google.com/",
-            sentimentLabel: "slightly-negative",
-            sentimentScore: -0.18,
-            signalScore: 61,
-            relevanceScore: 78,
-            freshnessScore: 64,
-            finalScore: 69,
-            region: "Global",
-            country: "Multiple",
-            topic: safeQuery
-        }
-    ];
+// Normalize text safely
+function normalizeText(text = "") {
+    return String(text).toLowerCase().replace(/[^a-z0-9 ]/g, " ");
 }
+
+// Basic keyword relevance scoring
+function calculateRelevance(article, query) {
+    if (!query) return 50;
+
+    const q = normalizeText(query).split(" ").filter(Boolean);
+    const text = normalizeText(article.title + " " + article.summary);
+
+    let matches = 0;
+    q.forEach(word => {
+        if (text.includes(word)) matches++;
+    });
+
+    return Math.min(100, Math.round((matches / q.length) * 100));
+}
+
+// Remove weak / broken articles
+function cleanArticles(articles = []) {
+    return articles.filter(a =>
+        a &&
+        a.title &&
+        a.summary &&
+        a.title.length > 10
+    );
+}
+
+// Remove duplicates (same title similarity)
+function deduplicateArticles(articles = []) {
+    const seen = new Set();
+
+    return articles.filter(a => {
+        const key = normalizeText(a.title).slice(0, 80);
+
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+    });
+}
+
+// Recalculate final score (weighted)
+function computeFinalScore(article) {
+    const relevance = article.relevanceScore || 50;
+    const freshness = article.freshnessScore || 50;
+    const sentiment = Math.abs(article.sentimentScore || 0) * 100;
+    const signal = article.signalScore || 50;
+
+    return Math.round(
+        (relevance * 0.4) +
+        (freshness * 0.25) +
+        (signal * 0.2) +
+        (sentiment * 0.15)
+    );
+}
+
+function enhanceArticles(articles, query) {
+    return articles.map(a => {
+        const relevanceScore = calculateRelevance(a, query);
+
+        const enhanced = {
+            ...a,
+            relevanceScore,
+            finalScore: computeFinalScore({
+                ...a,
+                relevanceScore
+            })
+        };
+
+        return enhanced;
+    });
+}
+
+/* ---------------------------
+   EXISTING FUNCTIONS
+----------------------------*/
 
 function collapseSentimentLabel(label = "") {
     const normalized = String(label).toLowerCase();
-
     if (normalized.includes("positive")) return "positive";
     if (normalized.includes("negative")) return "negative";
     return "neutral";
@@ -90,49 +129,28 @@ function compareDatesDesc(a, b) {
     return new Date(b.publishedAt || 0) - new Date(a.publishedAt || 0);
 }
 
-function compareDatesAsc(a, b) {
-    return new Date(a.publishedAt || 0) - new Date(b.publishedAt || 0);
-}
-
 function sortResults(results, sortBy = "final-desc") {
     const cloned = [...results];
 
     switch (sortBy) {
-        case "signal-desc":
-            return cloned.sort((a, b) => (b.signalScore || 0) - (a.signalScore || 0));
-
-        case "signal-asc":
-            return cloned.sort((a, b) => (a.signalScore || 0) - (b.signalScore || 0));
-
-        case "sentiment-desc":
-            return cloned.sort((a, b) => (b.sentimentScore || 0) - (a.sentimentScore || 0));
-
-        case "sentiment-asc":
-            return cloned.sort((a, b) => (a.sentimentScore || 0) - (b.sentimentScore || 0));
-
-        case "freshness-desc":
-            return cloned.sort((a, b) => (b.freshnessScore || 0) - (a.freshnessScore || 0));
-
-        case "relevance-desc":
-            return cloned.sort((a, b) => (b.relevanceScore || 0) - (a.relevanceScore || 0));
-
         case "published-desc":
             return cloned.sort(compareDatesDesc);
 
-        case "published-asc":
-            return cloned.sort(compareDatesAsc);
+        case "signal-desc":
+            return cloned.sort((a, b) => (b.signalScore || 0) - (a.signalScore || 0));
 
-        case "source-asc":
-            return cloned.sort((a, b) => String(a.source || "").localeCompare(String(b.source || "")));
-
-        case "title-asc":
-            return cloned.sort((a, b) => String(a.title || "").localeCompare(String(b.title || "")));
+        case "relevance-desc":
+            return cloned.sort((a, b) => (b.relevanceScore || 0) - (a.relevanceScore || 0));
 
         case "final-desc":
         default:
             return cloned.sort((a, b) => (b.finalScore || 0) - (a.finalScore || 0));
     }
 }
+
+/* ---------------------------
+   PYTHON WORKER
+----------------------------*/
 
 function runPythonWorker(payload) {
     return new Promise((resolve, reject) => {
@@ -167,13 +185,6 @@ function runPythonWorker(payload) {
             stderr += data.toString();
         });
 
-        child.on("error", (error) => {
-            if (finished) return;
-            finished = true;
-            clearTimeout(timeoutHandle);
-            reject(new Error(`Failed to start Python worker: ${error.message}`));
-        });
-
         child.on("close", (code) => {
             if (finished) return;
             finished = true;
@@ -186,12 +197,8 @@ function runPythonWorker(payload) {
             try {
                 const parsed = JSON.parse(stdout);
                 resolve(parsed);
-            } catch (parseError) {
-                reject(
-                    new Error(
-                        `Failed to parse Python worker JSON: ${parseError.message}. Raw stdout: ${stdout}`
-                    )
-                );
+            } catch (e) {
+                reject(new Error(`JSON parse failed: ${e.message}`));
             }
         });
 
@@ -199,6 +206,10 @@ function runPythonWorker(payload) {
         child.stdin.end();
     });
 }
+
+/* ---------------------------
+   MAIN SERVICE
+----------------------------*/
 
 async function getIntelligenceResults(rawPayload = {}) {
     const payload = normalizePayload(rawPayload);
@@ -209,36 +220,39 @@ async function getIntelligenceResults(rawPayload = {}) {
     try {
         workerOutput = await runPythonWorker(payload);
     } catch (error) {
-        console.error("Python worker failed, switching to mock fallback:", error.message);
+        console.error("Python worker failed:", error.message);
 
         usedFallback = true;
         workerOutput = {
             success: true,
             mode: "fallback",
             source: "mock",
-            articles: buildMockFallback(payload.query)
+            articles: []
         };
     }
 
-    const sourceArticles = Array.isArray(workerOutput.articles) ? workerOutput.articles : [];
+    let articles = Array.isArray(workerOutput.articles) ? workerOutput.articles : [];
 
-    let filtered = filterBySentiment(sourceArticles, payload.sentimentFilter);
-    filtered = sortResults(filtered, payload.sortBy);
+    // GEO-39 PIPELINE
+    articles = cleanArticles(articles);
+    articles = deduplicateArticles(articles);
+    articles = enhanceArticles(articles, payload.query);
+
+    articles = filterBySentiment(articles, payload.sentimentFilter);
+    articles = sortResults(articles, payload.sortBy);
+
+    // Limit results (UI friendly)
+    articles = articles.slice(0, 10);
 
     return {
         query: payload.query,
         source: usedFallback ? "mock-fallback" : workerOutput.source || "rss-live",
         mode: usedFallback ? "fallback" : workerOutput.mode || "live",
-        total: filtered.length,
-        results: filtered,
+        total: articles.length,
+        results: articles,
         meta: {
             sortBy: payload.sortBy,
-            sentimentFilter: payload.sentimentFilter,
-            regions: payload.regions,
-            countries: payload.countries,
-            mediaTypes: payload.mediaTypes,
-            publicationFocus: payload.publicationFocus,
-            selectedTrend: payload.selectedTrend || null
+            sentimentFilter: payload.sentimentFilter
         }
     };
 }
