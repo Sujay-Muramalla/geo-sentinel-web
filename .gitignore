@@ -62,8 +62,17 @@ override.tf
 override.tf.json
 *_override.tf
 *_override.tf.json
+
+# Ignore real tfvars (may contain secrets)
 *.tfvars
 *.tfvars.json
+
+# Allow example templates
+!*.tfvars.example
+
+# Terraform plan files
+*.out
+infra/terraform/*.out
 
 # =========================================================
 # AWS / serverless local artifacts
@@ -82,4 +91,4 @@ serverless/
 # Testing / tooling caches
 # =========================================================
 .pytest_cache/
-.mypy_cache/
+
