@@ -1,0 +1,47 @@
+name: Deploy Geo-Sentinel Web to S3
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: Deploy to AWS S3
+    runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write
+      contents: read
+
+    env:
+      AWS_REGION: eu-central-1
+      S3_BUCKET_NAME: geo-sentinel-web-frontend-632150488936
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::632150488936:role/GeoSentinelGitHubDeployRole
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Verify AWS identity
+        run: aws sts get-caller-identity
+
+      - name: Deploy frontend to S3
+        run: |
+          aws s3 sync . s3://${{ env.S3_BUCKET_NAME }} --delete \
+            --exclude ".git/*" \
+            --exclude ".github/*" \
+            --exclude "backend/*" \
+            --exclude "infra/*" \
+            --exclude "docs/*" \
+            --exclude "snapshots/*" \
+            --exclude "sentiment-engine/*" \
+            --exclude "geo-sentinel-web-architectures/*" \
+            --exclude "*.md" \
+            --exclude "LICENSE" \
+            --exclude "init-terraform-structure.sh"
