@@ -64,6 +64,8 @@ override.tf.json
 *_override.tf.json
 *.tfvars
 *.tfvars.json
+*.out
+infra/terraform/*.out
 
 # =========================================================
 # AWS / serverless local artifacts
