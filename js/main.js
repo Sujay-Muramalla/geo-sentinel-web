@@ -1,5 +1,7 @@
 document.addEventListener("DOMContentLoaded", () => {
-    const API_URL = "http://localhost:3000/api/intelligence/generate";
+    const API_URL =
+        window.GEO_SENTINEL_API_URL ||
+        "http://localhost:3000/api/intelligence/generate";
 
     const COUNTRY_SCOPE = {
         world: [
@@ -126,6 +128,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function init() {
         console.log("Generate button:", dom.generateBtn);
+        console.log("API URL:", API_URL);
 
         bindExpandButtons();
         bindScenarioInput();
@@ -184,12 +187,12 @@ document.addEventListener("DOMContentLoaded", () => {
         console.log("bindGenerateAction called");
 
         if (!dom.generateBtn) {
-            console.error("❌ Generate button not found");
+            console.error("Generate button not found");
             return;
         }
 
         dom.generateBtn.addEventListener("click", async () => {
-            console.log("✅ Generate button clicked");
+            console.log("Generate button clicked");
             await generateIntelligence();
         });
     }
@@ -334,7 +337,7 @@ document.addEventListener("DOMContentLoaded", () => {
         state.publicationFocus = mapPublicationFocusValues(getCheckedValues(dom.publicationCheckboxes));
 
         const checkedSentiment = dom.sentimentRadios.find((node) => node.checked);
-        state.sentimentFilter = checkedSentiment ? checked.value : "all";
+        state.sentimentFilter = checkedSentiment ? checkedSentiment.value : "all";
         state.sortBy = dom.sortResultsSelect ? (dom.sortResultsSelect.value || "final-desc") : "final-desc";
 
         if (!state.regions.length) state.regions = ["world"];
@@ -400,7 +403,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     async function generateIntelligence() {
-        console.log("🔥 generateIntelligence triggered");
+        console.log("generateIntelligence triggered");
         syncStateFromUI();
 
         if (!state.query) {
@@ -424,7 +427,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 selectedTrend: state.selectedTrend
             };
 
-            console.log("📤 Payload:", payload);
+            console.log("Payload:", payload);
 
             const response = await fetch(API_URL, {
                 method: "POST",
@@ -439,7 +442,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
             const data = await response.json();
-            console.log("📦 API response:", data);
+            console.log("API response:", data);
 
             if (!data.success) {
                 throw new Error(data.message || "Backend returned unsuccessful response");
