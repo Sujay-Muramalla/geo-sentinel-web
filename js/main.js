@@ -466,10 +466,33 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
+    function stripHtml(value = "") {
+        const temp = document.createElement("div");
+        temp.innerHTML = String(value || "");
+        return (temp.textContent || temp.innerText || "")
+            .replace(/\s+/g, " ")
+            .trim();
+    }
+
+    function clamp(value, min, max) {
+        return Math.max(min, Math.min(max, value));
+    }
+
+    function normalizeLiveScore(value, maxRaw = 10) {
+        const numeric = Number(value || 0);
+        if (!Number.isFinite(numeric)) return 0;
+        return Math.round(clamp((numeric / maxRaw) * 100, 0, 100));
+    }
+
     function normalizeBackendResult(item) {
         const sentimentScore = Number(item.sentimentScore || 0);
-        const finalScore = Number(item.finalScore || 0);
-        const signalScore = Number(item.signalScore || item.finalScore || 0);
+
+        const rawFinalScore = Number(item.finalScore || 0);
+        const rawSignalScore = Number(item.signalScore || item.finalScore || 0);
+
+        const finalScore = normalizeLiveScore(rawFinalScore, 10);
+        const signalScore = normalizeLiveScore(rawSignalScore, 10);
+
         const sourceRegion = item.sourceRegion || item.region || "Global";
         const sourceCountry = item.sourceCountry || item.country || "Multiple";
         const sourceType = item.mediaType || item.sourceType || "rss-live";
@@ -480,7 +503,7 @@ document.addEventListener("DOMContentLoaded", () => {
             source: item.source || "Unknown Source",
             sourceType,
             publishedAt: item.publishedAt || new Date().toISOString(),
-            summary: item.summary || "No summary available.",
+            summary: stripHtml(item.summary || "No summary available."),
             url: item.url || "#",
             sentimentLabel: normalizeSentimentLabel(item.sentiment ?? item.sentimentLabel ?? sentimentScore),
             sentimentScore,
