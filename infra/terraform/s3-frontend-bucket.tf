@@ -1,10 +1,10 @@
 resource "aws_s3_bucket" "frontend_bucket" {
-  bucket = "geo-sentinel-web-frontend-632150488936"
+  bucket = var.frontend_bucket_name
 
   tags = {
     Name        = "geo-sentinel-web-frontend"
     Project     = "geo-sentinel-web"
-    Environment = "dev"
+    Environment = var.environment
     ManagedBy   = "terraform"
   }
 }
@@ -24,4 +24,38 @@ resource "aws_s3_bucket_ownership_controls" "frontend_bucket_ownership" {
   rule {
     object_ownership = "BucketOwnerPreferred"
   }
+}
+
+resource "aws_s3_bucket_website_configuration" "frontend_bucket_website" {
+  bucket = aws_s3_bucket.frontend_bucket.id
+
+  index_document {
+    suffix = "index.html"
+  }
+
+  error_document {
+    key = "index.html"
+  }
+}
+
+resource "aws_s3_bucket_policy" "frontend_bucket_policy" {
+  depends_on = [
+    aws_s3_bucket_public_access_block.frontend_bucket_public_access
+  ]
+
+  bucket = aws_s3_bucket.frontend_bucket.id
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid       = "PublicReadForStaticWebsite"
+        Effect    = "Allow"
+        Principal = "*"
+        Action = [
+          "s3:GetObject"
+        ]
+        Resource = "${aws_s3_bucket.frontend_bucket.arn}/*"
+      }
+    ]
+  })
 }
