@@ -39,3 +39,9 @@ variable "availability_zones" {
   description = "Availability zones used by the subnets"
   default     = ["eu-central-1a", "eu-central-1b"]
 }
+
+variable "frontend_bucket_name" {
+  type        = string
+  description = "S3 bucket name for Geo-Sentinel frontend static hosting"
+  default     = "geo-sentinel-web-frontend-632150488936"
+}
