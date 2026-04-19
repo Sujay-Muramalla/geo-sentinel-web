@@ -62,19 +62,16 @@ override.tf
 override.tf.json
 *_override.tf
 *_override.tf.json
-
-# Ignore real tfvars (may contain secrets)
 *.tfvars
 *.tfvars.json
 *.out
 infra/terraform/*.out
 
-# Allow example templates
+# Ignore real tfvars (may contain secrets)
 !*.tfvars.example
 
-# Terraform plan files
-*.out
-infra/terraform/*.out
+# Keep lock file if you want reproducible provider versions
+# .terraform.lock.hcl
 
 # =========================================================
 # AWS / serverless local artifacts
@@ -93,4 +90,3 @@ serverless/
 # Testing / tooling caches
 # =========================================================
 .pytest_cache/
-
