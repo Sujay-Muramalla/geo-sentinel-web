@@ -1,14 +1,16 @@
 document.addEventListener("DOMContentLoaded", () => {
-    const PROD_API_URL = "http://3.67.134.78:3000/api/intelligence/generate";
+    const PROD_BACKEND_BASE_URL = "http://18.199.225.26:3000";
 
-    const API_URL =
-        window.GEO_SENTINEL_API_URL ||
+    const BACKEND_BASE_URL =
+        window.GEO_SENTINEL_API_BASE_URL ||
         (
             window.location.hostname === "localhost" ||
             window.location.hostname === "127.0.0.1"
-                ? "http://localhost:3000/api/intelligence/generate"
-                : PROD_API_URL
+                ? "http://localhost:3000"
+                : PROD_BACKEND_BASE_URL
         );
+
+    const API_URL = `${BACKEND_BASE_URL}/api/intelligence/generate`;
 
     const COUNTRY_SCOPE = {
         world: [
@@ -135,6 +137,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function init() {
         console.log("Generate button:", dom.generateBtn);
+        console.log("Backend base URL:", BACKEND_BASE_URL);
         console.log("API URL:", API_URL);
 
         bindExpandButtons();
@@ -191,15 +194,12 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function bindGenerateAction() {
-        console.log("bindGenerateAction called");
-
         if (!dom.generateBtn) {
             console.error("Generate button not found");
             return;
         }
 
         dom.generateBtn.addEventListener("click", async () => {
-            console.log("Generate button clicked");
             await generateIntelligence();
         });
     }
@@ -344,7 +344,7 @@ document.addEventListener("DOMContentLoaded", () => {
         state.publicationFocus = mapPublicationFocusValues(getCheckedValues(dom.publicationCheckboxes));
 
         const checkedSentiment = dom.sentimentRadios.find((node) => node.checked);
-        state.sentimentFilter = checkedSentiment ? checkedSentiment.value : "all";
+        state.sentimentFilter = checkedSentiment ? checked.value : "all";
         state.sortBy = dom.sortResultsSelect ? (dom.sortResultsSelect.value || "final-desc") : "final-desc";
 
         if (!state.regions.length) state.regions = ["world"];
@@ -410,7 +410,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     async function generateIntelligence() {
-        console.log("generateIntelligence triggered");
         syncStateFromUI();
 
         if (!state.query) {
@@ -434,7 +433,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 selectedTrend: state.selectedTrend
             };
 
-            console.log("Payload:", payload);
+            console.log("Submitting payload:", payload);
 
             const response = await fetch(API_URL, {
                 method: "POST",
@@ -444,28 +443,45 @@ document.addEventListener("DOMContentLoaded", () => {
                 body: JSON.stringify(payload)
             });
 
+            const responseText = await response.text();
+            let data = null;
+
+            try {
+                data = responseText ? JSON.parse(responseText) : null;
+            } catch (parseError) {
+                throw new Error(`Backend returned non-JSON response (status ${response.status})`);
+            }
+
             if (!response.ok) {
-                throw new Error(`Backend returned status ${response.status}`);
+                throw new Error(
+                    data?.message ||
+                    data?.error ||
+                    `Backend returned status ${response.status}`
+                );
             }
 
-            const data = await response.json();
-            console.log("API response:", data);
-
-            if (!data.success) {
-                throw new Error(data.message || "Backend returned unsuccessful response");
+            if (!data || data.success !== true) {
+                throw new Error(data?.message || "Backend returned unsuccessful response");
             }
 
-            state.results = Array.isArray(data.results) ? data.results.map(normalizeBackendResult) : [];
+            const liveResults = Array.isArray(data.results)
+                ? data.results.map(normalizeBackendResult)
+                : [];
+
+            state.results = liveResults;
             applyClientFiltersAndRender(data);
         } catch (error) {
             console.error("Failed to generate intelligence:", error);
             state.results = [];
+
             if (dom.resultsList) {
                 dom.resultsList.innerHTML = "";
             }
+
             if (dom.resultsEmptyState) {
                 dom.resultsEmptyState.classList.remove("hidden");
             }
+
             renderToolbarFromResults([]);
             updateMiniSummary(`Live request failed · ${error.message}`);
         } finally {
@@ -492,41 +508,44 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function normalizeBackendResult(item) {
-        const sentimentScore = Number(item.sentimentScore || 0);
+        const sentimentScore = Number(item?.sentimentScore || item?.sentiment || 0);
 
-        const rawFinalScore = Number(item.finalScore || 0);
-        const rawSignalScore = Number(item.signalScore || item.finalScore || 0);
+        const rawFinalScore = Number(item?.finalScore || 0);
+        const rawSignalScore = Number(item?.signalScore || item?.finalScore || 0);
 
         const finalScore = normalizeLiveScore(rawFinalScore, 10);
         const signalScore = normalizeLiveScore(rawSignalScore, 10);
 
-        const sourceRegion = item.sourceRegion || item.region || "Global";
-        const sourceCountry = item.sourceCountry || item.country || "Multiple";
-        const sourceType = item.mediaType || item.sourceType || "rss-live";
+        const sourceRegion = item?.sourceRegion || item?.region || "Global";
+        const sourceCountry = item?.sourceCountry || item?.country || "Multiple";
+        const sourceType = item?.mediaType || item?.sourceType || "rss-live";
+        const summary = stripHtml(item?.summary || item?.description || "No summary available.");
+        const publishedAt = item?.publishedAt || item?.published || new Date().toISOString();
+        const url = item?.url || item?.link || "#";
 
         return {
-            id: item.id || `live-${Math.random().toString(36).slice(2, 10)}`,
-            title: item.title || "Untitled result",
-            source: item.source || "Unknown Source",
+            id: item?.id || `live-${Math.random().toString(36).slice(2, 10)}`,
+            title: item?.title || "Untitled result",
+            source: item?.source || item?.publisher || "Unknown Source",
             sourceType,
-            publishedAt: item.publishedAt || new Date().toISOString(),
-            summary: stripHtml(item.summary || "No summary available."),
-            url: item.url || "#",
-            sentimentLabel: normalizeSentimentLabel(item.sentiment ?? item.sentimentLabel ?? sentimentScore),
+            publishedAt,
+            summary,
+            url,
+            sentimentLabel: normalizeSentimentLabel(item?.sentimentLabel ?? item?.sentiment ?? sentimentScore),
             sentimentScore,
             signalScore,
-            relevanceScore: Number(item.queryRelevance || item.relevanceScore || 0),
-            freshnessScore: Number(item.recencyScore || item.freshnessScore || 0),
+            relevanceScore: Number(item?.queryRelevance || item?.relevanceScore || 0),
+            freshnessScore: Number(item?.recencyScore || item?.freshnessScore || 0),
             finalScore,
             region: sourceRegion,
             country: sourceCountry,
-            topic: item.topic || state.query,
+            topic: item?.topic || state.query,
             rawCountries: splitCountryString(sourceCountry),
             rawMediaTypes: sourceType ? [sourceType] : [],
-            rawFocus: item.publicationFocus ? [item.publicationFocus] : [],
-            sourceTier: item.sourceTier || "standard",
-            influenceWeight: Number(item.influenceWeight || 1),
-            domain: item.domain || ""
+            rawFocus: item?.publicationFocus ? [item.publicationFocus] : [],
+            sourceTier: item?.sourceTier || "standard",
+            influenceWeight: Number(item?.influenceWeight || 1),
+            domain: item?.domain || ""
         };
     }
 
