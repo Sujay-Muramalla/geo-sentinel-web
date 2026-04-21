@@ -1,0 +1,329 @@
+============================================================
+GEO-44 EC2 MODULE / USER-DATA INSPECTION
+============================================================
+
+
+============================================================
+1) EC2 MODULE FILES
+============================================================
+--- FILE: infra/terraform/modules/ec2/main.tf ---
+
+--- FILE: infra/terraform/modules/ec2/variables.tf ---
+
+--- FILE: infra/terraform/modules/ec2/outputs.tf ---
+
+============================================================
+2) S3 MODULE FILES
+============================================================
+--- FILE: infra/terraform/modules/s3/main.tf ---
+
+--- FILE: infra/terraform/modules/s3/variables.tf ---
+
+--- FILE: infra/terraform/modules/s3/outputs.tf ---
+
+============================================================
+3) BACKEND USER-DATA SCRIPT
+============================================================
+--- FILE: infra/terraform/backend/user_data.sh ---
+
+============================================================
+4) INTELLIGENCE SERVICE
+============================================================
+--- FILE: backend/src/services/intelligenceService.js ---
+const path = require("path");
+const { spawn } = require("child_process");
+const { URL } = require("url");
+const {
+    SOURCE_REGISTRY,
+    normalizeKey,
+    resolveRegionFromCountry
+} = require("../config/sourceRegistry");
+
+const PYTHON_WORKER_TIMEOUT_MS = Number(process.env.PYTHON_WORKER_TIMEOUT_MS || 25000);
+
+function normalizePayload(payload = {}) {
+    return {
+        query: typeof payload.query === "string" ? payload.query.trim() : "",
+        regions: Array.isArray(payload.regions) && payload.regions.length ? payload.regions : ["world"],
+        countries: Array.isArray(payload.countries) ? payload.countries : [],
+        mediaTypes: Array.isArray(payload.mediaTypes) && payload.mediaTypes.length
+            ? payload.mediaTypes
+            : ["newspapers", "news-channels"],
+        publicationFocus: Array.isArray(payload.publicationFocus) && payload.publicationFocus.length
+            ? payload.publicationFocus
+            : ["international"],
+        sentimentFilter: payload.sentimentFilter || "all",
+        sortBy: payload.sortBy || "final-desc",
+        selectedTrend: payload.selectedTrend || ""
+    };
+}
+
+function resolvePythonCommand() {
+    if (process.env.PYTHON_COMMAND && process.env.PYTHON_COMMAND.trim()) {
+        return process.env.PYTHON_COMMAND.trim();
+    }
+
+    if (process.platform === "win32") {
+        return "python";
+    }
+
+    return "python3";
+}
+
+function resolveWorkerPath() {
+    return process.env.PYTHON_INTELLIGENCE_WORKER
+        ? path.resolve(process.env.PYTHON_INTELLIGENCE_WORKER)
+        : path.resolve(__dirname, "../python/rss_intelligence_worker.py");
+}
+
+function parseJsonSafe(value, fallback) {
+    try {
+        return JSON.parse(value);
+    } catch {
+        return fallback;
+    }
+}
+
+function toNumber(value, fallback = 0) {
+    const num = Number(value);
+    return Number.isFinite(num) ? num : fallback;
+}
+
+function clamp(value, min, max) {
+    return Math.max(min, Math.min(max, value));
+}
+
+function normalizeText(value = "") {
+    return String(value || "").trim();
+}
+
+function normalizeList(values = []) {
+    return (Array.isArray(values) ? values : [])
+        .map((item) => normalizeText(item))
+        .filter(Boolean);
+}
+
+function extractDomain(url = "") {
+    try {
+        return new URL(url).hostname.replace(/^www\./i, "").toLowerCase();
+    } catch {
+        return "";
+    }
+}
+
+function findSourceRegistryEntry(article = {}) {
+    const sourceName = normalizeKey(article.source || article.outlet || article.publisher || "");
+    const domain = extractDomain(article.url || article.link || "");
+
+    return SOURCE_REGISTRY.find((entry) => {
+        const matchesDomain = Array.isArray(entry.matchers)
+            && entry.matchers.some((matcher) => domain.includes(normalizeKey(matcher)));
+        const matchesName = sourceName && sourceName.includes(normalizeKey(entry.name));
+        return matchesDomain || matchesName;
+    }) || null;
+}
+
+function annotateSourceMetadata(article = {}) {
+    const registryEntry = findSourceRegistryEntry(article);
+
+    const sourceName = normalizeText(article.source || article.outlet || article.publisher || "Unknown Source");
+    const sourceCountry = normalizeText(
+        article.sourceCountry || article.country || (registryEntry ? registryEntry.country : "")
+    );
+    const sourceRegion = normalizeText(
+        article.sourceRegion || article.region || (registryEntry ? registryEntry.region : "") || resolveRegionFromCountry(sourceCountry)
+    );
+    const sourceTier = normalizeText(
+        article.sourceTier || (registryEntry ? registryEntry.tier : "") || "standard"
+    ).toLowerCase();
+
+    const influenceWeight = toNumber(
+        article.influenceWeight || (registryEntry ? registryEntry.influenceWeight : 1.0),
+        1.0
+    );
+
+    const publicationFocus = normalizeText(
+        article.publicationFocus || (registryEntry ? registryEntry.focus : "") || "international"
+    ).toLowerCase();
+
+    return {
+        ...article,
+        source: sourceName,
+        sourceCountry: sourceCountry || "Unknown",
+        sourceRegion: sourceRegion || "Unknown",
+        sourceTier,
+        influenceWeight,
+        publicationFocus,
+        sourceId: registryEntry ? registryEntry.id : null,
+        domain: extractDomain(article.url || article.link || "")
+    };
+}
+
+function matchesSelectedCountries(article, payload) {
+    const selectedCountries = normalizeList(payload.countries).map(normalizeKey);
+    if (!selectedCountries.length) {
+        return true;
+    }
+
+    const articleCountries = [
+        article.sourceCountry,
+        article.country,
+        ...(Array.isArray(article.countries) ? article.countries : [])
+    ]
+        .map(normalizeText)
+        .filter(Boolean)
+        .map(normalizeKey);
+
+    return articleCountries.some((country) => selectedCountries.includes(country));
+}
+
+function matchesSelectedRegions(article, payload) {
+    const selectedRegions = normalizeList(payload.regions)
+        .map(normalizeKey)
+        .filter((region) => region !== "world");
+
+    if (!selectedRegions.length) {
+        return true;
+    }
+
+    const articleRegions = [
+        article.sourceRegion,
+        article.region,
+        ...(Array.isArray(article.regions) ? article.regions : [])
+    ]
+        .map(normalizeText)
+        .filter(Boolean)
+        .map(normalizeKey);
+
+    return articleRegions.some((region) => selectedRegions.includes(region));
+}
+
+function matchesPublicationFocus(article, payload) {
+    const selectedFocus = normalizeList(payload.publicationFocus).map(normalizeKey);
+    if (!selectedFocus.length) {
+        return true;
+    }
+
+    if (selectedFocus.includes("all")) {
+        return true;
+    }
+
+    return selectedFocus.includes(normalizeKey(article.publicationFocus || "international"));
+}
+
+function matchesSentimentFilter(article, payload) {
+    const filter = normalizeKey(payload.sentimentFilter || "all");
+    if (filter === "all") {
+        return true;
+    }
+
+    return normalizeKey(article.sentiment || article.sentimentLabel || "neutral") === filter;
+}
+
+function computeGeoAlignmentScore(article, payload) {
+    const selectedCountries = normalizeList(payload.countries).map(normalizeKey);
+    const selectedRegions = normalizeList(payload.regions).map(normalizeKey);
+
+    let score = 0;
+
+    if (selectedCountries.length) {
+        if (selectedCountries.includes(normalizeKey(article.sourceCountry))) {
+            score += 2.5;
+        }
+    } else if (selectedRegions.length && !selectedRegions.includes("world")) {
+        if (selectedRegions.includes(normalizeKey(article.sourceRegion))) {
+            score += 1.75;
+        }
+    } else if (selectedRegions.includes("world")) {
+        score += 0.4;
+    }
+
+    return score;
+}
+
+function computeTierScore(article) {
+    const tier = normalizeKey(article.sourceTier || "standard");
+    if (tier === "top") return 1.4;
+    if (tier === "high") return 1.0;
+    if (tier === "regional") return 0.75;
+    return 0.45;
+}
+
+function computeRecencyScore(article) {
+    const publishedAt = article.publishedAt || article.pubDate || article.isoDate || "";
+    const timestamp = Date.parse(publishedAt);
+    if (!Number.isFinite(timestamp)) {
+        return 0.25;
+    }
+
+    const hoursOld = Math.max(0, (Date.now() - timestamp) / (1000 * 60 * 60));
+
+    if (hoursOld <= 6) return 1.5;
+    if (hoursOld <= 24) return 1.2;
+    if (hoursOld <= 72) return 0.9;
+    if (hoursOld <= 168) return 0.55;
+    return 0.2;
+}
+
+function computeQueryRelevance(article, payload) {
+    const query = normalizeKey(payload.query || payload.selectedTrend || "");
+    if (!query) {
+        return 0;
+    }
+
+    const title = normalizeKey(article.title || "");
+    const summary = normalizeKey(article.summary || article.description || "");
+    const combined = `${title} ${summary}`;
+
+    const queryTerms = query.split(/\s+/).filter((term) => term.length > 2);
+    if (!queryTerms.length) {
+        return 0;
+    }
+
+    let matches = 0;
+    for (const term of queryTerms) {
+        if (combined.includes(term)) {
+            matches += 1;
+        }
+    }
+
+    return clamp(matches / queryTerms.length, 0, 1.5) * 2.0;
+}
+
+
+============================================================
+5) CONTROLLER / ROUTES
+============================================================
+--- FILE: backend/src/controllers/intelligenceController.js ---
+const { generateIntelligence } = require("../services/intelligenceService");
+
+async function handleGenerateIntelligence(req, res) {
+    try {
+        const result = await generateIntelligence(req.body || {});
+        return res.status(200).json(result);
+    } catch (error) {
+        console.error("generateIntelligence controller error:", error);
+        return res.status(500).json({
+            success: false,
+            message: "Failed to generate intelligence",
+            error: error.message
+        });
+    }
+}
+
+module.exports = {
+    handleGenerateIntelligence
+};
+--- FILE: backend/src/routes/intelligenceRoutes.js ---
+const express = require("express");
+const { handleGenerateIntelligence } = require("../controllers/intelligenceController");
+
+const router = express.Router();
+
+router.post("/generate", handleGenerateIntelligence);
+
+module.exports = router;
+============================================================
+6) DONE
+============================================================
+GEO-44 EC2 detail inspection completed.

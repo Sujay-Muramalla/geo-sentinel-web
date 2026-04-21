@@ -45,3 +45,57 @@ variable "frontend_bucket_name" {
   description = "S3 bucket name for Geo-Sentinel frontend static hosting"
   default     = "geo-sentinel-web-frontend-632150488936"
 }
+
+variable "enable_backend_ec2" {
+  type        = bool
+  description = "Whether to create the Geo-Sentinel backend EC2 instance"
+  default     = false
+}
+
+variable "backend_instance_type" {
+  type        = string
+  description = "EC2 instance type for the Geo-Sentinel backend"
+  default     = "t2.micro"
+}
+
+variable "backend_port" {
+  type        = number
+  description = "Port exposed by the backend API"
+  default     = 3000
+}
+
+variable "backend_key_name" {
+  type        = string
+  description = "Optional EC2 key pair name for SSH access"
+  default     = ""
+}
+
+variable "ssh_allowed_cidrs" {
+  type        = list(string)
+  description = "CIDR blocks allowed to SSH into the backend instance"
+  default     = []
+}
+
+variable "github_repository_url" {
+  type        = string
+  description = "Git repository URL cloned by the backend EC2 bootstrap"
+  default     = "https://github.com/Sujay-Muramalla/geo-sentinel-web.git"
+}
+
+variable "backend_git_ref" {
+  type        = string
+  description = "Git branch, tag, or ref to deploy on the backend EC2 instance"
+  default     = "main"
+}
+
+variable "backend_clone_path" {
+  type        = string
+  description = "Filesystem path where the repository is cloned on EC2"
+  default     = "/opt/geo-sentinel-web"
+}
+
+variable "python_worker_timeout_ms" {
+  type        = number
+  description = "Timeout in milliseconds for the Python intelligence worker"
+  default     = 25000
+}

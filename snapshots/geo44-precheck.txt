@@ -1,0 +1,1214 @@
+============================================================
+GEO-44 PRECHECK / REPO INSPECTION
+============================================================
+
+
+============================================================
+1) GIT / WORKING TREE STATUS
+============================================================
+feature/geo-44-backend-api-deployment
+
+On branch feature/geo-44-backend-api-deployment
+Untracked files:
+  (use "git add <file>..." to include in what will be committed)
+	scripts/
+	snapshots/geo44-precheck.txt
+
+nothing added to commit but untracked files present (use "git add" to track)
+
+============================================================
+2) TOP-LEVEL REPO STRUCTURE
+============================================================
+.
+./.github
+./.github/workflows
+./.github/workflows/deploy.yml
+./.gitignore
+./backend
+./backend/package.json
+./backend/package-lock.json
+./backend/src
+./backend/src/app.js
+./backend/src/config
+./backend/src/controllers
+./backend/src/data
+./backend/src/python
+./backend/src/routes
+./backend/src/server.js
+./backend/src/services
+./css
+./css/style.css
+./docs
+./docs/NF_Capstone_Project_OnePager_Brief.pdf
+./docs/ui-notes.md
+./index.html
+./infra
+./infra/terraform
+./infra/terraform/.terraform.lock.hcl
+./infra/terraform/backend
+./infra/terraform/github_deploy_role.tf
+./infra/terraform/github_oidc.tf
+./infra/terraform/main.tf
+./infra/terraform/modules
+./infra/terraform/outputs.tf
+./infra/terraform/provider.tf
+./infra/terraform/s3-frontend-bucket.tf
+./infra/terraform/variables.tf
+./init-terraform-structure.sh
+./js
+./js/app.js
+./js/main.js
+./LICENSE
+./README_GEO31_Completed_Notes.md
+./scripts
+./scripts/inspect-geo44-precheck.sh
+./sentiment-engine
+./sentiment-engine/analyze.py
+./snapshots
+./snapshots/.gitkeep
+./snapshots/Document.html
+./snapshots/Document_files
+./snapshots/Document_files/style.css
+./snapshots/geo44-precheck.txt
+./snapshots/Geo-Sentinel.html
+./snapshots/Geo-Sentinel_files
+./snapshots/Geo-Sentinel_files/main.js
+./snapshots/Geo-Sentinel_files/style.css
+./snapshots/webpage-2.html
+./snapshots/webpage-2_files
+./snapshots/webpage-2_files/style.css
+./snapshots/webpage-3.html
+./snapshots/webpage-3_files
+./snapshots/webpage-3_files/style.css
+
+============================================================
+3) BACKEND ENTRY FILES
+============================================================
+--- FILE: backend/src/server.js ---
+const express = require("express");
+const cors = require("cors");
+const intelligenceRoutes = require("./routes/intelligenceRoutes");
+
+const app = express();
+const PORT = process.env.PORT || 3000;
+
+app.use(cors());
+app.use(express.json());
+
+app.get("/health", (req, res) => {
+    res.status(200).json({
+        success: true,
+        service: "geo-sentinel-backend",
+        status: "ok",
+        timestamp: new Date().toISOString()
+    });
+});
+
+app.use("/api/intelligence", intelligenceRoutes);
+
+app.use((req, res) => {
+    res.status(404).json({
+        success: false,
+        message: "Route not found"
+    });
+});
+
+app.use((err, req, res, next) => {
+    console.error("Unhandled server error:", err);
+
+    res.status(500).json({
+        success: false,
+        message: "Internal server error"
+    });
+});
+
+app.listen(PORT, () => {
+    console.log(`Geo-Sentinel backend running on http://localhost:${PORT}`);
+});
+--- FILE: backend/src/app.js ---
+const express = require("express");
+const cors = require("cors");
+const intelligenceRoutes = require("./routes/intelligenceRoutes");
+
+const app = express();
+
+app.use(cors());
+app.use(express.json());
+
+app.get("/api/health", (req, res) => {
+    res.status(200).json({
+        status: "ok",
+        service: "geo-sentinel-web-backend",
+        timestamp: new Date().toISOString()
+    });
+});
+
+app.use("/api/intelligence", intelligenceRoutes);
+
+module.exports = app;
+============================================================
+4) BACKEND SERVICE FILES
+============================================================
+--- FILE LIST: backend/src/services (maxdepth=3) ---
+backend/src/services/intelligenceService.js
+
+============================================================
+5) BACKEND PYTHON FILES
+============================================================
+--- FILE LIST: backend/src/python (maxdepth=4) ---
+backend/src/python/requirements.txt
+backend/src/python/rss_intelligence_worker.legacy.py
+backend/src/python/rss_intelligence_worker.py
+
+============================================================
+6) BACKEND CONFIG / ROUTES / CONTROLLERS
+============================================================
+--- FILE LIST: backend/src/config (maxdepth=3) ---
+backend/src/config/sourceRegistry.js
+
+--- FILE LIST: backend/src/routes (maxdepth=3) ---
+backend/src/routes/intelligenceRoutes.js
+
+--- FILE LIST: backend/src/controllers (maxdepth=3) ---
+backend/src/controllers/intelligenceController.js
+
+============================================================
+7) BACKEND PACKAGE FILES
+============================================================
+--- FILE: backend/package.json ---
+{
+  "name": "geo-sentinel-backend",
+  "version": "1.0.0",
+  "description": "Geo-Sentinel backend API with Python RSS ingestion worker",
+  "main": "src/server.js",
+  "type": "commonjs",
+  "scripts": {
+    "dev": "nodemon src/server.js",
+    "start": "node src/server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}
+
+--- FILE: backend/package-lock.json ---
+{
+  "name": "geo-sentinel-backend",
+  "version": "1.0.0",
+  "lockfileVersion": 3,
+  "requires": true,
+  "packages": {
+    "": {
+      "name": "geo-sentinel-backend",
+      "version": "1.0.0",
+      "dependencies": {
+        "cors": "^2.8.5",
+        "dotenv": "^16.4.5",
+        "express": "^4.21.2"
+      },
+      "devDependencies": {
+        "nodemon": "^3.1.14"
+      }
+    },
+    "node_modules/accepts": {
+      "version": "1.3.8",
+      "resolved": "https://registry.npmjs.org/accepts/-/accepts-1.3.8.tgz",
+      "integrity": "sha512-PYAthTa2m2VKxuvSD3DPC/Gy+U+sOA1LAuT8mkmRuvw+NACSaeXEQ+NHcVF7rONl6qcaxV3Uuemwawk+7+SJLw==",
+      "license": "MIT",
+      "dependencies": {
+        "mime-types": "~2.1.34",
+        "negotiator": "0.6.3"
+      },
+      "engines": {
+        "node": ">= 0.6"
+      }
+    },
+    "node_modules/anymatch": {
+      "version": "3.1.3",
+      "resolved": "https://registry.npmjs.org/anymatch/-/anymatch-3.1.3.tgz",
+      "integrity": "sha512-KMReFUr0B4t+D+OBkjR3KYqvocp2XaSzO55UcB6mgQMd3KbcE+mWTyvVV7D/zsdEbNnV6acZUutkiHQXvTr1Rw==",
+      "dev": true,
+      "license": "ISC",
+      "dependencies": {
+        "normalize-path": "^3.0.0",
+        "picomatch": "^2.0.4"
+      },
+      "engines": {
+        "node": ">= 8"
+      }
+    },
+    "node_modules/array-flatten": {
+      "version": "1.1.1",
+      "resolved": "https://registry.npmjs.org/array-flatten/-/array-flatten-1.1.1.tgz",
+      "integrity": "sha512-PCVAQswWemu6UdxsDFFX/+gVeYqKAod3D3UVm91jHwynguOwAvYPhx8nNlM++NqRcK6CxxpUafjmhIdKiHibqg==",
+      "license": "MIT"
+    },
+    "node_modules/balanced-match": {
+      "version": "4.0.4",
+      "resolved": "https://registry.npmjs.org/balanced-match/-/balanced-match-4.0.4.tgz",
+      "integrity": "sha512-BLrgEcRTwX2o6gGxGOCNyMvGSp35YofuYzw9h1IMTRmKqttAZZVU67bdb9Pr2vUHA8+j3i2tJfjO6C6+4myGTA==",
+      "dev": true,
+      "license": "MIT",
+      "engines": {
+        "node": "18 || 20 || >=22"
+      }
+    },
+    "node_modules/binary-extensions": {
+      "version": "2.3.0",
+      "resolved": "https://registry.npmjs.org/binary-extensions/-/binary-extensions-2.3.0.tgz",
+      "integrity": "sha512-Ceh+7ox5qe7LJuLHoY0feh3pHuUDHAcRUeyL2VYghZwfpkNIy/+8Ocg0a3UuSoYzavmylwuLWQOf3hl0jjMMIw==",
+      "dev": true,
+      "license": "MIT",
+      "engines": {
+        "node": ">=8"
+      },
+      "funding": {
+        "url": "https://github.com/sponsors/sindresorhus"
+      }
+    },
+    "node_modules/body-parser": {
+      "version": "1.20.4",
+      "resolved": "https://registry.npmjs.org/body-parser/-/body-parser-1.20.4.tgz",
+      "integrity": "sha512-ZTgYYLMOXY9qKU/57FAo8F+HA2dGX7bqGc71txDRC1rS4frdFI5R7NhluHxH6M0YItAP0sHB4uqAOcYKxO6uGA==",
+      "license": "MIT",
+      "dependencies": {
+        "bytes": "~3.1.2",
+        "content-type": "~1.0.5",
+        "debug": "2.6.9",
+        "depd": "2.0.0",
+        "destroy": "~1.2.0",
+        "http-errors": "~2.0.1",
+        "iconv-lite": "~0.4.24",
+        "on-finished": "~2.4.1",
+        "qs": "~6.14.0",
+        "raw-body": "~2.5.3",
+        "type-is": "~1.6.18",
+        "unpipe": "~1.0.0"
+      },
+      "engines": {
+        "node": ">= 0.8",
+        "npm": "1.2.8000 || >= 1.4.16"
+      }
+    },
+    "node_modules/body-parser/node_modules/debug": {
+      "version": "2.6.9",
+      "resolved": "https://registry.npmjs.org/debug/-/debug-2.6.9.tgz",
+      "integrity": "sha512-bC7ElrdJaJnPbAP+1EotYvqZsb3ecl5wi6Bfi6BJTUcNowp6cvspg0jXznRTKDjm/E7AdgFBVeAPVMNcKGsHMA==",
+      "license": "MIT",
+      "dependencies": {
+        "ms": "2.0.0"
+      }
+    },
+    "node_modules/body-parser/node_modules/ms": {
+      "version": "2.0.0",
+      "resolved": "https://registry.npmjs.org/ms/-/ms-2.0.0.tgz",
+      "integrity": "sha512-Tpp60P6IUJDTuOq/5Z8cdskzJujfwqfOTkrwIwj7IRISpnkJnT6SyJ4PCPnGMoFjC9ddhal5KVIYtAt97ix05A==",
+      "license": "MIT"
+    },
+    "node_modules/brace-expansion": {
+      "version": "5.0.5",
+      "resolved": "https://registry.npmjs.org/brace-expansion/-/brace-expansion-5.0.5.tgz",
+      "integrity": "sha512-VZznLgtwhn+Mact9tfiwx64fA9erHH/MCXEUfB/0bX/6Fz6ny5EGTXYltMocqg4xFAQZtnO3DHWWXi8RiuN7cQ==",
+      "dev": true,
+      "license": "MIT",
+      "dependencies": {
+        "balanced-match": "^4.0.2"
+      },
+      "engines": {
+        "node": "18 || 20 || >=22"
+      }
+    },
+    "node_modules/braces": {
+      "version": "3.0.3",
+      "resolved": "https://registry.npmjs.org/braces/-/braces-3.0.3.tgz",
+      "integrity": "sha512-yQbXgO/OSZVD2IsiLlro+7Hf6Q18EJrKSEsdoMzKePKXct3gvD8oLcOQdIzGupr5Fj+EDe8gO/lxc1BzfMpxvA==",
+      "dev": true,
+      "license": "MIT",
+      "dependencies": {
+        "fill-range": "^7.1.1"
+      },
+      "engines": {
+        "node": ">=8"
+      }
+    },
+    "node_modules/bytes": {
+      "version": "3.1.2",
+      "resolved": "https://registry.npmjs.org/bytes/-/bytes-3.1.2.tgz",
+      "integrity": "sha512-/Nf7TyzTx6S3yRJObOAV7956r8cr2+Oj8AC5dt8wSP3BQAoeX58NoHyCU8P8zGkNXStjTSi6fzO6F0pBdcYbEg==",
+      "license": "MIT",
+      "engines": {
+        "node": ">= 0.8"
+      }
+    },
+    "node_modules/call-bind-apply-helpers": {
+      "version": "1.0.2",
+      "resolved": "https://registry.npmjs.org/call-bind-apply-helpers/-/call-bind-apply-helpers-1.0.2.tgz",
+      "integrity": "sha512-Sp1ablJ0ivDkSzjcaJdxEunN5/XvksFJ2sMBFfq6x0ryhQV/2b/KwFe21cMpmHtPOSij8K99/wSfoEuTObmuMQ==",
+      "license": "MIT",
+      "dependencies": {
+        "es-errors": "^1.3.0",
+        "function-bind": "^1.1.2"
+      },
+      "engines": {
+        "node": ">= 0.4"
+      }
+    },
+    "node_modules/call-bound": {
+      "version": "1.0.4",
+      "resolved": "https://registry.npmjs.org/call-bound/-/call-bound-1.0.4.tgz",
+      "integrity": "sha512-+ys997U96po4Kx/ABpBCqhA9EuxJaQWDQg7295H4hBphv3IZg0boBKuwYpt4YXp6MZ5AmZQnU/tyMTlRpaSejg==",
+      "license": "MIT",
+      "dependencies": {
+        "call-bind-apply-helpers": "^1.0.2",
+        "get-intrinsic": "^1.3.0"
+      },
+      "engines": {
+        "node": ">= 0.4"
+      },
+      "funding": {
+        "url": "https://github.com/sponsors/ljharb"
+      }
+    },
+    "node_modules/chokidar": {
+      "version": "3.6.0",
+      "resolved": "https://registry.npmjs.org/chokidar/-/chokidar-3.6.0.tgz",
+      "integrity": "sha512-7VT13fmjotKpGipCW9JEQAusEPE+Ei8nl6/g4FBAmIm0GOOLMua9NDDo/DWp0ZAxCr3cPq5ZpBqmPAQgDda2Pw==",
+      "dev": true,
+      "license": "MIT",
+      "dependencies": {
+        "anymatch": "~3.1.2",
+        "braces": "~3.0.2",
+        "glob-parent": "~5.1.2",
+        "is-binary-path": "~2.1.0",
+        "is-glob": "~4.0.1",
+        "normalize-path": "~3.0.0",
+        "readdirp": "~3.6.0"
+      },
+      "engines": {
+        "node": ">= 8.10.0"
+      },
+      "funding": {
+        "url": "https://paulmillr.com/funding/"
+      },
+      "optionalDependencies": {
+        "fsevents": "~2.3.2"
+      }
+    },
+    "node_modules/content-disposition": {
+      "version": "0.5.4",
+      "resolved": "https://registry.npmjs.org/content-disposition/-/content-disposition-0.5.4.tgz",
+      "integrity": "sha512-FveZTNuGw04cxlAiWbzi6zTAL/lhehaWbTtgluJh4/E95DqMwTmha3KZN1aAWA8cFIhHzMZUvLevkw5Rqk+tSQ==",
+      "license": "MIT",
+      "dependencies": {
+        "safe-buffer": "5.2.1"
+      },
+      "engines": {
+        "node": ">= 0.6"
+      }
+    },
+    "node_modules/content-type": {
+      "version": "1.0.5",
+      "resolved": "https://registry.npmjs.org/content-type/-/content-type-1.0.5.tgz",
+      "integrity": "sha512-nTjqfcBFEipKdXCv4YDQWCfmcLZKm81ldF0pAopTvyrFGVbcR6P/VAAd5G7N+0tTr8QqiU0tFadD6FK4NtJwOA==",
+      "license": "MIT",
+      "engines": {
+        "node": ">= 0.6"
+      }
+    },
+    "node_modules/cookie": {
+      "version": "0.7.2",
+      "resolved": "https://registry.npmjs.org/cookie/-/cookie-0.7.2.tgz",
+      "integrity": "sha512-yki5XnKuf750l50uGTllt6kKILY4nQ1eNIQatoXEByZ5dWgnKqbnqmTrBE5B4N7lrMJKQ2ytWMiTO2o0v6Ew/w==",
+      "license": "MIT",
+      "engines": {
+        "node": ">= 0.6"
+      }
+    },
+    "node_modules/cookie-signature": {
+      "version": "1.0.7",
+      "resolved": "https://registry.npmjs.org/cookie-signature/-/cookie-signature-1.0.7.tgz",
+      "integrity": "sha512-NXdYc3dLr47pBkpUCHtKSwIOQXLVn8dZEuywboCOJY/osA0wFSLlSawr3KN8qXJEyX66FcONTH8EIlVuK0yyFA==",
+      "license": "MIT"
+    },
+    "node_modules/cors": {
+      "version": "2.8.6",
+      "resolved": "https://registry.npmjs.org/cors/-/cors-2.8.6.tgz",
+      "integrity": "sha512-tJtZBBHA6vjIAaF6EnIaq6laBBP9aq/Y3ouVJjEfoHbRBcHBAHYcMh/w8LDrk2PvIMMq8gmopa5D4V8RmbrxGw==",
+      "license": "MIT",
+      "dependencies": {
+        "object-assign": "^4",
+        "vary": "^1"
+      },
+      "engines": {
+        "node": ">= 0.10"
+      },
+      "funding": {
+        "type": "opencollective",
+        "url": "https://opencollective.com/express"
+      }
+    },
+    "node_modules/debug": {
+      "version": "4.4.3",
+      "resolved": "https://registry.npmjs.org/debug/-/debug-4.4.3.tgz",
+      "integrity": "sha512-RGwwWnwQvkVfavKVt22FGLw+xYSdzARwm0ru6DhTVA3umU5hZc28V3kO4stgYryrTlLpuvgI9GiijltAjNbcqA==",
+      "dev": true,
+
+============================================================
+8) TERRAFORM CORE FILES
+============================================================
+--- FILE: infra/terraform/provider.tf ---
+terraform {
+  required_version = ">= 1.3.0, < 2.0.0"
+
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 6.3.0"
+    }
+  }
+}
+
+provider "aws" {
+  region = var.aws_region
+
+  default_tags {
+    tags = {
+      Project     = var.project_name
+      Environment = var.environment
+      ManagedBy   = "terraform"
+    }
+  }
+}
+--- FILE: infra/terraform/main.tf ---
+locals {
+  public_subnets = {
+    for idx, cidr in var.public_subnet_cidrs :
+    "public-${idx + 1}" => {
+      cidr = cidr
+      az   = var.availability_zones[idx]
+    }
+  }
+
+  private_subnets = {
+    for idx, cidr in var.private_subnet_cidrs :
+    "private-${idx + 1}" => {
+      cidr = cidr
+      az   = var.availability_zones[idx]
+    }
+  }
+
+  common_tags = {
+    Project     = var.project_name
+    Environment = var.environment
+  }
+}
+
+resource "aws_vpc" "main" {
+  cidr_block           = var.vpc_cidr
+  enable_dns_support   = true
+  enable_dns_hostnames = true
+
+  tags = merge(local.common_tags, {
+    Name = "${var.project_name}-${var.environment}-vpc"
+  })
+}
+
+resource "aws_internet_gateway" "main" {
+  vpc_id = aws_vpc.main.id
+
+  tags = merge(local.common_tags, {
+    Name = "${var.project_name}-${var.environment}-igw"
+  })
+}
+
+resource "aws_subnet" "public" {
+  for_each = local.public_subnets
+
+  vpc_id                  = aws_vpc.main.id
+  cidr_block              = each.value.cidr
+  availability_zone       = each.value.az
+  map_public_ip_on_launch = true
+
+  tags = merge(local.common_tags, {
+    Name = "${var.project_name}-${var.environment}-${each.key}"
+    Tier = "public"
+  })
+}
+
+resource "aws_subnet" "private" {
+  for_each = local.private_subnets
+
+  vpc_id            = aws_vpc.main.id
+  cidr_block        = each.value.cidr
+  availability_zone = each.value.az
+
+  tags = merge(local.common_tags, {
+    Name = "${var.project_name}-${var.environment}-${each.key}"
+    Tier = "private"
+  })
+}
+
+resource "aws_route_table" "public" {
+  vpc_id = aws_vpc.main.id
+
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.main.id
+  }
+
+  tags = merge(local.common_tags, {
+    Name = "${var.project_name}-${var.environment}-public-rt"
+  })
+}
+
+resource "aws_route_table_association" "public" {
+  for_each = aws_subnet.public
+
+  subnet_id      = each.value.id
+  route_table_id = aws_route_table.public.id
+}
+
+resource "aws_route_table" "private" {
+  vpc_id = aws_vpc.main.id
+
+  tags = merge(local.common_tags, {
+    Name = "${var.project_name}-${var.environment}-private-rt"
+  })
+}
+
+resource "aws_route_table_association" "private" {
+  for_each = aws_subnet.private
+
+  subnet_id      = each.value.id
+  route_table_id = aws_route_table.private.id
+}
+--- FILE: infra/terraform/variables.tf ---
+variable "aws_region" {
+  type        = string
+  description = "AWS region for Geo-Sentinel infrastructure"
+  default     = "eu-central-1"
+}
+
+variable "project_name" {
+  type        = string
+  description = "Project name used for tagging and naming resources"
+  default     = "geo-sentinel"
+}
+
+variable "environment" {
+  type        = string
+  description = "Deployment environment name"
+  default     = "dev"
+}
+
+variable "vpc_cidr" {
+  type        = string
+  description = "CIDR block for the Geo-Sentinel VPC"
+  default     = "10.0.0.0/16"
+}
+
+variable "public_subnet_cidrs" {
+  type        = list(string)
+  description = "CIDR blocks for public subnets"
+  default     = ["10.0.1.0/24", "10.0.2.0/24"]
+}
+
+variable "private_subnet_cidrs" {
+  type        = list(string)
+  description = "CIDR blocks for private subnets"
+  default     = ["10.0.11.0/24", "10.0.12.0/24"]
+}
+
+variable "availability_zones" {
+  type        = list(string)
+  description = "Availability zones used by the subnets"
+  default     = ["eu-central-1a", "eu-central-1b"]
+}
+
+variable "frontend_bucket_name" {
+  type        = string
+  description = "S3 bucket name for Geo-Sentinel frontend static hosting"
+  default     = "geo-sentinel-web-frontend-632150488936"
+}
+--- FILE: infra/terraform/outputs.tf ---
+output "vpc_id" {
+  description = "ID of the Geo-Sentinel VPC"
+  value       = aws_vpc.main.id
+}
+
+output "public_subnet_ids" {
+  description = "IDs of the public subnets"
+  value       = [for subnet in aws_subnet.public : subnet.id]
+}
+
+output "private_subnet_ids" {
+  description = "IDs of the private subnets"
+  value       = [for subnet in aws_subnet.private : subnet.id]
+}
+
+output "public_route_table_id" {
+  description = "ID of the public route table"
+  value       = aws_route_table.public.id
+}
+
+output "private_route_table_id" {
+  description = "ID of the private route table"
+  value       = aws_route_table.private.id
+}
+
+output "frontend_bucket_name" {
+  description = "Name of the frontend S3 bucket"
+  value       = aws_s3_bucket.frontend_bucket.id
+}
+
+output "frontend_bucket_arn" {
+  description = "ARN of the frontend S3 bucket"
+  value       = aws_s3_bucket.frontend_bucket.arn
+}
+
+output "frontend_website_endpoint" {
+  description = "S3 static website endpoint for the frontend bucket"
+  value       = aws_s3_bucket_website_configuration.frontend_bucket_website.website_endpoint
+}
+
+output "frontend_website_domain" {
+  description = "S3 static website domain for the frontend bucket"
+  value       = aws_s3_bucket_website_configuration.frontend_bucket_website.website_domain
+}
+
+output "frontend_website_url" {
+  description = "Public HTTP URL of the frontend static website"
+  value       = "http://${aws_s3_bucket_website_configuration.frontend_bucket_website.website_endpoint}"
+}
+--- FILE: infra/terraform/s3-frontend-bucket.tf ---
+resource "aws_s3_bucket" "frontend_bucket" {
+  bucket = var.frontend_bucket_name
+
+  tags = {
+    Name        = "geo-sentinel-web-frontend"
+    Project     = "geo-sentinel-web"
+    Environment = var.environment
+    ManagedBy   = "terraform"
+  }
+}
+
+resource "aws_s3_bucket_public_access_block" "frontend_bucket_public_access" {
+  bucket = aws_s3_bucket.frontend_bucket.id
+
+  block_public_acls       = false
+  block_public_policy     = false
+  ignore_public_acls      = false
+  restrict_public_buckets = false
+}
+
+resource "aws_s3_bucket_ownership_controls" "frontend_bucket_ownership" {
+  bucket = aws_s3_bucket.frontend_bucket.id
+
+  rule {
+    object_ownership = "BucketOwnerPreferred"
+  }
+}
+
+resource "aws_s3_bucket_website_configuration" "frontend_bucket_website" {
+  bucket = aws_s3_bucket.frontend_bucket.id
+
+  index_document {
+    suffix = "index.html"
+  }
+
+  error_document {
+    key = "index.html"
+  }
+}
+
+resource "aws_s3_bucket_policy" "frontend_bucket_policy" {
+  depends_on = [
+    aws_s3_bucket_public_access_block.frontend_bucket_public_access
+  ]
+
+  bucket = aws_s3_bucket.frontend_bucket.id
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid       = "PublicReadForStaticWebsite"
+        Effect    = "Allow"
+        Principal = "*"
+        Action = [
+          "s3:GetObject"
+        ]
+        Resource = "${aws_s3_bucket.frontend_bucket.arn}/*"
+      }
+    ]
+  })
+}
+--- FILE: infra/terraform/github_oidc.tf ---
+resource "aws_iam_openid_connect_provider" "github" {
+  url = "https://token.actions.githubusercontent.com"
+
+  client_id_list = [
+    "sts.amazonaws.com"
+  ]
+
+  thumbprint_list = [
+    "6938fd4d98bab03faadb97b34396831e3780aea1"
+  ]
+}
+--- FILE: infra/terraform/github_deploy_role.tf ---
+data "aws_iam_policy_document" "github_actions_assume_role" {
+  statement {
+    effect = "Allow"
+
+    actions = ["sts:AssumeRoleWithWebIdentity"]
+
+    principals {
+      type = "Federated"
+      identifiers = [
+        "arn:aws:iam::632150488936:oidc-provider/token.actions.githubusercontent.com"
+      ]
+    }
+
+    condition {
+      test     = "StringEquals"
+      variable = "token.actions.githubusercontent.com:aud"
+      values   = ["sts.amazonaws.com"]
+    }
+
+    condition {
+      test     = "StringLike"
+      variable = "token.actions.githubusercontent.com:sub"
+      values   = ["repo:Sujay-Muramalla/geo-sentinel-web:*"]
+    }
+  }
+}
+
+resource "aws_iam_role" "github_deploy_role" {
+  name               = "GeoSentinelGitHubDeployRole"
+  assume_role_policy = data.aws_iam_policy_document.github_actions_assume_role.json
+}
+
+resource "aws_iam_policy" "github_deploy_s3_policy" {
+  name        = "GeoSentinelGitHubDeployS3Policy"
+  description = "Allows GitHub Actions to deploy frontend files to the Geo-Sentinel S3 bucket"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:ListBucket"
+        ]
+        Resource = aws_s3_bucket.frontend_bucket.arn
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "s3:PutObject",
+          "s3:DeleteObject"
+        ]
+        Resource = "${aws_s3_bucket.frontend_bucket.arn}/*"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "github_deploy_s3_attach" {
+  role       = aws_iam_role.github_deploy_role.name
+  policy_arn = aws_iam_policy.github_deploy_s3_policy.arn
+}
+
+============================================================
+9) TERRAFORM MODULE / BACKEND STRUCTURE
+============================================================
+infra/terraform/modules
+infra/terraform/modules/ec2
+infra/terraform/modules/ec2/main.tf
+infra/terraform/modules/ec2/outputs.tf
+infra/terraform/modules/ec2/variables.tf
+infra/terraform/modules/s3
+infra/terraform/modules/s3/main.tf
+infra/terraform/modules/s3/outputs.tf
+infra/terraform/modules/s3/variables.tf
+
+infra/terraform/backend
+infra/terraform/backend/user_data.sh
+
+============================================================
+10) SEARCH FOR PORT / CORS / API / PYTHON / ENV
+============================================================
+--- SEARCH: cors|CORS|PORT|API|PYTHON|origin|process\.env|spawn|python ---
+backend/src/app.js:2:const cors = require("cors");
+backend/src/app.js:7:app.use(cors());
+backend/src/server.js:2:const cors = require("cors");
+backend/src/server.js:6:const PORT = process.env.PORT || 3000;
+backend/src/server.js:8:app.use(cors());
+backend/src/server.js:38:app.listen(PORT, () => {
+backend/src/server.js:39:    console.log(`Geo-Sentinel backend running on http://localhost:${PORT}`);
+backend/src/services/intelligenceService.js:2:const { spawn } = require("child_process");
+backend/src/services/intelligenceService.js:10:const PYTHON_WORKER_TIMEOUT_MS = Number(process.env.PYTHON_WORKER_TIMEOUT_MS || 25000);
+backend/src/services/intelligenceService.js:30:    if (process.env.PYTHON_COMMAND && process.env.PYTHON_COMMAND.trim()) {
+backend/src/services/intelligenceService.js:31:        return process.env.PYTHON_COMMAND.trim();
+backend/src/services/intelligenceService.js:35:        return "python";
+backend/src/services/intelligenceService.js:38:    return "python3";
+backend/src/services/intelligenceService.js:42:    return process.env.PYTHON_INTELLIGENCE_WORKER
+backend/src/services/intelligenceService.js:43:        ? path.resolve(process.env.PYTHON_INTELLIGENCE_WORKER)
+backend/src/services/intelligenceService.js:44:        : path.resolve(__dirname, "../python/rss_intelligence_worker.py");
+backend/src/services/intelligenceService.js:386:    const pythonCommand = resolvePythonCommand();
+backend/src/services/intelligenceService.js:390:        const child = spawn(pythonCommand, [workerPath], {
+backend/src/services/intelligenceService.js:392:                ...process.env,
+backend/src/services/intelligenceService.js:393:                PYTHONIOENCODING: "utf-8"
+backend/src/services/intelligenceService.js:406:                reject(new Error(`Python worker timed out after ${PYTHON_WORKER_TIMEOUT_MS} ms`));
+backend/src/services/intelligenceService.js:408:        }, PYTHON_WORKER_TIMEOUT_MS);
+backend/package.json:4:  "description": "Geo-Sentinel backend API with Python RSS ingestion worker",
+backend/package.json:12:    "cors": "^2.8.5",
+js/main.js:2:    const API_URL =
+js/main.js:3:        window.GEO_SENTINEL_API_URL ||
+js/main.js:131:        console.log("API URL:", API_URL);
+js/main.js:432:            const response = await fetch(API_URL, {
+js/main.js:445:            console.log("API response:", data);
+
+============================================================
+11) SEARCH FOR EC2 / SG / VPC / SUBNET / IAM IN TERRAFORM
+============================================================
+--- SEARCH: aws_instance|security_group|aws_security_group|subnet|vpc|iam_instance_profile|key_name|user_data|aws_internet_gateway|route_table ---
+infra/terraform/main.tf:2:  public_subnets = {
+infra/terraform/main.tf:3:    for idx, cidr in var.public_subnet_cidrs :
+infra/terraform/main.tf:10:  private_subnets = {
+infra/terraform/main.tf:11:    for idx, cidr in var.private_subnet_cidrs :
+infra/terraform/main.tf:24:resource "aws_vpc" "main" {
+infra/terraform/main.tf:25:  cidr_block           = var.vpc_cidr
+infra/terraform/main.tf:30:    Name = "${var.project_name}-${var.environment}-vpc"
+infra/terraform/main.tf:34:resource "aws_internet_gateway" "main" {
+infra/terraform/main.tf:35:  vpc_id = aws_vpc.main.id
+infra/terraform/main.tf:42:resource "aws_subnet" "public" {
+infra/terraform/main.tf:43:  for_each = local.public_subnets
+infra/terraform/main.tf:45:  vpc_id                  = aws_vpc.main.id
+infra/terraform/main.tf:56:resource "aws_subnet" "private" {
+infra/terraform/main.tf:57:  for_each = local.private_subnets
+infra/terraform/main.tf:59:  vpc_id            = aws_vpc.main.id
+infra/terraform/main.tf:69:resource "aws_route_table" "public" {
+infra/terraform/main.tf:70:  vpc_id = aws_vpc.main.id
+infra/terraform/main.tf:74:    gateway_id = aws_internet_gateway.main.id
+infra/terraform/main.tf:82:resource "aws_route_table_association" "public" {
+infra/terraform/main.tf:83:  for_each = aws_subnet.public
+infra/terraform/main.tf:85:  subnet_id      = each.value.id
+infra/terraform/main.tf:86:  route_table_id = aws_route_table.public.id
+infra/terraform/main.tf:89:resource "aws_route_table" "private" {
+infra/terraform/main.tf:90:  vpc_id = aws_vpc.main.id
+infra/terraform/main.tf:97:resource "aws_route_table_association" "private" {
+infra/terraform/main.tf:98:  for_each = aws_subnet.private
+infra/terraform/main.tf:100:  subnet_id      = each.value.id
+infra/terraform/main.tf:101:  route_table_id = aws_route_table.private.id
+infra/terraform/outputs.tf:1:output "vpc_id" {
+infra/terraform/outputs.tf:3:  value       = aws_vpc.main.id
+infra/terraform/outputs.tf:6:output "public_subnet_ids" {
+infra/terraform/outputs.tf:7:  description = "IDs of the public subnets"
+infra/terraform/outputs.tf:8:  value       = [for subnet in aws_subnet.public : subnet.id]
+infra/terraform/outputs.tf:11:output "private_subnet_ids" {
+infra/terraform/outputs.tf:12:  description = "IDs of the private subnets"
+infra/terraform/outputs.tf:13:  value       = [for subnet in aws_subnet.private : subnet.id]
+infra/terraform/outputs.tf:16:output "public_route_table_id" {
+infra/terraform/outputs.tf:18:  value       = aws_route_table.public.id
+infra/terraform/outputs.tf:21:output "private_route_table_id" {
+infra/terraform/outputs.tf:23:  value       = aws_route_table.private.id
+infra/terraform/variables.tf:19:variable "vpc_cidr" {
+infra/terraform/variables.tf:25:variable "public_subnet_cidrs" {
+infra/terraform/variables.tf:27:  description = "CIDR blocks for public subnets"
+infra/terraform/variables.tf:31:variable "private_subnet_cidrs" {
+infra/terraform/variables.tf:33:  description = "CIDR blocks for private subnets"
+infra/terraform/variables.tf:39:  description = "Availability zones used by the subnets"
+
+============================================================
+12) FRONTEND API WIRING FILE
+============================================================
+--- FILE: js/main.js ---
+document.addEventListener("DOMContentLoaded", () => {
+    const API_URL =
+        window.GEO_SENTINEL_API_URL ||
+        "http://localhost:3000/api/intelligence/generate";
+
+    const COUNTRY_SCOPE = {
+        world: [
+            "united-states", "canada", "mexico", "brazil", "argentina",
+            "united-kingdom", "germany", "france", "poland", "ukraine",
+            "russia", "china", "japan", "south-korea", "taiwan", "india",
+            "pakistan", "israel", "iran", "saudi-arabia", "turkey",
+            "egypt", "south-africa", "australia"
+        ],
+        europe: [
+            "united-kingdom", "germany", "france", "poland", "ukraine",
+            "italy", "spain", "netherlands", "sweden", "norway", "russia"
+        ],
+        asia: [
+            "china", "japan", "south-korea", "taiwan", "india",
+            "pakistan", "singapore", "indonesia", "philippines"
+        ],
+        "north-america": [
+            "united-states", "canada", "mexico"
+        ],
+        africa: [
+            "egypt", "south-africa", "nigeria", "kenya", "ethiopia", "morocco"
+        ],
+        "middle-east": [
+            "israel", "iran", "saudi-arabia", "turkey", "uae", "qatar", "iraq", "jordan"
+        ],
+        "south-america": [
+            "brazil", "argentina", "chile", "colombia", "peru"
+        ],
+        oceania: [
+            "australia", "new-zealand"
+        ]
+    };
+
+    const ALL_COUNTRIES = Array.from(
+        new Set(Object.values(COUNTRY_SCOPE).flat())
+    ).sort((a, b) => humanize(a).localeCompare(humanize(b)));
+
+    const state = {
+        query: "",
+        regions: ["world"],
+        countries: [],
+        mediaTypes: ["newspapers", "news-channels"],
+        publicationFocus: ["international"],
+        sentimentFilter: "all",
+        sortBy: "final-desc",
+        selectedTrend: "",
+        results: []
+    };
+
+    function normalizeUiText(value = "") {
+        return String(value).trim().toLowerCase().replace(/\s+/g, " ");
+    }
+
+    function getCheckboxesForFilterGroup(groupTitle) {
+        const groups = Array.from(document.querySelectorAll(".filter-group"));
+
+        const match = groups.find((group) => {
+            const titleText = normalizeUiText(group.textContent || "");
+            return titleText.includes(normalizeUiText(groupTitle));
+        });
+
+        return match ? Array.from(match.querySelectorAll("input[type='checkbox']")) : [];
+    }
+
+    function mapPublicationFocusValues(values = []) {
+        const normalized = (Array.isArray(values) ? values : [])
+            .map((value) => String(value || "").trim().toLowerCase());
+
+        if (!normalized.length) {
+            return ["international"];
+        }
+
+        if (normalized.includes("international")) {
+            return ["international"];
+        }
+
+        if (normalized.includes("international-publications")) {
+            return ["international"];
+        }
+
+        if (normalized.includes("regional")) {
+            return ["regional"];
+        }
+
+        if (normalized.includes("regional-publications")) {
+            return ["regional"];
+        }
+
+        return ["all"];
+    }
+
+    const dom = {
+        clearFiltersBtn: document.getElementById("clear-filters-btn"),
+        scenarioInput: document.getElementById("scenario-command"),
+        scopeChips: document.getElementById("scope-chips"),
+        resultsMiniSummary: document.getElementById("results-mini-summary"),
+        activeQueryLabel: document.getElementById("active-query-label"),
+        activeSortLabel: document.getElementById("active-sort-label"),
+        dominantSentimentLabel: document.getElementById("dominant-sentiment-label"),
+        metricSignalStrength: document.getElementById("metric-signal-strength"),
+        metricDominantTone: document.getElementById("metric-dominant-tone"),
+        metricSourceSpread: document.getElementById("metric-source-spread"),
+        resultsList: document.querySelector(".results-list"),
+        resultsEmptyState: document.getElementById("results-empty-state"),
+        generateBtn: document.querySelector(".scenario-command-actions .primary-action-btn"),
+        saveQueryBtn: document.querySelector(".secondary-action-btn"),
+        exampleChips: Array.from(document.querySelectorAll(".example-chip")),
+        trendSignalItems: Array.from(document.querySelectorAll(".trend-signal-item")),
+        expandButtons: Array.from(document.querySelectorAll(".expand-btn")),
+        countryDropdownBtn: document.getElementById("country-dropdown-btn"),
+        countryDropdown: document.getElementById("country-dropdown"),
+        countryList: document.getElementById("country-list"),
+        countrySearchInput: document.getElementById("country-search-input"),
+        selectedCountries: document.getElementById("selected-countries"),
+        sortResultsSelect: document.getElementById("sort-results-select"),
+        sentimentRadios: Array.from(document.querySelectorAll("input[name='sentiment-filter']")),
+        regionCheckboxes: getCheckboxesForFilterGroup("geographic scope"),
+        mediaCheckboxes: getCheckboxesForFilterGroup("media type"),
+        publicationCheckboxes: getCheckboxesForFilterGroup("publication focus")
+    };
+
+    init();
+
+    function init() {
+        console.log("Generate button:", dom.generateBtn);
+        console.log("API URL:", API_URL);
+
+        bindExpandButtons();
+        bindScenarioInput();
+        bindGenerateAction();
+        bindClearFilters();
+        bindExampleChips();
+        bindTrendSignals();
+        bindCountryDropdown();
+        bindRegionFilters();
+        bindMediaFilters();
+        bindPublicationFilters();
+        bindSentimentFilters();
+        bindSortControl();
+
+        renderCountryList();
+        renderSelectedCountries();
+        syncStateFromUI();
+        hydrateStaticCards();
+        renderScopeChips();
+        renderToolbarFromResults(state.results);
+        renderResultVisibility(state.results);
+    }
+
+    function bindExpandButtons() {
+        dom.expandButtons.forEach((button) => {
+            button.addEventListener("click", () => {
+                const targetId = button.dataset.target;
+                const target = document.getElementById(targetId);
+                if (!target) return;
+
+                const isOpen = target.classList.toggle("is-open");
+                button.textContent = isOpen ? "Show less" : "Show more";
+            });
+        });
+    }
+
+    function bindScenarioInput() {
+        if (!dom.scenarioInput) return;
+
+        dom.scenarioInput.addEventListener("input", (event) => {
+            state.query = event.target.value.trim();
+            state.selectedTrend = state.query;
+            renderScopeChips();
+            renderResultsMiniSummary();
+        });
+
+        dom.scenarioInput.addEventListener("keydown", async (event) => {
+            if (event.key === "Enter") {
+                event.preventDefault();
+                await generateIntelligence();
+            }
+        });
+    }
+
+    function bindGenerateAction() {
+        console.log("bindGenerateAction called");
+
+        if (!dom.generateBtn) {
+            console.error("Generate button not found");
+            return;
+        }
+
+        dom.generateBtn.addEventListener("click", async () => {
+            console.log("Generate button clicked");
+            await generateIntelligence();
+        });
+    }
+
+    function bindClearFilters() {
+        if (!dom.clearFiltersBtn) return;
+
+        dom.clearFiltersBtn.addEventListener("click", () => {
+            resetAllFilters();
+        });
+    }
+
+    function bindExampleChips() {
+        dom.exampleChips.forEach((chip) => {
+            chip.addEventListener("click", async () => {
+                const query = chip.textContent.trim();
+                if (dom.scenarioInput) {
+                    dom.scenarioInput.value = query;
+                }
+                state.query = query;
+                state.selectedTrend = query;
+                renderScopeChips();
+                renderResultsMiniSummary();
+                await generateIntelligence();
+            });
+        });
+    }
+
+    function bindTrendSignals() {
+        dom.trendSignalItems.forEach((item) => {
+            item.addEventListener("click", async () => {
+                const query = item.dataset.trendQuery || item.textContent.trim();
+                if (dom.scenarioInput) {
+                    dom.scenarioInput.value = query;
+                }
+                state.query = query;
+                state.selectedTrend = query;
+
+                dom.trendSignalItems.forEach((node) => node.classList.remove("is-active"));
+                item.classList.add("is-active");
+
+                renderScopeChips();
+                renderResultsMiniSummary();
+                await generateIntelligence();
+            });
+        });
+    }
+
+    function bindCountryDropdown() {
+        if (!dom.countryDropdownBtn || !dom.countryDropdown) return;
+
+        dom.countryDropdownBtn.addEventListener("click", () => {
+            dom.countryDropdown.classList.toggle("hidden");
+        });
+
+        if (dom.countrySearchInput) {
+            dom.countrySearchInput.addEventListener("input", () => {
+                renderCountryList(dom.countrySearchInput.value.trim().toLowerCase());
+            });
+        }
+
+        document.addEventListener("click", (event) => {
+            const clickedInside =
+                dom.countryDropdown.contains(event.target) ||
+                dom.countryDropdownBtn.contains(event.target);
+
+============================================================
+13) OPTIONAL ENV / EXAMPLE FILES
+============================================================
+
+============================================================
+14) TERRAFORM FORMAT / VALIDATION SNAPSHOT
+============================================================
+--- terraform version ---
+Terraform v1.14.8
+on windows_amd64
++ provider registry.terraform.io/hashicorp/aws v6.3.0
+
+Your version of Terraform is out of date! The latest version
+is 1.14.9. You can update by downloading from https://developer.hashicorp.com/terraform/install
+
+--- terraform fmt -check ---
+
+--- terraform validate ---
+
+============================================================
+15) DONE
+============================================================
+GEO-44 precheck inspection completed.
