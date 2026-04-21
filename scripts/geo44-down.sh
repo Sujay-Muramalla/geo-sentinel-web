@@ -12,3 +12,7 @@ terraform apply \
 echo
 echo "Backend compute disabled."
 echo "Foundation resources remain."
+
+echo
+echo "Remaining frontend URL:"
+terraform output -raw frontend_website_url || true

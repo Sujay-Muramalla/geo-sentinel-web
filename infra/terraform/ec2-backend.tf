@@ -38,6 +38,11 @@ resource "aws_instance" "backend" {
     volume_type           = "gp3"
     encrypted             = true
     delete_on_termination = true
+
+    tags = merge(local.common_tags, {
+      Name = "${var.project_name}-${var.environment}-backend-root-volume"
+      Role = "backend-api"
+    })
   }
 
   tags = merge(local.common_tags, {
