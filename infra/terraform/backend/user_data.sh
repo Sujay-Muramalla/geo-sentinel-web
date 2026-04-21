@@ -11,9 +11,10 @@ GITHUB_REPOSITORY_URL="${github_repository_url}"
 BACKEND_GIT_REF="${backend_git_ref}"
 
 dnf update -y
-dnf install -y git gcc-c++ make python3 python3-pip curl
+dnf install -y git gcc-c++ make python3 python3-pip python3-virtualenv
 
-curl -fsSL https://rpm.nodesource.com/setup_20.x | bash -
+curl -fsSL https://rpm.nodesource.com/setup_20.x -o /tmp/nodesource_setup.sh
+bash /tmp/nodesource_setup.sh
 dnf install -y nodejs
 
 rm -rf "$BACKEND_CLONE_PATH"
@@ -24,14 +25,17 @@ cd "$BACKEND_CLONE_PATH/backend"
 
 npm ci --omit=dev
 
-python3 -m pip install --upgrade pip
-python3 -m pip install -r src/python/requirements.txt
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r src/python/requirements.txt
+deactivate
 
 cat > .env <<EOF
 NODE_ENV=production
 PORT=$BACKEND_PORT
 CORS_ALLOWED_ORIGINS=$FRONTEND_ORIGIN
-PYTHON_COMMAND=python3
+PYTHON_COMMAND=$BACKEND_CLONE_PATH/backend/.venv/bin/python
 PYTHON_INTELLIGENCE_WORKER=$BACKEND_CLONE_PATH/backend/src/python/rss_intelligence_worker.py
 PYTHON_WORKER_TIMEOUT_MS=$PYTHON_WORKER_TIMEOUT_MS
 EOF
@@ -50,6 +54,8 @@ EnvironmentFile=$BACKEND_CLONE_PATH/backend/.env
 ExecStart=/usr/bin/node $BACKEND_CLONE_PATH/backend/src/server.js
 Restart=always
 RestartSec=5
+StandardOutput=journal
+StandardError=journal
 
 [Install]
 WantedBy=multi-user.target
@@ -61,7 +67,16 @@ systemctl daemon-reload
 systemctl enable geo-sentinel-backend
 systemctl restart geo-sentinel-backend
 
-for attempt in $(seq 1 30); do
+sleep 10
+
+if ! systemctl is-active --quiet geo-sentinel-backend; then
+  echo "geo-sentinel-backend service failed to start" >&2
+  systemctl status geo-sentinel-backend --no-pager || true
+  journalctl -u geo-sentinel-backend --no-pager -n 200 || true
+  exit 1
+fi
+
+for attempt in $(seq 1 24); do
   if curl -fsS "http://127.0.0.1:$BACKEND_PORT/api/health" >/dev/null; then
     echo "Geo-Sentinel backend became healthy on attempt $attempt"
     exit 0

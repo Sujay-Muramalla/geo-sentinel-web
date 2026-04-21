@@ -1,0 +1,418 @@
+i-0dc9bfe1bfe74b98e	[    3.736059] device-mapper: core: CONFIG_IMA_DISABLE_HTABLE is disabled. Duplicate IMA measurements will not be recorded in the IMA log.
+[    3.745840] device-mapper: uevent: version 1.0.3
+[    3.789198] systemd[1]: Finished systemd-network-generator.service - Generate network units from Kernel command line.
+[    3.809213] systemd[1]: Started systemd-journald.service - Journal Service.
+[    3.818784] device-mapper: ioctl: 4.47.0-ioctl (2022-07-28) initialised: dm-devel@redhat.com
+[    3.851490] loop: module loaded
+[    3.871333] fuse: init (API version 7.38)
+[    3.995087] systemd-journald[1095]: Received client request to flush runtime journal.
+[    4.307780] RPC: Registered named UNIX socket transport module.
+[    4.311178] RPC: Registered udp transport module.
+[    4.313956] RPC: Registered tcp transport module.
+[    4.316578] RPC: Registered tcp NFSv4.1 backchannel transport module.
+[    4.559012] vif vif-0 enX0: renamed from eth0
+[    4.574954] input: Power Button as /devices/LNXSYSTM:00/LNXPWRBN:00/input/input0
+[    4.616291] i8042: PNP: PS/2 Controller [PNP0303:PS2K,PNP0f13:PS2M] at 0x60,0x64 irq 1,12
+[    4.622958] serio: i8042 KBD port at 0x60,0x64 irq 1
+[    4.625983] serio: i8042 AUX port at 0x60,0x64 irq 12
+[    4.679012] ACPI: button: Power Button [PWRF]
+[    4.681808] input: Sleep Button as /devices/LNXSYSTM:00/LNXSLPBN:00/input/input1
+[    4.722179] ACPI: button: Sleep Button [SLPF]
+[    4.867605] SCSI subsystem initialized
+[    4.990201] zram_generator::config[1892]: zram0: system has too much memory (961MB), limit is 800MB, ignoring.
+[    5.058981] libata version 3.00 loaded.
+[    5.079758] ata_piix 0000:00:01.1: version 2.13
+[    5.118933] scsi host0: ata_piix
+[    5.158921] scsi host1: ata_piix
+[    5.159262] ata1: PATA max MWDMA2 cmd 0x1f0 ctl 0x3f6 bmdma 0xc100 irq 14
+[    5.159265] ata2: PATA max MWDMA2 cmd 0x170 ctl 0x376 bmdma 0xc108 irq 15
+[    7.475961] cloud-init[2062]: Cloud-init v. 22.2.2 running 'init' at Tue, 21 Apr 2026 10:31:53 +0000. Up 7.43 seconds.
+[    7.565163] cloud-init[2062]: ci-info: ++++++++++++++++++++++++++++++++++++++Net device info++++++++++++++++++++++++++++++++++++++
+[    7.574376] cloud-init[2062]: ci-info: +--------+------+----------------------------+---------------+--------+-------------------+
+[    7.583532] cloud-init[2062]: ci-info: | Device |  Up  |          Address           |      Mask     | Scope  |     Hw-Address    |
+[    7.592658] cloud-init[2062]: ci-info: +--------+------+----------------------------+---------------+--------+-------------------+
+[    7.601661] cloud-init[2062]: ci-info: |  enX0  | True |         10.0.1.218         | 255.255.255.0 | global | 02:a6:9e:47:94:e9 |
+[    7.612355] cloud-init[2062]: ci-info: |  enX0  | True | fe80::a6:9eff:fe47:94e9/64 |       .       |  link  | 02:a6:9e:47:94:e9 |
+[    7.621775] cloud-init[2062]: ci-info: |   lo   | True |         127.0.0.1          |   255.0.0.0   |  host  |         .         |
+[    7.631227] cloud-init[2062]: ci-info: |   lo   | True |          ::1/128           |       .       |  host  |         .         |
+[    7.640160] cloud-init[2062]: ci-info: +--------+------+----------------------------+---------------+--------+-------------------+
+[    7.649202] cloud-init[2062]: ci-info: ++++++++++++++++++++++++++++Route IPv4 info+++++++++++++++++++++++++++++
+[    7.657212] cloud-init[2062]: ci-info: +-------+-------------+----------+-----------------+-----------+-------+
+[    7.665745] cloud-init[2062]: ci-info: | Route | Destination | Gateway  |     Genmask     | Interface | Flags |
+[    7.676555] cloud-init[2062]: ci-info: +-------+-------------+----------+-----------------+-----------+-------+
+[    7.685926] cloud-init[2062]: ci-info: |   0   |   0.0.0.0   | 10.0.1.1 |     0.0.0.0     |    enX0   |   UG  |
+[    7.694230] cloud-init[2062]: ci-info: |   1   |   10.0.0.2  | 10.0.1.1 | 255.255.255.255 |    enX0   |  UGH  |
+[    7.704445] cloud-init[2062]: ci-info: |   2   |   10.0.1.0  | 0.0.0.0  |  255.255.255.0  |    enX0   |   U   |
+[    7.713896] cloud-init[2062]: ci-info: |   3   |   10.0.1.1  | 0.0.0.0  | 255.255.255.255 |    enX0   |   UH  |
+[    7.722076] cloud-init[2062]: ci-info: +-------+-------------+----------+-----------------+-----------+-------+
+[    7.730209] cloud-init[2062]: ci-info: +++++++++++++++++++Route IPv6 info+++++++++++++++++++
+[    7.735377] cloud-init[2062]: ci-info: +-------+-------------+---------+-----------+-------+
+[    7.742322] cloud-init[2062]: ci-info: | Route | Destination | Gateway | Interface | Flags |
+[    7.749153] cloud-init[2062]: ci-info: +-------+-------------+---------+-----------+-------+
+[    7.754380] cloud-init[2062]: ci-info: |   0   |  fe80::/64  |    ::   |    enX0   |   U   |
+[    7.761257] cloud-init[2062]: ci-info: |   2   |    local    |    ::   |    enX0   |   U   |
+[    7.768377] cloud-init[2062]: ci-info: |   3   |  multicast  |    ::   |    enX0   |   U   |
+[    7.775322] cloud-init[2062]: ci-info: +-------+-------------+---------+-----------+-------+
+[    8.615411] cloud-init[2062]: Generating public/private ed25519 key pair.
+[    8.630113] cloud-init[2062]: Your identification has been saved in /etc/ssh/ssh_host_ed25519_key
+[    8.635487] cloud-init[2062]: Your public key has been saved in /etc/ssh/ssh_host_ed25519_key.pub
+[    8.650124] cloud-init[2062]: The key fingerprint is:
+[    8.653374] cloud-init[2062]: SHA256:2IG7+YLzu/vxZEVipwEE2cQqlch1R5ourPHx+ynjnQs root@ip-10-0-1-218.eu-central-1.compute.internal
+[    8.662785] cloud-init[2062]: The key's randomart image is:
+[    8.670126] cloud-init[2062]: +--[ED25519 256]--+
+[    8.680091] cloud-init[2062]: |   . ooO=.o      |
+[    8.683282] cloud-init[2062]: |    o +oo=       |
+[    8.687141] cloud-init[2062]: |     ...+ + o    |
+[    8.690227] cloud-init[2062]: |    ...= o *     |
+[    8.693319] cloud-init[2062]: |    ..* S . .    |
+[    8.696404] cloud-init[2062]: |     + *   .     |
+[    8.699347] cloud-init[2062]: |    ..+ E o      |
+[    8.705608] cloud-init[2062]: |    o ..oO o     |
+[    8.708770] cloud-init[2062]: |     o=B=+B.     |
+[    8.711914] cloud-init[2062]: +----[SHA256]-----+
+[    8.715416] cloud-init[2062]: Generating public/private ecdsa key pair.
+[    8.750555] cloud-init[2062]: Your identification has been saved in /etc/ssh/ssh_host_ecdsa_key
+[    8.781185] cloud-init[2062]: Your public key has been saved in /etc/ssh/ssh_host_ecdsa_key.pub
+[    8.806011] cloud-init[2062]: The key fingerprint is:
+[    8.834332] cloud-init[2062]: SHA256:NwjMPgSFMCzMSDnDE3ixizLynOSv81xkWgwkbQeSGms root@ip-10-0-1-218.eu-central-1.compute.internal
+[    8.857679] cloud-init[2062]: The key's randomart image is:
+[    8.870297] cloud-init[2062]: +---[ECDSA 256]---+
+[    8.885769] cloud-init[2062]: |B+O=++.          |
+[    8.898944] cloud-init[2062]: |=O+*++.          |
+[    8.909618] cloud-init[2062]: | *=...=          |
+[    8.920385] cloud-init[2062]: |oE . = . .       |
+[    8.926334] cloud-init[2062]: |* o   B S o      |
+[    8.934059] cloud-init[2062]: |o* . = . . .     |
+[    8.944574] cloud-init[2062]: |  = . .          |
+[    8.964794] cloud-init[2062]: |  .o .           |
+[    8.970759] cloud-init[2062]: |  .++            |
+[    8.984480] cloud-init[2062]: +----[SHA256]-----+
+2026/04/21 10:31:55Z: SSM Agent unable to acquire credentials: <error>no valid credentials could be retrieved for ec2 identity. Default Host Management Err: error calling RequestManagedInstanceRoleToken: AccessDeniedException: Systems Manager's instance management role is not configured for account: 632150488936
+	status code: 400, request id: fa904e3e-15d6-46af-b7f0-984dc90f9127</error>
+[    9.460045] cloud-init[2152]: Cloud-init v. 22.2.2 running 'modules:config' at Tue, 21 Apr 2026 10:31:55 +0000. Up 9.37 seconds.
+[   10.105386] cloud-init[2160]: Cloud-init v. 22.2.2 running 'modules:final' at Tue, 21 Apr 2026 10:31:56 +0000. Up 10.04 seconds.
+[   10.188485] cloud-init[2160]: + exec
+[   10.192352] cloud-init[2160]: ++ logger -t user-data -s
+[   10.201768] cloud-init[2160]: ++ tee /var/log/geo-sentinel-user-data.log
+<13>Apr 21 10:31:56 user-data: + BACKEND_CLONE_PATH=/opt/geo-sentinel-web
+<13>Apr 21 10:31:56 user-data: + BACKEND_PORT=3000
+<13>Apr 21 10:31:56 user-data: + PYTHON_WORKER_TIMEOUT_MS=25000
+<13>Apr 21 10:31:56 user-data: + FRONTEND_ORIGIN=http://geo-sentinel-web-frontend-632150488936.s3-website.eu-central-1.amazonaws.com
+<13>Apr 21 10:31:56 user-data: + GITHUB_REPOSITORY_URL=https://github.com/Sujay-Muramalla/geo-sentinel-web.git
+<13>Apr 21 10:31:56 user-data: + BACKEND_GIT_REF=feature/geo-44-backend-api-deployment
+<13>Apr 21 10:31:56 user-data: + dnf update -y
+<13>Apr 21 10:31:58 user-data: Amazon Linux 2023 repository                     62 MB/s |  59 MB     00:00    
+
+Amazon Linux 2023.11.20260413
+Kernel 6.1.166-197.305.amzn2023.x86_64 on an x86_64 (-)
+
+ip-10-0-1-218 login: <13>Apr 21 10:32:13 user-data: Amazon Linux 2023 Kernel Livepatch repository   231 kB/s |  31 kB     00:00    
+<13>Apr 21 10:32:14 user-data: Dependencies resolved.
+<13>Apr 21 10:32:14 user-data: Nothing to do.
+<13>Apr 21 10:32:14 user-data: Complete!
+<13>Apr 21 10:32:14 user-data: + dnf install -y git gcc-c++ make python3 python3-pip curl
+<13>Apr 21 10:32:15 user-data: Last metadata expiration check: 0:00:02 ago on Tue Apr 21 10:32:13 2026.
+<13>Apr 21 10:32:15 user-data: Package python3-3.9.25-1.amzn2023.0.4.x86_64 is already installed.
+<13>Apr 21 10:32:15 user-data: Error: 
+<13>Apr 21 10:32:15 user-data:  Problem: problem with installed package curl-minimal-8.17.0-1.amzn2023.0.2.x86_64
+<13>Apr 21 10:32:15 user-data:   - package curl-minimal-8.17.0-1.amzn2023.0.2.x86_64 from @System conflicts with curl provided by curl-7.87.0-2.amzn2023.0.2.x86_64 from amazonlinux
+<13>Apr 21 10:32:15 user-data:   - package curl-minimal-7.87.0-2.amzn2023.0.2.x86_64 from amazonlinux conflicts with curl provided by curl-7.87.0-2.amzn2023.0.2.x86_64 from amazonlinux
+<13>Apr 21 10:32:15 user-data:   - package curl-minimal-7.88.0-1.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-7.87.0-2.amzn2023.0.2.x86_64 from amazonlinux
+[   29.320290] cloud-init[2160]: 2026-04-21 10:32:15,396 - cc_scripts_user.py[WARNING]: Failed to run module scripts-user (scripts in /var/lib/cloud/instance/scripts)
+[   29.328081] cloud-init[2160]: 2026-04-21 10:32:15,396 - util.py[WARNING]: Running module scripts-user (<module 'cloudinit.config.cc_scripts_user' from '/usr/lib/python3.9/site-packages/cloudinit/config/cc_scripts_user.py'>) failed
+<13>Apr 21 10:32:15 user-data:   - package curl-minimal-7.88.1-1.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-7.87.0-2.amzn2023.0.2.x86_64 from amazonlinux
+<13>Apr 21 10:32:15 user-data:   - package curl-minimal-8.0.1-1.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-7.87.0-2.amzn2023.0.2.x86_64 from amazonlinux
+<13>Apr 21 10:32:15 user-data:   - package curl-minimal-8.0.1-1.amzn2023.x86_64 from amazonlinux conflicts with curl provided by curl-7.87.0-2.amzn2023.0.2.x86_64 from amazonlinux
+<13>Apr 21 10:32:15 user-data:   - package curl-minimal-8.11.1-4.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-7.87.0-2.amzn2023.0.2.x86_64 from amazonlinux
+<13>Apr 21 10:32:15 user-data:   - package curl-minimal-8.11.1-4.amzn2023.0.3.x86_64 from amazonlinux conflicts with curl provided by curl-7.87.0-2.amzn2023.0.2.x86_64 from amazonlinux
+<13>Apr 21 10:32:15 user-data:   - package curl-minimal-8.15.0-4.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-7.87.0-2.amzn2023.0.2.x86_64 from amazonlinux
+ci-info: no authorized SSH keys fingerprints found for user ec2-user.
+<13>Apr 21 10:32:15 user-data:   - package curl-minimal-8.17.0-1.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-7.87.0-2.amzn2023.0.2.x86_64 from amazonlinux
+<13>Apr 21 10:32:15 user-data:   - package curl-minimal-8.17.0-1.amzn2023.0.2.x86_64 from amazonlinux conflicts with curl provided by curl-7.87.0-2.amzn2023.0.2.x86_64 from amazonlinux
+<13>Apr 21 10:32:15 user-data:   - package curl-minimal-8.2.1-1.amzn2023.0.2.x86_64 from amazonlinux conflicts with curl provided by curl-7.87.0-2.amzn2023.0.2.x86_64 from amazonlinux
+<13>Apr 21 10:32:15 user-data:   - package curl-minimal-8.2.1-1.amzn2023.0.3.x86_64 from amazonlinux conflicts with curl provided by curl-7.87.0-2.amzn2023.0.2.x86_64 from amazonlinux
+<13>Apr 21 10:32:15 user-data:   - package curl-minimal-8.3.0-1.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-7.87.0-2.amzn2023.0.2.x86_64 from amazonlinux
+<13>Apr 21 10:32:15 user-data:   - package curl-minimal-8.3.0-1.amzn2023.0.2.x86_64 from amazonlinux conflicts with curl provided by curl-7.87.0-2.amzn2023.0.2.x86_64 from amazonlinux
+<13>Apr 21 10:32:15 user-data:   - package curl-minimal-8.5.0-1.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-7.87.0-2.amzn2023.0.2.x86_64 from amazonlinux
+<13>Apr 21 10:32:15 user-data:   - package curl-minimal-8.5.0-1.amzn2023.0.2.x86_64 from amazonlinux conflicts with curl provided by curl-7.87.0-2.amzn2023.0.2.x86_64 from amazonlinux
+<13>Apr 21 10:32:15 user-data:   - package curl-minimal-8.5.0-1.amzn2023.0.3.x86_64 from amazonlinux conflicts with curl provided by curl-7.87.0-2.amzn2023.0.2.x86_64 from amazonlinux
+<13>Apr 21 10:32:15 user-data:   - package curl-minimal-8.5.0-1.amzn2023.0.4.x86_64 from amazonlinux conflicts with curl provided by curl-7.87.0-2.amzn2023.0.2.x86_64 from amazonlinux
+<13>Apr 21 10:32:15 user-data:   - package curl-minimal-8.5.0-1.amzn2023.0.5.x86_64 from amazonlinux conflicts with curl provided by curl-7.87.0-2.amzn2023.0.2.x86_64 from amazonlinux
+<13>Apr 21 10:32:15 user-data:   - conflicting requests
+<14>Apr 21 10:32:15 cloud-init: #############################################################
+<14>Apr 21 10:32:15 cloud-init: -----BEGIN SSH HOST KEY FINGERPRINTS-----
+<14>Apr 21 10:32:15 cloud-init: 256 SHA256:NwjMPgSFMCzMSDnDE3ixizLynOSv81xkWgwkbQeSGms root@ip-10-0-1-218.eu-central-1.compute.internal (ECDSA)
+<14>Apr 21 10:32:15 cloud-init: 256 SHA256:2IG7+YLzu/vxZEVipwEE2cQqlch1R5ourPHx+ynjnQs root@ip-10-0-1-218.eu-central-1.compute.internal (ED25519)
+<14>Apr 21 10:32:15 cloud-init: -----END SSH HOST KEY FINGERPRINTS-----
+<14>Apr 21 10:32:15 cloud-init: #############################################################
+-----BEGIN SSH HOST KEY KEYS-----
+ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBC3aMoDe/Y5tVAVCdIwhcoCrBj6LjXOnqREPkCsbBQ+ecjMtSBCd9NDEWEHbB9Y4WnsAT0JQUmU1lZ4Nk0/CF/U= root@ip-10-0-1-218.eu-central-1.compute.internal
+ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINqssNa7dXXyc9x79lVluBi93kRRoWcsKu7i4oNjN3h4 root@ip-10-0-1-218.eu-central-1.compute.internal
+-----END SSH HOST KEY KEYS-----
+<13>Apr 21 10:32:15 user-data:   - package curl-minimal-8.17.0-1.amzn2023.0.2.x86_64 from @System conflicts with curl provided by curl-7.88.0-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:15 user-data:   - package curl-minimal-7.87.0-2.amzn2023.0.2.x86_64 from amazonlinux conflicts with curl provided by curl-7.88.0-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:15 user-data:   - package curl-minimal-7.88.0-1.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-7.88.0-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:15 user-data:   - package curl-minimal-7.88.1-1.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-7.88.0-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:15 user-data:   - package curl-minimal-8.0.1-1.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-7.88.0-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:15 user-data:   - package curl-minimal-8.0.1-1.amzn2023.x86_64 from amazonlinux conflicts with curl provided by curl-7.88.0-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:15 user-data:   - package curl-minimal-8.11.1-4.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-7.88.0-1.amzn2023.0.1.x86_64 from amazonlinux
+[   29.741930] cloud-init[2160]: Cloud-init v. 22.2.2 finished at Tue, 21 Apr 2026 10:32:15 +0000. Datasource DataSourceEc2.  Up 29.72 seconds
+<13>Apr 21 10:32:15 user-data:   - package curl-minimal-8.11.1-4.amzn2023.0.3.x86_64 from amazonlinux conflicts with curl provided by curl-7.88.0-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:15 user-data:   - package curl-minimal-8.15.0-4.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-7.88.0-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:15 user-data:   - package curl-minimal-8.17.0-1.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-7.88.0-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:15 user-data:   - package curl-minimal-8.17.0-1.amzn2023.0.2.x86_64 from amazonlinux conflicts with curl provided by curl-7.88.0-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:15 user-data:   - package curl-minimal-8.2.1-1.amzn2023.0.2.x86_64 from amazonlinux conflicts with curl provided by curl-7.88.0-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:15 user-data:   - package curl-minimal-8.2.1-1.amzn2023.0.3.x86_64 from amazonlinux conflicts with curl provided by curl-7.88.0-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:15 user-data:   - package curl-minimal-8.3.0-1.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-7.88.0-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:15 user-data:   - package curl-minimal-8.3.0-1.amzn2023.0.2.x86_64 from amazonlinux conflicts with curl provided by curl-7.88.0-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:15 user-data:   - package curl-minimal-8.5.0-1.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-7.88.0-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:16 user-data:   - package curl-minimal-8.5.0-1.amzn2023.0.2.x86_64 from amazonlinux conflicts with curl provided by curl-7.88.0-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:16 user-data:   - package curl-minimal-8.5.0-1.amzn2023.0.3.x86_64 from amazonlinux conflicts with curl provided by curl-7.88.0-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:16 user-data:   - package curl-minimal-8.5.0-1.amzn2023.0.4.x86_64 from amazonlinux conflicts with curl provided by curl-7.88.0-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:16 user-data:   - package curl-minimal-8.5.0-1.amzn2023.0.5.x86_64 from amazonlinux conflicts with curl provided by curl-7.88.0-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:16 user-data:   - package curl-minimal-8.17.0-1.amzn2023.0.2.x86_64 from @System conflicts with curl provided by curl-7.88.1-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:16 user-data:   - package curl-minimal-7.87.0-2.amzn2023.0.2.x86_64 from amazonlinux conflicts with curl provided by curl-7.88.1-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:16 user-data:   - package curl-minimal-7.88.0-1.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-7.88.1-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:16 user-data:   - package curl-minimal-7.88.1-1.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-7.88.1-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:16 user-data:   - package curl-minimal-8.0.1-1.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-7.88.1-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:16 user-data:   - package curl-minimal-8.0.1-1.amzn2023.x86_64 from amazonlinux conflicts with curl provided by curl-7.88.1-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:16 user-data:   - package curl-minimal-8.11.1-4.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-7.88.1-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:16 user-data:   - package curl-minimal-8.11.1-4.amzn2023.0.3.x86_64 from amazonlinux conflicts with curl provided by curl-7.88.1-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:16 user-data:   - package curl-minimal-8.15.0-4.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-7.88.1-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:16 user-data:   - package curl-minimal-8.17.0-1.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-7.88.1-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:16 user-data:   - package curl-minimal-8.17.0-1.amzn2023.0.2.x86_64 from amazonlinux conflicts with curl provided by curl-7.88.1-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:16 user-data:   - package curl-minimal-8.2.1-1.amzn2023.0.2.x86_64 from amazonlinux conflicts with curl provided by curl-7.88.1-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:16 user-data:   - package curl-minimal-8.2.1-1.amzn2023.0.3.x86_64 from amazonlinux conflicts with curl provided by curl-7.88.1-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:16 user-data:   - package curl-minimal-8.3.0-1.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-7.88.1-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:16 user-data:   - package curl-minimal-8.3.0-1.amzn2023.0.2.x86_64 from amazonlinux conflicts with curl provided by curl-7.88.1-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:16 user-data:   - package curl-minimal-8.5.0-1.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-7.88.1-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:16 user-data:   - package curl-minimal-8.5.0-1.amzn2023.0.2.x86_64 from amazonlinux conflicts with curl provided by curl-7.88.1-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:16 user-data:   - package curl-minimal-8.5.0-1.amzn2023.0.3.x86_64 from amazonlinux conflicts with curl provided by curl-7.88.1-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:16 user-data:   - package curl-minimal-8.5.0-1.amzn2023.0.4.x86_64 from amazonlinux conflicts with curl provided by curl-7.88.1-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:16 user-data:   - package curl-minimal-8.5.0-1.amzn2023.0.5.x86_64 from amazonlinux conflicts with curl provided by curl-7.88.1-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:16 user-data:   - package curl-minimal-8.17.0-1.amzn2023.0.2.x86_64 from @System conflicts with curl provided by curl-8.0.1-1.amzn2023.x86_64 from amazonlinux
+<13>Apr 21 10:32:16 user-data:   - package curl-minimal-7.87.0-2.amzn2023.0.2.x86_64 from amazonlinux conflicts with curl provided by curl-8.0.1-1.amzn2023.x86_64 from amazonlinux
+<13>Apr 21 10:32:16 user-data:   - package curl-minimal-7.88.0-1.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.0.1-1.amzn2023.x86_64 from amazonlinux
+<13>Apr 21 10:32:16 user-data:   - package curl-minimal-7.88.1-1.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.0.1-1.amzn2023.x86_64 from amazonlinux
+<13>Apr 21 10:32:16 user-data:   - package curl-minimal-8.0.1-1.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.0.1-1.amzn2023.x86_64 from amazonlinux
+<13>Apr 21 10:32:16 user-data:   - package curl-minimal-8.0.1-1.amzn2023.x86_64 from amazonlinux conflicts with curl provided by curl-8.0.1-1.amzn2023.x86_64 from amazonlinux
+<13>Apr 21 10:32:16 user-data:   - package curl-minimal-8.11.1-4.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.0.1-1.amzn2023.x86_64 from amazonlinux
+<13>Apr 21 10:32:16 user-data:   - package curl-minimal-8.11.1-4.amzn2023.0.3.x86_64 from amazonlinux conflicts with curl provided by curl-8.0.1-1.amzn2023.x86_64 from amazonlinux
+<13>Apr 21 10:32:16 user-data:   - package curl-minimal-8.15.0-4.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.0.1-1.amzn2023.x86_64 from amazonlinux
+<13>Apr 21 10:32:16 user-data:   - package curl-minimal-8.17.0-1.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.0.1-1.amzn2023.x86_64 from amazonlinux
+<13>Apr 21 10:32:16 user-data:   - package curl-minimal-8.17.0-1.amzn2023.0.2.x86_64 from amazonlinux conflicts with curl provided by curl-8.0.1-1.amzn2023.x86_64 from amazonlinux
+<13>Apr 21 10:32:16 user-data:   - package curl-minimal-8.2.1-1.amzn2023.0.2.x86_64 from amazonlinux conflicts with curl provided by curl-8.0.1-1.amzn2023.x86_64 from amazonlinux
+<13>Apr 21 10:32:16 user-data:   - package curl-minimal-8.2.1-1.amzn2023.0.3.x86_64 from amazonlinux conflicts with curl provided by curl-8.0.1-1.amzn2023.x86_64 from amazonlinux
+<13>Apr 21 10:32:16 user-data:   - package curl-minimal-8.3.0-1.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.0.1-1.amzn2023.x86_64 from amazonlinux
+<13>Apr 21 10:32:16 user-data:   - package curl-minimal-8.3.0-1.amzn2023.0.2.x86_64 from amazonlinux conflicts with curl provided by curl-8.0.1-1.amzn2023.x86_64 from amazonlinux
+<13>Apr 21 10:32:16 user-data:   - package curl-minimal-8.5.0-1.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.0.1-1.amzn2023.x86_64 from amazonlinux
+<13>Apr 21 10:32:16 user-data:   - package curl-minimal-8.5.0-1.amzn2023.0.2.x86_64 from amazonlinux conflicts with curl provided by curl-8.0.1-1.amzn2023.x86_64 from amazonlinux
+<13>Apr 21 10:32:16 user-data:   - package curl-minimal-8.5.0-1.amzn2023.0.3.x86_64 from amazonlinux conflicts with curl provided by curl-8.0.1-1.amzn2023.x86_64 from amazonlinux
+<13>Apr 21 10:32:16 user-data:   - package curl-minimal-8.5.0-1.amzn2023.0.4.x86_64 from amazonlinux conflicts with curl provided by curl-8.0.1-1.amzn2023.x86_64 from amazonlinux
+<13>Apr 21 10:32:16 user-data:   - package curl-minimal-8.5.0-1.amzn2023.0.5.x86_64 from amazonlinux conflicts with curl provided by curl-8.0.1-1.amzn2023.x86_64 from amazonlinux
+<13>Apr 21 10:32:16 user-data:   - package curl-minimal-8.17.0-1.amzn2023.0.2.x86_64 from @System conflicts with curl provided by curl-8.0.1-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:16 user-data:   - package curl-minimal-7.87.0-2.amzn2023.0.2.x86_64 from amazonlinux conflicts with curl provided by curl-8.0.1-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:16 user-data:   - package curl-minimal-7.88.0-1.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.0.1-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:16 user-data:   - package curl-minimal-7.88.1-1.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.0.1-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:16 user-data:   - package curl-minimal-8.0.1-1.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.0.1-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:16 user-data:   - package curl-minimal-8.0.1-1.amzn2023.x86_64 from amazonlinux conflicts with curl provided by curl-8.0.1-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:16 user-data:   - package curl-minimal-8.11.1-4.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.0.1-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:16 user-data:   - package curl-minimal-8.11.1-4.amzn2023.0.3.x86_64 from amazonlinux conflicts with curl provided by curl-8.0.1-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:16 user-data:   - package curl-minimal-8.15.0-4.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.0.1-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:16 user-data:   - package curl-minimal-8.17.0-1.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.0.1-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:16 user-data:   - package curl-minimal-8.17.0-1.amzn2023.0.2.x86_64 from amazonlinux conflicts with curl provided by curl-8.0.1-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:16 user-data:   - package curl-minimal-8.2.1-1.amzn2023.0.2.x86_64 from amazonlinux conflicts with curl provided by curl-8.0.1-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:16 user-data:   - package curl-minimal-8.2.1-1.amzn2023.0.3.x86_64 from amazonlinux conflicts with curl provided by curl-8.0.1-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:16 user-data:   - package curl-minimal-8.3.0-1.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.0.1-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:16 user-data:   - package curl-minimal-8.3.0-1.amzn2023.0.2.x86_64 from amazonlinux conflicts with curl provided by curl-8.0.1-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:16 user-data:   - package curl-minimal-8.5.0-1.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.0.1-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:16 user-data:   - package curl-minimal-8.5.0-1.amzn2023.0.2.x86_64 from amazonlinux conflicts with curl provided by curl-8.0.1-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:16 user-data:   - package curl-minimal-8.5.0-1.amzn2023.0.3.x86_64 from amazonlinux conflicts with curl provided by curl-8.0.1-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:16 user-data:   - package curl-minimal-8.5.0-1.amzn2023.0.4.x86_64 from amazonlinux conflicts with curl provided by curl-8.0.1-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:16 user-data:   - package curl-minimal-8.5.0-1.amzn2023.0.5.x86_64 from amazonlinux conflicts with curl provided by curl-8.0.1-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:17 user-data:   - package curl-minimal-8.17.0-1.amzn2023.0.2.x86_64 from @System conflicts with curl provided by curl-8.2.1-1.amzn2023.0.2.x86_64 from amazonlinux
+<13>Apr 21 10:32:17 user-data:   - package curl-minimal-7.87.0-2.amzn2023.0.2.x86_64 from amazonlinux conflicts with curl provided by curl-8.2.1-1.amzn2023.0.2.x86_64 from amazonlinux
+<13>Apr 21 10:32:17 user-data:   - package curl-minimal-7.88.0-1.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.2.1-1.amzn2023.0.2.x86_64 from amazonlinux
+<13>Apr 21 10:32:17 user-data:   - package curl-minimal-7.88.1-1.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.2.1-1.amzn2023.0.2.x86_64 from amazonlinux
+<13>Apr 21 10:32:17 user-data:   - package curl-minimal-8.0.1-1.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.2.1-1.amzn2023.0.2.x86_64 from amazonlinux
+<13>Apr 21 10:32:17 user-data:   - package curl-minimal-8.0.1-1.amzn2023.x86_64 from amazonlinux conflicts with curl provided by curl-8.2.1-1.amzn2023.0.2.x86_64 from amazonlinux
+<13>Apr 21 10:32:17 user-data:   - package curl-minimal-8.11.1-4.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.2.1-1.amzn2023.0.2.x86_64 from amazonlinux
+<13>Apr 21 10:32:17 user-data:   - package curl-minimal-8.11.1-4.amzn2023.0.3.x86_64 from amazonlinux conflicts with curl provided by curl-8.2.1-1.amzn2023.0.2.x86_64 from amazonlinux
+<13>Apr 21 10:32:17 user-data:   - package curl-minimal-8.15.0-4.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.2.1-1.amzn2023.0.2.x86_64 from amazonlinux
+<13>Apr 21 10:32:17 user-data:   - package curl-minimal-8.17.0-1.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.2.1-1.amzn2023.0.2.x86_64 from amazonlinux
+<13>Apr 21 10:32:17 user-data:   - package curl-minimal-8.17.0-1.amzn2023.0.2.x86_64 from amazonlinux conflicts with curl provided by curl-8.2.1-1.amzn2023.0.2.x86_64 from amazonlinux
+<13>Apr 21 10:32:17 user-data:   - package curl-minimal-8.2.1-1.amzn2023.0.2.x86_64 from amazonlinux conflicts with curl provided by curl-8.2.1-1.amzn2023.0.2.x86_64 from amazonlinux
+<13>Apr 21 10:32:17 user-data:   - package curl-minimal-8.2.1-1.amzn2023.0.3.x86_64 from amazonlinux conflicts with curl provided by curl-8.2.1-1.amzn2023.0.2.x86_64 from amazonlinux
+<13>Apr 21 10:32:17 user-data:   - package curl-minimal-8.3.0-1.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.2.1-1.amzn2023.0.2.x86_64 from amazonlinux
+<13>Apr 21 10:32:17 user-data:   - package curl-minimal-8.3.0-1.amzn2023.0.2.x86_64 from amazonlinux conflicts with curl provided by curl-8.2.1-1.amzn2023.0.2.x86_64 from amazonlinux
+<13>Apr 21 10:32:17 user-data:   - package curl-minimal-8.5.0-1.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.2.1-1.amzn2023.0.2.x86_64 from amazonlinux
+<13>Apr 21 10:32:17 user-data:   - package curl-minimal-8.5.0-1.amzn2023.0.2.x86_64 from amazonlinux conflicts with curl provided by curl-8.2.1-1.amzn2023.0.2.x86_64 from amazonlinux
+<13>Apr 21 10:32:17 user-data:   - package curl-minimal-8.5.0-1.amzn2023.0.3.x86_64 from amazonlinux conflicts with curl provided by curl-8.2.1-1.amzn2023.0.2.x86_64 from amazonlinux
+<13>Apr 21 10:32:17 user-data:   - package curl-minimal-8.5.0-1.amzn2023.0.4.x86_64 from amazonlinux conflicts with curl provided by curl-8.2.1-1.amzn2023.0.2.x86_64 from amazonlinux
+<13>Apr 21 10:32:17 user-data:   - package curl-minimal-8.5.0-1.amzn2023.0.5.x86_64 from amazonlinux conflicts with curl provided by curl-8.2.1-1.amzn2023.0.2.x86_64 from amazonlinux
+<13>Apr 21 10:32:17 user-data:   - package curl-minimal-8.17.0-1.amzn2023.0.2.x86_64 from @System conflicts with curl provided by curl-8.2.1-1.amzn2023.0.3.x86_64 from amazonlinux
+<13>Apr 21 10:32:17 user-data:   - package curl-minimal-7.87.0-2.amzn2023.0.2.x86_64 from amazonlinux conflicts with curl provided by curl-8.2.1-1.amzn2023.0.3.x86_64 from amazonlinux
+<13>Apr 21 10:32:17 user-data:   - package curl-minimal-7.88.0-1.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.2.1-1.amzn2023.0.3.x86_64 from amazonlinux
+<13>Apr 21 10:32:17 user-data:   - package curl-minimal-7.88.1-1.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.2.1-1.amzn2023.0.3.x86_64 from amazonlinux
+<13>Apr 21 10:32:17 user-data:   - package curl-minimal-8.0.1-1.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.2.1-1.amzn2023.0.3.x86_64 from amazonlinux
+<13>Apr 21 10:32:17 user-data:   - package curl-minimal-8.0.1-1.amzn2023.x86_64 from amazonlinux conflicts with curl provided by curl-8.2.1-1.amzn2023.0.3.x86_64 from amazonlinux
+<13>Apr 21 10:32:17 user-data:   - package curl-minimal-8.11.1-4.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.2.1-1.amzn2023.0.3.x86_64 from amazonlinux
+<13>Apr 21 10:32:17 user-data:   - package curl-minimal-8.11.1-4.amzn2023.0.3.x86_64 from amazonlinux conflicts with curl provided by curl-8.2.1-1.amzn2023.0.3.x86_64 from amazonlinux
+<13>Apr 21 10:32:17 user-data:   - package curl-minimal-8.15.0-4.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.2.1-1.amzn2023.0.3.x86_64 from amazonlinux
+<13>Apr 21 10:32:17 user-data:   - package curl-minimal-8.17.0-1.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.2.1-1.amzn2023.0.3.x86_64 from amazonlinux
+<13>Apr 21 10:32:17 user-data:   - package curl-minimal-8.17.0-1.amzn2023.0.2.x86_64 from amazonlinux conflicts with curl provided by curl-8.2.1-1.amzn2023.0.3.x86_64 from amazonlinux
+<13>Apr 21 10:32:17 user-data:   - package curl-minimal-8.2.1-1.amzn2023.0.2.x86_64 from amazonlinux conflicts with curl provided by curl-8.2.1-1.amzn2023.0.3.x86_64 from amazonlinux
+<13>Apr 21 10:32:17 user-data:   - package curl-minimal-8.2.1-1.amzn2023.0.3.x86_64 from amazonlinux conflicts with curl provided by curl-8.2.1-1.amzn2023.0.3.x86_64 from amazonlinux
+<13>Apr 21 10:32:17 user-data:   - package curl-minimal-8.3.0-1.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.2.1-1.amzn2023.0.3.x86_64 from amazonlinux
+<13>Apr 21 10:32:17 user-data:   - package curl-minimal-8.3.0-1.amzn2023.0.2.x86_64 from amazonlinux conflicts with curl provided by curl-8.2.1-1.amzn2023.0.3.x86_64 from amazonlinux
+<13>Apr 21 10:32:17 user-data:   - package curl-minimal-8.5.0-1.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.2.1-1.amzn2023.0.3.x86_64 from amazonlinux
+<13>Apr 21 10:32:17 user-data:   - package curl-minimal-8.5.0-1.amzn2023.0.2.x86_64 from amazonlinux conflicts with curl provided by curl-8.2.1-1.amzn2023.0.3.x86_64 from amazonlinux
+<13>Apr 21 10:32:17 user-data:   - package curl-minimal-8.5.0-1.amzn2023.0.3.x86_64 from amazonlinux conflicts with curl provided by curl-8.2.1-1.amzn2023.0.3.x86_64 from amazonlinux
+<13>Apr 21 10:32:17 user-data:   - package curl-minimal-8.5.0-1.amzn2023.0.4.x86_64 from amazonlinux conflicts with curl provided by curl-8.2.1-1.amzn2023.0.3.x86_64 from amazonlinux
+<13>Apr 21 10:32:17 user-data:   - package curl-minimal-8.5.0-1.amzn2023.0.5.x86_64 from amazonlinux conflicts with curl provided by curl-8.2.1-1.amzn2023.0.3.x86_64 from amazonlinux
+<13>Apr 21 10:32:17 user-data:   - package curl-minimal-8.17.0-1.amzn2023.0.2.x86_64 from @System conflicts with curl provided by curl-8.3.0-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:17 user-data:   - package curl-minimal-7.87.0-2.amzn2023.0.2.x86_64 from amazonlinux conflicts with curl provided by curl-8.3.0-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:17 user-data:   - package curl-minimal-7.88.0-1.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.3.0-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:17 user-data:   - package curl-minimal-7.88.1-1.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.3.0-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:17 user-data:   - package curl-minimal-8.0.1-1.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.3.0-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:17 user-data:   - package curl-minimal-8.0.1-1.amzn2023.x86_64 from amazonlinux conflicts with curl provided by curl-8.3.0-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:17 user-data:   - package curl-minimal-8.11.1-4.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.3.0-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:17 user-data:   - package curl-minimal-8.11.1-4.amzn2023.0.3.x86_64 from amazonlinux conflicts with curl provided by curl-8.3.0-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:17 user-data:   - package curl-minimal-8.15.0-4.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.3.0-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:17 user-data:   - package curl-minimal-8.17.0-1.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.3.0-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:17 user-data:   - package curl-minimal-8.17.0-1.amzn2023.0.2.x86_64 from amazonlinux conflicts with curl provided by curl-8.3.0-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:17 user-data:   - package curl-minimal-8.2.1-1.amzn2023.0.2.x86_64 from amazonlinux conflicts with curl provided by curl-8.3.0-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:17 user-data:   - package curl-minimal-8.2.1-1.amzn2023.0.3.x86_64 from amazonlinux conflicts with curl provided by curl-8.3.0-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:17 user-data:   - package curl-minimal-8.3.0-1.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.3.0-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:17 user-data:   - package curl-minimal-8.3.0-1.amzn2023.0.2.x86_64 from amazonlinux conflicts with curl provided by curl-8.3.0-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:17 user-data:   - package curl-minimal-8.5.0-1.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.3.0-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:17 user-data:   - package curl-minimal-8.5.0-1.amzn2023.0.2.x86_64 from amazonlinux conflicts with curl provided by curl-8.3.0-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:17 user-data:   - package curl-minimal-8.5.0-1.amzn2023.0.3.x86_64 from amazonlinux conflicts with curl provided by curl-8.3.0-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:17 user-data:   - package curl-minimal-8.5.0-1.amzn2023.0.4.x86_64 from amazonlinux conflicts with curl provided by curl-8.3.0-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:17 user-data:   - package curl-minimal-8.5.0-1.amzn2023.0.5.x86_64 from amazonlinux conflicts with curl provided by curl-8.3.0-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:17 user-data:   - package curl-minimal-8.17.0-1.amzn2023.0.2.x86_64 from @System conflicts with curl provided by curl-8.3.0-1.amzn2023.0.2.x86_64 from amazonlinux
+<13>Apr 21 10:32:17 user-data:   - package curl-minimal-7.87.0-2.amzn2023.0.2.x86_64 from amazonlinux conflicts with curl provided by curl-8.3.0-1.amzn2023.0.2.x86_64 from amazonlinux
+<13>Apr 21 10:32:17 user-data:   - package curl-minimal-7.88.0-1.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.3.0-1.amzn2023.0.2.x86_64 from amazonlinux
+<13>Apr 21 10:32:17 user-data:   - package curl-minimal-7.88.1-1.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.3.0-1.amzn2023.0.2.x86_64 from amazonlinux
+<13>Apr 21 10:32:17 user-data:   - package curl-minimal-8.0.1-1.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.3.0-1.amzn2023.0.2.x86_64 from amazonlinux
+<13>Apr 21 10:32:18 user-data:   - package curl-minimal-8.0.1-1.amzn2023.x86_64 from amazonlinux conflicts with curl provided by curl-8.3.0-1.amzn2023.0.2.x86_64 from amazonlinux
+<13>Apr 21 10:32:18 user-data:   - package curl-minimal-8.11.1-4.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.3.0-1.amzn2023.0.2.x86_64 from amazonlinux
+<13>Apr 21 10:32:18 user-data:   - package curl-minimal-8.11.1-4.amzn2023.0.3.x86_64 from amazonlinux conflicts with curl provided by curl-8.3.0-1.amzn2023.0.2.x86_64 from amazonlinux
+<13>Apr 21 10:32:18 user-data:   - package curl-minimal-8.15.0-4.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.3.0-1.amzn2023.0.2.x86_64 from amazonlinux
+<13>Apr 21 10:32:18 user-data:   - package curl-minimal-8.17.0-1.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.3.0-1.amzn2023.0.2.x86_64 from amazonlinux
+<13>Apr 21 10:32:18 user-data:   - package curl-minimal-8.17.0-1.amzn2023.0.2.x86_64 from amazonlinux conflicts with curl provided by curl-8.3.0-1.amzn2023.0.2.x86_64 from amazonlinux
+<13>Apr 21 10:32:18 user-data:   - package curl-minimal-8.2.1-1.amzn2023.0.2.x86_64 from amazonlinux conflicts with curl provided by curl-8.3.0-1.amzn2023.0.2.x86_64 from amazonlinux
+<13>Apr 21 10:32:18 user-data:   - package curl-minimal-8.2.1-1.amzn2023.0.3.x86_64 from amazonlinux conflicts with curl provided by curl-8.3.0-1.amzn2023.0.2.x86_64 from amazonlinux
+<13>Apr 21 10:32:18 user-data:   - package curl-minimal-8.3.0-1.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.3.0-1.amzn2023.0.2.x86_64 from amazonlinux
+<13>Apr 21 10:32:18 user-data:   - package curl-minimal-8.3.0-1.amzn2023.0.2.x86_64 from amazonlinux conflicts with curl provided by curl-8.3.0-1.amzn2023.0.2.x86_64 from amazonlinux
+<13>Apr 21 10:32:18 user-data:   - package curl-minimal-8.5.0-1.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.3.0-1.amzn2023.0.2.x86_64 from amazonlinux
+<13>Apr 21 10:32:18 user-data:   - package curl-minimal-8.5.0-1.amzn2023.0.2.x86_64 from amazonlinux conflicts with curl provided by curl-8.3.0-1.amzn2023.0.2.x86_64 from amazonlinux
+<13>Apr 21 10:32:18 user-data:   - package curl-minimal-8.5.0-1.amzn2023.0.3.x86_64 from amazonlinux conflicts with curl provided by curl-8.3.0-1.amzn2023.0.2.x86_64 from amazonlinux
+<13>Apr 21 10:32:18 user-data:   - package curl-minimal-8.5.0-1.amzn2023.0.4.x86_64 from amazonlinux conflicts with curl provided by curl-8.3.0-1.amzn2023.0.2.x86_64 from amazonlinux
+<13>Apr 21 10:32:18 user-data:   - package curl-minimal-8.5.0-1.amzn2023.0.5.x86_64 from amazonlinux conflicts with curl provided by curl-8.3.0-1.amzn2023.0.2.x86_64 from amazonlinux
+<13>Apr 21 10:32:18 user-data:   - package curl-minimal-8.17.0-1.amzn2023.0.2.x86_64 from @System conflicts with curl provided by curl-8.5.0-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:18 user-data:   - package curl-minimal-7.87.0-2.amzn2023.0.2.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:18 user-data:   - package curl-minimal-7.88.0-1.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:18 user-data:   - package curl-minimal-7.88.1-1.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:18 user-data:   - package curl-minimal-8.0.1-1.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:18 user-data:   - package curl-minimal-8.0.1-1.amzn2023.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:18 user-data:   - package curl-minimal-8.11.1-4.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:18 user-data:   - package curl-minimal-8.11.1-4.amzn2023.0.3.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:18 user-data:   - package curl-minimal-8.15.0-4.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:18 user-data:   - package curl-minimal-8.17.0-1.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:18 user-data:   - package curl-minimal-8.17.0-1.amzn2023.0.2.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:18 user-data:   - package curl-minimal-8.2.1-1.amzn2023.0.2.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:18 user-data:   - package curl-minimal-8.2.1-1.amzn2023.0.3.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:18 user-data:   - package curl-minimal-8.3.0-1.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:18 user-data:   - package curl-minimal-8.3.0-1.amzn2023.0.2.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:18 user-data:   - package curl-minimal-8.5.0-1.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:18 user-data:   - package curl-minimal-8.5.0-1.amzn2023.0.2.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:18 user-data:   - package curl-minimal-8.5.0-1.amzn2023.0.3.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:18 user-data:   - package curl-minimal-8.5.0-1.amzn2023.0.4.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:18 user-data:   - package curl-minimal-8.5.0-1.amzn2023.0.5.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:18 user-data:   - package curl-minimal-8.17.0-1.amzn2023.0.2.x86_64 from @System conflicts with curl provided by curl-8.5.0-1.amzn2023.0.2.x86_64 from amazonlinux
+<13>Apr 21 10:32:18 user-data:   - package curl-minimal-7.87.0-2.amzn2023.0.2.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.2.x86_64 from amazonlinux
+<13>Apr 21 10:32:18 user-data:   - package curl-minimal-7.88.0-1.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.2.x86_64 from amazonlinux
+<13>Apr 21 10:32:18 user-data:   - package curl-minimal-7.88.1-1.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.2.x86_64 from amazonlinux
+<13>Apr 21 10:32:18 user-data:   - package curl-minimal-8.0.1-1.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.2.x86_64 from amazonlinux
+<13>Apr 21 10:32:18 user-data:   - package curl-minimal-8.0.1-1.amzn2023.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.2.x86_64 from amazonlinux
+<13>Apr 21 10:32:18 user-data:   - package curl-minimal-8.11.1-4.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.2.x86_64 from amazonlinux
+<13>Apr 21 10:32:18 user-data:   - package curl-minimal-8.11.1-4.amzn2023.0.3.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.2.x86_64 from amazonlinux
+<13>Apr 21 10:32:18 user-data:   - package curl-minimal-8.15.0-4.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.2.x86_64 from amazonlinux
+<13>Apr 21 10:32:18 user-data:   - package curl-minimal-8.17.0-1.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.2.x86_64 from amazonlinux
+<13>Apr 21 10:32:18 user-data:   - package curl-minimal-8.17.0-1.amzn2023.0.2.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.2.x86_64 from amazonlinux
+<13>Apr 21 10:32:18 user-data:   - package curl-minimal-8.2.1-1.amzn2023.0.2.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.2.x86_64 from amazonlinux
+<13>Apr 21 10:32:18 user-data:   - package curl-minimal-8.2.1-1.amzn2023.0.3.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.2.x86_64 from amazonlinux
+<13>Apr 21 10:32:18 user-data:   - package curl-minimal-8.3.0-1.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.2.x86_64 from amazonlinux
+<13>Apr 21 10:32:18 user-data:   - package curl-minimal-8.3.0-1.amzn2023.0.2.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.2.x86_64 from amazonlinux
+<13>Apr 21 10:32:18 user-data:   - package curl-minimal-8.5.0-1.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.2.x86_64 from amazonlinux
+<13>Apr 21 10:32:18 user-data:   - package curl-minimal-8.5.0-1.amzn2023.0.2.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.2.x86_64 from amazonlinux
+<13>Apr 21 10:32:18 user-data:   - package curl-minimal-8.5.0-1.amzn2023.0.3.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.2.x86_64 from amazonlinux
+<13>Apr 21 10:32:18 user-data:   - package curl-minimal-8.5.0-1.amzn2023.0.4.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.2.x86_64 from amazonlinux
+<13>Apr 21 10:32:18 user-data:   - package curl-minimal-8.5.0-1.amzn2023.0.5.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.2.x86_64 from amazonlinux
+<13>Apr 21 10:32:18 user-data:   - package curl-minimal-8.17.0-1.amzn2023.0.2.x86_64 from @System conflicts with curl provided by curl-8.5.0-1.amzn2023.0.3.x86_64 from amazonlinux
+<13>Apr 21 10:32:18 user-data:   - package curl-minimal-7.87.0-2.amzn2023.0.2.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.3.x86_64 from amazonlinux
+<13>Apr 21 10:32:18 user-data:   - package curl-minimal-7.88.0-1.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.3.x86_64 from amazonlinux
+<13>Apr 21 10:32:18 user-data:   - package curl-minimal-7.88.1-1.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.3.x86_64 from amazonlinux
+<13>Apr 21 10:32:18 user-data:   - package curl-minimal-8.0.1-1.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.3.x86_64 from amazonlinux
+<13>Apr 21 10:32:18 user-data:   - package curl-minimal-8.0.1-1.amzn2023.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.3.x86_64 from amazonlinux
+<13>Apr 21 10:32:18 user-data:   - package curl-minimal-8.11.1-4.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.3.x86_64 from amazonlinux
+<13>Apr 21 10:32:18 user-data:   - package curl-minimal-8.11.1-4.amzn2023.0.3.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.3.x86_64 from amazonlinux
+<13>Apr 21 10:32:18 user-data:   - package curl-minimal-8.15.0-4.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.3.x86_64 from amazonlinux
+<13>Apr 21 10:32:19 user-data:   - package curl-minimal-8.17.0-1.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.3.x86_64 from amazonlinux
+<13>Apr 21 10:32:19 user-data:   - package curl-minimal-8.17.0-1.amzn2023.0.2.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.3.x86_64 from amazonlinux
+<13>Apr 21 10:32:19 user-data:   - package curl-minimal-8.2.1-1.amzn2023.0.2.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.3.x86_64 from amazonlinux
+<13>Apr 21 10:32:19 user-data:   - package curl-minimal-8.2.1-1.amzn2023.0.3.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.3.x86_64 from amazonlinux
+<13>Apr 21 10:32:19 user-data:   - package curl-minimal-8.3.0-1.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.3.x86_64 from amazonlinux
+<13>Apr 21 10:32:19 user-data:   - package curl-minimal-8.3.0-1.amzn2023.0.2.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.3.x86_64 from amazonlinux
+<13>Apr 21 10:32:19 user-data:   - package curl-minimal-8.5.0-1.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.3.x86_64 from amazonlinux
+<13>Apr 21 10:32:19 user-data:   - package curl-minimal-8.5.0-1.amzn2023.0.2.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.3.x86_64 from amazonlinux
+<13>Apr 21 10:32:19 user-data:   - package curl-minimal-8.5.0-1.amzn2023.0.3.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.3.x86_64 from amazonlinux
+<13>Apr 21 10:32:19 user-data:   - package curl-minimal-8.5.0-1.amzn2023.0.4.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.3.x86_64 from amazonlinux
+<13>Apr 21 10:32:19 user-data:   - package curl-minimal-8.5.0-1.amzn2023.0.5.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.3.x86_64 from amazonlinux
+<13>Apr 21 10:32:19 user-data:   - package curl-minimal-8.17.0-1.amzn2023.0.2.x86_64 from @System conflicts with curl provided by curl-8.5.0-1.amzn2023.0.4.x86_64 from amazonlinux
+<13>Apr 21 10:32:19 user-data:   - package curl-minimal-7.87.0-2.amzn2023.0.2.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.4.x86_64 from amazonlinux
+<13>Apr 21 10:32:19 user-data:   - package curl-minimal-7.88.0-1.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.4.x86_64 from amazonlinux
+<13>Apr 21 10:32:19 user-data:   - package curl-minimal-7.88.1-1.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.4.x86_64 from amazonlinux
+<13>Apr 21 10:32:19 user-data:   - package curl-minimal-8.0.1-1.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.4.x86_64 from amazonlinux
+<13>Apr 21 10:32:19 user-data:   - package curl-minimal-8.0.1-1.amzn2023.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.4.x86_64 from amazonlinux
+<13>Apr 21 10:32:19 user-data:   - package curl-minimal-8.11.1-4.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.4.x86_64 from amazonlinux
+<13>Apr 21 10:32:19 user-data:   - package curl-minimal-8.11.1-4.amzn2023.0.3.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.4.x86_64 from amazonlinux
+<13>Apr 21 10:32:19 user-data:   - package curl-minimal-8.15.0-4.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.4.x86_64 from amazonlinux
+<13>Apr 21 10:32:19 user-data:   - package curl-minimal-8.17.0-1.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.4.x86_64 from amazonlinux
+<13>Apr 21 10:32:19 user-data:   - package curl-minimal-8.17.0-1.amzn2023.0.2.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.4.x86_64 from amazonlinux
+<13>Apr 21 10:32:19 user-data:   - package curl-minimal-8.2.1-1.amzn2023.0.2.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.4.x86_64 from amazonlinux
+<13>Apr 21 10:32:19 user-data:   - package curl-minimal-8.2.1-1.amzn2023.0.3.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.4.x86_64 from amazonlinux
+<13>Apr 21 10:32:19 user-data:   - package curl-minimal-8.3.0-1.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.4.x86_64 from amazonlinux
+<13>Apr 21 10:32:19 user-data:   - package curl-minimal-8.3.0-1.amzn2023.0.2.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.4.x86_64 from amazonlinux
+<13>Apr 21 10:32:19 user-data:   - package curl-minimal-8.5.0-1.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.4.x86_64 from amazonlinux
+<13>Apr 21 10:32:19 user-data:   - package curl-minimal-8.5.0-1.amzn2023.0.2.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.4.x86_64 from amazonlinux
+<13>Apr 21 10:32:19 user-data:   - package curl-minimal-8.5.0-1.amzn2023.0.3.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.4.x86_64 from amazonlinux
+<13>Apr 21 10:32:19 user-data:   - package curl-minimal-8.5.0-1.amzn2023.0.4.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.4.x86_64 from amazonlinux
+<13>Apr 21 10:32:19 user-data:   - package curl-minimal-8.5.0-1.amzn2023.0.5.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.4.x86_64 from amazonlinux
+<13>Apr 21 10:32:19 user-data:   - package curl-minimal-8.17.0-1.amzn2023.0.2.x86_64 from @System conflicts with curl provided by curl-8.5.0-1.amzn2023.0.5.x86_64 from amazonlinux
+<13>Apr 21 10:32:19 user-data:   - package curl-minimal-7.87.0-2.amzn2023.0.2.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.5.x86_64 from amazonlinux
+<13>Apr 21 10:32:19 user-data:   - package curl-minimal-7.88.0-1.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.5.x86_64 from amazonlinux
+<13>Apr 21 10:32:19 user-data:   - package curl-minimal-7.88.1-1.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.5.x86_64 from amazonlinux
+<13>Apr 21 10:32:19 user-data:   - package curl-minimal-8.0.1-1.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.5.x86_64 from amazonlinux
+<13>Apr 21 10:32:19 user-data:   - package curl-minimal-8.0.1-1.amzn2023.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.5.x86_64 from amazonlinux
+<13>Apr 21 10:32:19 user-data:   - package curl-minimal-8.11.1-4.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.5.x86_64 from amazonlinux
+<13>Apr 21 10:32:19 user-data:   - package curl-minimal-8.11.1-4.amzn2023.0.3.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.5.x86_64 from amazonlinux
+<13>Apr 21 10:32:19 user-data:   - package curl-minimal-8.15.0-4.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.5.x86_64 from amazonlinux
+<13>Apr 21 10:32:19 user-data:   - package curl-minimal-8.17.0-1.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.5.x86_64 from amazonlinux
+<13>Apr 21 10:32:19 user-data:   - package curl-minimal-8.17.0-1.amzn2023.0.2.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.5.x86_64 from amazonlinux
+<13>Apr 21 10:32:19 user-data:   - package curl-minimal-8.2.1-1.amzn2023.0.2.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.5.x86_64 from amazonlinux
+<13>Apr 21 10:32:19 user-data:   - package curl-minimal-8.2.1-1.amzn2023.0.3.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.5.x86_64 from amazonlinux
+<13>Apr 21 10:32:19 user-data:   - package curl-minimal-8.3.0-1.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.5.x86_64 from amazonlinux
+<13>Apr 21 10:32:19 user-data:   - package curl-minimal-8.3.0-1.amzn2023.0.2.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.5.x86_64 from amazonlinux
+<13>Apr 21 10:32:19 user-data:   - package curl-minimal-8.5.0-1.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.5.x86_64 from amazonlinux
+<13>Apr 21 10:32:19 user-data:   - package curl-minimal-8.5.0-1.amzn2023.0.2.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.5.x86_64 from amazonlinux
+<13>Apr 21 10:32:19 user-data:   - package curl-minimal-8.5.0-1.amzn2023.0.3.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.5.x86_64 from amazonlinux
+<13>Apr 21 10:32:19 user-data:   - package curl-minimal-8.5.0-1.amzn2023.0.4.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.5.x86_64 from amazonlinux
+<13>Apr 21 10:32:19 user-data:   - package curl-minimal-8.5.0-1.amzn2023.0.5.x86_64 from amazonlinux conflicts with curl provided by curl-8.5.0-1.amzn2023.0.5.x86_64 from amazonlinux
+<13>Apr 21 10:32:19 user-data:   - package curl-minimal-8.17.0-1.amzn2023.0.2.x86_64 from @System conflicts with curl provided by curl-8.11.1-4.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:19 user-data:   - package curl-minimal-7.87.0-2.amzn2023.0.2.x86_64 from amazonlinux conflicts with curl provided by curl-8.11.1-4.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:19 user-data:   - package curl-minimal-7.88.0-1.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.11.1-4.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:19 user-data:   - package curl-minimal-7.88.1-1.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.11.1-4.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:19 user-data:   - package curl-minimal-8.0.1-1.amzn2023.0.1.x86_64 from amazonlinux conflicts with curl provided by curl-8.11.1-4.amzn2023.0.1.x86_64 from amazonlinux
+<13>Apr 21 10:32:19 user-data:   - package curl-minimal-8.0.1-1.amzn2023.x86_64 from amazonlinux conflicts with curl provided by curl-8.11.1-4.amzn2023.0.1.x86_64 from amazonli	2026-04-21T10:34:48+00:00

@@ -1,7 +1,14 @@
 document.addEventListener("DOMContentLoaded", () => {
+    const PROD_API_URL = "http://3.67.134.78:3000/api/intelligence/generate";
+
     const API_URL =
         window.GEO_SENTINEL_API_URL ||
-        "http://localhost:3000/api/intelligence/generate";
+        (
+            window.location.hostname === "localhost" ||
+            window.location.hostname === "127.0.0.1"
+                ? "http://localhost:3000/api/intelligence/generate"
+                : PROD_API_URL
+        );
 
     const COUNTRY_SCOPE = {
         world: [
