@@ -6,8 +6,11 @@ const {
     normalizeKey,
     resolveRegionFromCountry
 } = require("../config/sourceRegistry");
+const env = require("../config/env");
+const AppError = require("../utils/appError");
+const logger = require("../utils/logger");
 
-const PYTHON_WORKER_TIMEOUT_MS = Number(process.env.PYTHON_WORKER_TIMEOUT_MS || 25000);
+const PYTHON_WORKER_TIMEOUT_MS = env.pythonWorkerTimeoutMs;
 
 function normalizePayload(payload = {}) {
     return {
@@ -26,22 +29,27 @@ function normalizePayload(payload = {}) {
     };
 }
 
+function validatePayload(payload = {}) {
+    const query = String(payload.query || "").trim();
+    const selectedTrend = String(payload.selectedTrend || "").trim();
+
+    if (!query && !selectedTrend) {
+        throw new AppError(
+            "Scenario query is required",
+            400,
+            "VALIDATION_ERROR"
+        );
+    }
+}
+
 function resolvePythonCommand() {
-    if (process.env.PYTHON_COMMAND && process.env.PYTHON_COMMAND.trim()) {
-        return process.env.PYTHON_COMMAND.trim();
-    }
-
-    if (process.platform === "win32") {
-        return "python";
-    }
-
-    return "python3";
+    return env.pythonCommand;
 }
 
 function resolveWorkerPath() {
     return process.env.PYTHON_INTELLIGENCE_WORKER
         ? path.resolve(process.env.PYTHON_INTELLIGENCE_WORKER)
-        : path.resolve(__dirname, "../python/rss_intelligence_worker.py");
+        : path.resolve(env.pythonIntelligenceWorker);
 }
 
 function parseJsonSafe(value, fallback) {
@@ -345,7 +353,7 @@ function strictGeographicFilter(articles = [], payload) {
 function buildFallbackResults(payload) {
     const base = [
         {
-            title: `Regional coverage: ${payload.query || "selected topic"} in India`,
+            title: `Regional coverage: ${payload.query || payload.selectedTrend || "selected topic"} in India`,
             summary: "Fallback intelligence card showing India-aligned source coverage when the Python worker is unavailable.",
             source: "NDTV",
             url: "https://www.ndtv.com",
@@ -355,7 +363,7 @@ function buildFallbackResults(payload) {
             mediaType: "news-article"
         },
         {
-            title: `Regional coverage: ${payload.query || "selected topic"} in Europe`,
+            title: `Regional coverage: ${payload.query || payload.selectedTrend || "selected topic"} in Europe`,
             summary: "Fallback intelligence card showing Europe-aligned source coverage when the Python worker is unavailable.",
             source: "DW",
             url: "https://www.dw.com",
@@ -365,7 +373,7 @@ function buildFallbackResults(payload) {
             mediaType: "news-article"
         },
         {
-            title: `Regional coverage: ${payload.query || "selected topic"} in the global press`,
+            title: `Regional coverage: ${payload.query || payload.selectedTrend || "selected topic"} in the global press`,
             summary: "Fallback intelligence card showing world/global source coverage when the Python worker is unavailable.",
             source: "Reuters",
             url: "https://www.reuters.com",
@@ -386,7 +394,15 @@ function runPythonWorker(payload) {
     const pythonCommand = resolvePythonCommand();
     const workerPath = resolveWorkerPath();
 
+    logger.info("Starting Python intelligence worker", {
+        pythonCommand,
+        workerPath,
+        timeoutMs: PYTHON_WORKER_TIMEOUT_MS
+    });
+
     return new Promise((resolve, reject) => {
+        const startedAt = Date.now();
+
         const child = spawn(pythonCommand, [workerPath], {
             env: {
                 ...process.env,
@@ -403,7 +419,19 @@ function runPythonWorker(payload) {
             if (!settled) {
                 settled = true;
                 child.kill("SIGTERM");
-                reject(new Error(`Python worker timed out after ${PYTHON_WORKER_TIMEOUT_MS} ms`));
+
+                logger.error("Python intelligence worker timed out", {
+                    durationMs: Date.now() - startedAt,
+                    timeoutMs: PYTHON_WORKER_TIMEOUT_MS
+                });
+
+                reject(
+                    new AppError(
+                        "The intelligence worker timed out",
+                        504,
+                        "WORKER_TIMEOUT"
+                    )
+                );
             }
         }, PYTHON_WORKER_TIMEOUT_MS);
 
@@ -417,21 +445,50 @@ function runPythonWorker(payload) {
 
         child.on("error", (error) => {
             clearTimeout(timeout);
+
             if (!settled) {
                 settled = true;
-                reject(error);
+
+                logger.error("Failed to start Python intelligence worker", {
+                    message: error.message
+                });
+
+                reject(
+                    new AppError(
+                        "Failed to start intelligence worker",
+                        500,
+                        "WORKER_EXECUTION_FAILED"
+                    )
+                );
             }
         });
 
         child.on("close", (code) => {
             clearTimeout(timeout);
+
             if (settled) {
                 return;
             }
 
             if (code !== 0) {
                 settled = true;
-                reject(new Error(stderr || `Python worker exited with code ${code}`));
+
+                logger.error("Python worker exited with non-zero status", {
+                    exitCode: code,
+                    durationMs: Date.now() - startedAt,
+                    stderr: stderr.trim()
+                });
+
+                reject(
+                    new AppError(
+                        "Intelligence worker execution failed",
+                        500,
+                        "WORKER_EXECUTION_FAILED",
+                        {
+                            exitCode: code
+                        }
+                    )
+                );
                 return;
             }
 
@@ -439,11 +496,29 @@ function runPythonWorker(payload) {
 
             if (!parsed) {
                 settled = true;
-                reject(new Error(`Python worker returned invalid JSON. stderr=${stderr}`));
+
+                logger.error("Python worker returned invalid JSON", {
+                    durationMs: Date.now() - startedAt,
+                    stdoutPreview: stdout.slice(0, 500),
+                    stderr: stderr.trim()
+                });
+
+                reject(
+                    new AppError(
+                        "Invalid response from intelligence worker",
+                        500,
+                        "WORKER_INVALID_RESPONSE"
+                    )
+                );
                 return;
             }
 
             settled = true;
+
+            logger.info("Python intelligence worker completed", {
+                durationMs: Date.now() - startedAt
+            });
+
             resolve(parsed);
         });
 
@@ -454,9 +529,11 @@ function runPythonWorker(payload) {
 
 async function generateIntelligence(payload = {}) {
     const normalizedPayload = normalizePayload(payload);
+    validatePayload(normalizedPayload);
 
     try {
         const workerResponse = await runPythonWorker(normalizedPayload);
+
         const rawResults = Array.isArray(workerResponse.results)
             ? workerResponse.results
             : Array.isArray(workerResponse)
@@ -466,11 +543,16 @@ async function generateIntelligence(payload = {}) {
         const transformed = rawResults.map((item) => transformRawArticle(item, normalizedPayload));
         const filtered = strictGeographicFilter(transformed, normalizedPayload);
         const sorted = sortArticles(filtered, normalizedPayload.sortBy);
-
         const finalResults = sorted.length ? sorted : buildFallbackResults(normalizedPayload);
 
+        logger.info("Intelligence generation completed", {
+            mode: workerResponse.mode || "live",
+            rawCount: rawResults.length,
+            filteredCount: filtered.length,
+            returnedCount: finalResults.length
+        });
+
         return {
-            success: true,
             mode: workerResponse.mode || "live",
             query: normalizedPayload.query,
             appliedFilters: {
@@ -487,10 +569,14 @@ async function generateIntelligence(payload = {}) {
             results: finalResults
         };
     } catch (error) {
+        logger.warn("Falling back to synthetic intelligence results", {
+            code: error.code || "UNKNOWN_ERROR",
+            message: error.message
+        });
+
         const fallbackResults = buildFallbackResults(normalizedPayload);
 
         return {
-            success: true,
             mode: "fallback",
             query: normalizedPayload.query,
             warning: error.message,
