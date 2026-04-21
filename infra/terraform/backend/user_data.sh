@@ -32,7 +32,12 @@ echo "Backend git ref: $${BACKEND_GIT_REF}"
 echo "Clone path: $${BACKEND_CLONE_PATH}"
 
 dnf update -y
-dnf install -y git gcc-c++ make python3 python3-pip python3-virtualenv curl
+dnf install -y git gcc-c++ make python3 python3-pip python3-virtualenv
+
+if ! command -v curl >/dev/null 2>&1; then
+  echo "❌ curl is required but was not found on this AMI"
+  exit 1
+fi
 
 if ! command -v node >/dev/null 2>&1 || ! node --version | grep -q "^v$${NODE_MAJOR}\."; then
   echo "📦 Installing Node.js $${NODE_MAJOR}.x"
