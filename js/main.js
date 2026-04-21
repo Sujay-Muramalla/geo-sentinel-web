@@ -140,6 +140,7 @@ document.addEventListener("DOMContentLoaded", () => {
         console.log("Backend base URL:", BACKEND_BASE_URL);
         console.log("API URL:", API_URL);
         
+        ensureResultsErrorState();
         bindExpandButtons();
         bindScenarioInput();
         bindGenerateAction();
@@ -409,12 +410,53 @@ document.addEventListener("DOMContentLoaded", () => {
         renderResults(state.results);
     }
     
+    function ensureResultsErrorState() {
+        let errorBox = document.getElementById("results-error-state");
+        
+        if (!errorBox && dom.resultsList) {
+            errorBox = document.createElement("div");
+            errorBox.id = "results-error-state";
+            errorBox.className = "results-error-state";
+            errorBox.style.display = "none";
+            errorBox.style.marginBottom = "16px";
+            errorBox.style.padding = "12px 14px";
+            errorBox.style.border = "1px solid rgba(255, 99, 99, 0.35)";
+            errorBox.style.borderRadius = "8px";
+            errorBox.style.background = "rgba(255, 99, 99, 0.08)";
+            errorBox.style.color = "#ffd4d4";
+            
+            if (dom.resultsList.parentNode) {
+                dom.resultsList.parentNode.insertBefore(errorBox, dom.resultsList);
+            }
+        }
+        
+        return errorBox;
+    }
+    
+    function showResultsError(message) {
+        const errorBox = ensureResultsErrorState();
+        if (!errorBox) return;
+        
+        errorBox.textContent = message;
+        errorBox.style.display = "block";
+    }
+    
+    function clearResultsError() {
+        const errorBox = document.getElementById("results-error-state");
+        if (errorBox) {
+            errorBox.textContent = "";
+            errorBox.style.display = "none";
+        }
+    }
+    
     async function generateIntelligence() {
         syncStateFromUI();
+        clearResultsError();
         
         if (!state.query) {
             setGenerateButtonState(false);
             updateMiniSummary("Enter a scenario first · no request sent");
+            showResultsError("Please enter a geopolitical scenario first.");
             return;
         }
         
@@ -444,32 +486,51 @@ document.addEventListener("DOMContentLoaded", () => {
             });
             
             const responseText = await response.text();
-            let data = null;
+            let apiResponse = null;
             
             try {
-                data = responseText ? JSON.parse(responseText) : null;
+                apiResponse = responseText ? JSON.parse(responseText) : null;
             } catch (parseError) {
                 throw new Error(`Backend returned non-JSON response (status ${response.status})`);
             }
             
             if (!response.ok) {
                 throw new Error(
-                    data?.message ||
-                    data?.error ||
+                    apiResponse?.error?.message ||
+                    apiResponse?.message ||
                     `Backend returned status ${response.status}`
                 );
             }
             
-            if (!data || data.success !== true) {
-                throw new Error(data?.message || "Backend returned unsuccessful response");
+            if (!apiResponse || apiResponse.success !== true) {
+                throw new Error(
+                    apiResponse?.error?.message ||
+                    apiResponse?.message ||
+                    "Backend returned unsuccessful response"
+                );
             }
             
-            const liveResults = Array.isArray(data.results)
-            ? data.results.map(normalizeBackendResult)
+            const responseData = apiResponse.data || {};
+            const liveResults = Array.isArray(responseData.results)
+            ? responseData.results.map(normalizeBackendResult)
             : [];
             
             state.results = liveResults;
-            applyClientFiltersAndRender(data);
+            
+            applyClientFiltersAndRender(responseData);
+            
+            if (responseData.mode === "fallback") {
+                const warningMessage =
+                responseData.warning ||
+                "Live worker was unavailable, so fallback intelligence results are being shown.";
+                
+                showResultsError(warningMessage);
+                updateMiniSummary(`Fallback mode · ${warningMessage}`);
+            } else {
+                updateMiniSummary(
+                    `${responseData.counts?.returned ?? liveResults.length} live results · intelligence updated`
+                );
+            }
         } catch (error) {
             console.error("Failed to generate intelligence:", error);
             state.results = [];
@@ -483,6 +544,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
             
             renderToolbarFromResults([]);
+            showResultsError(error.message || "Unable to generate intelligence right now.");
             updateMiniSummary(`Live request failed · ${error.message}`);
         } finally {
             setGenerateButtonState(false);

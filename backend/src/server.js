@@ -1,21 +1,17 @@
-const cors = require("cors");
+require("dotenv").config();
 
-const allowedOrigins = (process.env.CORS_ALLOWED_ORIGINS || "")
-    .split(",")
-    .map(origin => origin.trim())
-    .filter(Boolean);
+const http = require("http");
+const app = require("./app");
+const env = require("./config/env");
+const logger = require("./utils/logger");
 
-app.use(cors({
-    origin: function (origin, callback) {
-        // allow requests with no origin (curl, postman)
-        if (!origin) return callback(null, true);
+const server = http.createServer(app);
+server.timeout = env.intelligenceRequestTimeoutMs;
 
-        if (allowedOrigins.includes(origin)) {
-            return callback(null, true);
-        }
-
-        return callback(new Error("CORS not allowed"));
-    },
-    methods: ["GET", "POST", "OPTIONS"],
-    allowedHeaders: ["Content-Type"]
-}));
+server.listen(env.port, () => {
+    logger.info("Geo-Sentinel backend started", {
+        port: env.port,
+        nodeEnv: env.nodeEnv,
+        requestTimeoutMs: env.intelligenceRequestTimeoutMs
+    });
+});
