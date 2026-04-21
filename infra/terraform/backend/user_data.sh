@@ -105,7 +105,6 @@ Environment=HOME=/home/ec2-user
 ExecStart=/usr/bin/node $${BACKEND_DIR}/src/server.js
 Restart=always
 RestartSec=5
-StartLimitIntervalSec=60
 StartLimitBurst=10
 StandardOutput=journal
 StandardError=journal
