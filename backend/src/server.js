@@ -1,9 +1,21 @@
-require("dotenv").config();
+const cors = require("cors");
 
-const app = require("./app");
+const allowedOrigins = (process.env.CORS_ALLOWED_ORIGINS || "")
+    .split(",")
+    .map(origin => origin.trim())
+    .filter(Boolean);
 
-const PORT = Number(process.env.PORT || 3000);
+app.use(cors({
+    origin: function (origin, callback) {
+        // allow requests with no origin (curl, postman)
+        if (!origin) return callback(null, true);
 
-app.listen(PORT, "0.0.0.0", () => {
-    console.log(`Geo-Sentinel backend running on http://0.0.0.0:${PORT}`);
-});
+        if (allowedOrigins.includes(origin)) {
+            return callback(null, true);
+        }
+
+        return callback(new Error("CORS not allowed"));
+    },
+    methods: ["GET", "POST", "OPTIONS"],
+    allowedHeaders: ["Content-Type"]
+}));
