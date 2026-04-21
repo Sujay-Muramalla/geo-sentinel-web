@@ -47,3 +47,28 @@ output "frontend_website_url" {
   description = "Public HTTP URL of the frontend static website"
   value       = "http://${aws_s3_bucket_website_configuration.frontend_bucket_website.website_endpoint}"
 }
+
+output "backend_instance_id" {
+  description = "ID of the backend EC2 instance"
+  value       = try(aws_instance.backend[0].id, null)
+}
+
+output "backend_public_ip" {
+  description = "Public IP of the backend EC2 instance"
+  value       = try(aws_instance.backend[0].public_ip, null)
+}
+
+output "backend_public_dns" {
+  description = "Public DNS of the backend EC2 instance"
+  value       = try(aws_instance.backend[0].public_dns, null)
+}
+
+output "backend_health_url" {
+  description = "Health endpoint for the backend API"
+  value       = try(format("http://%s:%d/api/health", aws_instance.backend[0].public_ip, var.backend_port), null)
+}
+
+output "backend_api_generate_url" {
+  description = "Generate endpoint for the backend intelligence API"
+  value       = try(format("http://%s:%d/api/intelligence/generate", aws_instance.backend[0].public_ip, var.backend_port), null)
+}
