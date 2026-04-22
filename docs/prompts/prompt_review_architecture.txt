@@ -1,0 +1,1 @@
+before we proceed, can we recap the current state of simple architecture, what we achieved, what needs to be done, and can you draw an ascii diagram of the simple architecture that we decided earlier in its current form?
