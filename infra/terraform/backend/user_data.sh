@@ -78,7 +78,7 @@ echo "Repository URL: \$${GITHUB_REPOSITORY_URL}"
 echo "Target ref: \$${TARGET_REF}"
 echo "Clone path: \$${BACKEND_CLONE_PATH}"
 
-mkdir -p "$(dirname "\$${BACKEND_CLONE_PATH}")"
+mkdir -p "\$(dirname "\$${BACKEND_CLONE_PATH}")"
 mkdir -p "\$${DEPLOY_STATE_DIR}"
 
 if ! command -v curl >/dev/null 2>&1; then
@@ -173,7 +173,7 @@ systemctl enable "\$${SERVICE_NAME}"
 systemctl restart "\$${SERVICE_NAME}"
 
 echo "⏳ Waiting for service to become active"
-for attempt in $(seq 1 12); do
+for attempt in \$(seq 1 12); do
   if systemctl is-active --quiet "\$${SERVICE_NAME}"; then
     echo "✅ \$${SERVICE_NAME} is active on attempt \$${attempt}"
     break
@@ -189,7 +189,7 @@ if ! systemctl is-active --quiet "\$${SERVICE_NAME}"; then
 fi
 
 echo "🩺 Waiting for backend health endpoint"
-for attempt in $(seq 1 24); do
+for attempt in \$(seq 1 24); do
   if curl -fsS "http://127.0.0.1:\$${BACKEND_PORT}/api/health" >/dev/null; then
     echo "✅ Geo-Sentinel backend became healthy on attempt \$${attempt}"
     exit 0
