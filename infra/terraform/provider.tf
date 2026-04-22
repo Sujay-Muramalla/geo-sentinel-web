@@ -1,6 +1,14 @@
 terraform {
   required_version = ">= 1.3.0, < 2.0.0"
 
+  cloud {
+    organization = "sujay-devops-lab"
+
+    workspaces {
+      name = "geo-sentinel-web-dev"
+    }
+  }
+
   required_providers {
     aws = {
       source  = "hashicorp/aws"
