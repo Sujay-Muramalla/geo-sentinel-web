@@ -21,7 +21,7 @@ resource "aws_instance" "backend" {
     frontend_origin          = "http://${aws_s3_bucket_website_configuration.frontend_bucket_website.website_endpoint}"
   })
 
-  user_data_replace_on_change = true
+  user_data_replace_on_change = false
   monitoring                  = false
 
   metadata_options {
