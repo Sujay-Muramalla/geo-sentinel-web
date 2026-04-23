@@ -1,67 +1,44 @@
-import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-  } from "@/components/ui/card";
-  import { Badge } from "@/components/ui/badge";
-  import { Panel, PanelDescription, PanelHeader, PanelTitle } from "@/components/ui/panel";
-  
-  const sampleCards = [
-    {
-      title: "Narrative divergence detected",
-      description:
-        "Regional framing is expected to vary significantly between Western, Chinese, and local Taiwanese sources.",
-      badge: "Signal",
-      variant: "cyan",
-    },
-    {
-      title: "Source spread placeholder",
-      description:
-        "Future integration will render multi-source cards with sentiment, recency, influence, and geographic alignment.",
-      badge: "Sources",
-      variant: "green",
-    },
-    {
-      title: "Report generation target",
-      description:
-        "This area will later support downloadable intelligence summaries and premium workflows.",
-      badge: "Reports",
-      variant: "amber",
-    },
-  ];
-  
-  export function ResultsPlaceholder() {
-    return (
-      <Panel className="h-full">
-        <PanelHeader className="flex-col items-start">
-          <div>
-            <PanelTitle>Results Surface</PanelTitle>
-            <PanelDescription className="mt-2">
-              Placeholder cards now, live intelligence cards later.
-            </PanelDescription>
-          </div>
-        </PanelHeader>
-  
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {sampleCards.map((card) => (
-            <Card key={card.title} className="h-full">
-              <CardHeader>
-                <div className="flex items-center justify-between gap-3">
-                  <CardTitle>{card.title}</CardTitle>
-                  <Badge variant={card.variant}>{card.badge}</Badge>
-                </div>
-                <CardDescription>{card.description}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="rounded-2xl border border-dashed border-slate-700 bg-slate-950/70 p-4 text-sm text-slate-400">
-                  Future data widgets, result summaries, source metadata, and sentiment views will land here.
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </Panel>
-    );
-  }
+import { Panel } from "@/components/ui/panel";
+
+export function ResultsPlaceholder({ loading, errorMessage }) {
+  return (
+    <Panel className="p-8">
+      <div className="flex min-h-[320px] flex-col items-center justify-center text-center">
+        {loading ? (
+          <>
+            <div className="h-12 w-12 animate-spin rounded-full border-4 border-cyan-400/20 border-t-cyan-300" />
+            <h3 className="mt-5 text-xl font-semibold text-slate-100">
+              Request in progress
+            </h3>
+            <p className="mt-2 max-w-xl text-sm text-slate-400">
+              The React frontend is waiting for the backend intelligence response.
+            </p>
+          </>
+        ) : errorMessage ? (
+          <>
+            <div className="rounded-full border border-red-400/20 bg-red-400/10 px-4 py-2 text-sm font-medium text-red-200">
+              API unavailable
+            </div>
+            <h3 className="mt-5 text-xl font-semibold text-slate-100">
+              No live results to show yet
+            </h3>
+            <p className="mt-2 max-w-2xl text-sm text-slate-400">{errorMessage}</p>
+          </>
+        ) : (
+          <>
+            <div className="rounded-full border border-cyan-400/20 bg-cyan-400/10 px-4 py-2 text-sm font-medium text-cyan-200">
+              Ready for live integration
+            </div>
+            <h3 className="mt-5 text-xl font-semibold text-slate-100">
+              Submit a scenario to generate intelligence cards
+            </h3>
+            <p className="mt-2 max-w-2xl text-sm text-slate-400">
+              This panel will render real API results once the backend is turned on and reachable.
+              Until then, the frontend remains fully usable and gracefully handles downtime.
+            </p>
+          </>
+        )}
+      </div>
+    </Panel>
+  );
+}
