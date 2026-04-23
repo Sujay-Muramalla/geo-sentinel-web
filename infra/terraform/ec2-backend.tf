@@ -18,7 +18,7 @@ resource "aws_instance" "backend" {
     backend_clone_path       = var.backend_clone_path
     backend_port             = tostring(var.backend_port)
     python_worker_timeout_ms = tostring(var.python_worker_timeout_ms)
-    frontend_origin          = "http://${aws_s3_bucket_website_configuration.frontend_bucket_website.website_endpoint}"
+    frontend_origin          = "http://${aws_s3_bucket_website_configuration.frontend_bucket_website.website_endpoint},http://localhost:5173"
   })
 
   user_data_replace_on_change = false
