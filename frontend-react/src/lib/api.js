@@ -1,15 +1,49 @@
-const DEFAULT_API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
+const DEFAULT_API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
+
+function normalizeArray(value) {
+  return Array.isArray(value) ? value : [];
+}
 
 function buildGeneratePayload(form) {
   return {
-    scenario: form.scenario,
-    geographicScope: form.geographicScope,
-    countries: form.countries,
-    mediaType: form.mediaType,
-    publicationFocus: form.publicationFocus,
-    sentiment: form.sentiment,
-    sortBy: form.sortBy,
+    query: form.scenario?.trim() || "",
+    scope: form.geographicScope || "world",
+    countries: normalizeArray(form.countries),
+    mediaType: form.mediaType || "all",
+    publicationFocus: form.publicationFocus || "all",
+    sentiment: form.sentiment || "all",
+    sort: form.sortBy || "final-desc",
   };
+}
+
+export function getApiResults(payload) {
+  return normalizeArray(payload?.data?.results);
+}
+
+export function getApiMeta(payload) {
+  return payload?.meta || {};
+}
+
+export function getApiCounts(payload) {
+  return (
+    payload?.data?.counts || {
+      raw: 0,
+      filtered: 0,
+      returned: 0,
+    }
+  );
+}
+
+export function getAppliedFilters(payload) {
+  return (
+    payload?.data?.appliedFilters || {
+      regions: [],
+      countries: [],
+      publicationFocus: [],
+      sentimentFilter: "all",
+    }
+  );
 }
 
 export async function generateIntelligence(form) {
@@ -40,7 +74,11 @@ export async function generateIntelligence(form) {
   }
 
   if (payload?.success === false) {
-    throw new Error(payload?.message || "Backend returned an unsuccessful response.");
+    const message =
+      payload?.error?.message ||
+      payload?.message ||
+      "Backend returned an unsuccessful response.";
+    throw new Error(message);
   }
 
   return payload;
