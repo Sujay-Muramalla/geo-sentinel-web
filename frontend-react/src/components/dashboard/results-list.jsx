@@ -11,12 +11,17 @@ export function ResultsList({ results = [], loading = false }) {
           <h2 className="mt-2 text-xl font-semibold text-slate-100">
             Intelligence results
           </h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Cleaned, ranked, and rendered from the active backend response.
+          </p>
         </div>
 
         {loading ? (
           <span className="text-sm text-slate-400">Refreshing…</span>
         ) : (
-          <span className="text-sm text-slate-400">{results.length} item(s)</span>
+          <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-sm text-slate-300">
+            {results.length} item(s)
+          </span>
         )}
       </div>
 
