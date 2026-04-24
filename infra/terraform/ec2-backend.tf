@@ -1,5 +1,13 @@
 locals {
   public_subnet_ids = values(aws_subnet.public)[*].id
+
+  backend_allowed_origins = join(",", [
+    "http://${aws_s3_bucket_website_configuration.frontend_bucket_website.website_endpoint}",
+    "http://localhost:5173",
+    "http://localhost:5174",
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:5174"
+  ])
 }
 
 resource "aws_instance" "backend" {
@@ -18,7 +26,7 @@ resource "aws_instance" "backend" {
     backend_clone_path       = var.backend_clone_path
     backend_port             = tostring(var.backend_port)
     python_worker_timeout_ms = tostring(var.python_worker_timeout_ms)
-    frontend_origin          = "http://${aws_s3_bucket_website_configuration.frontend_bucket_website.website_endpoint},http://localhost:5173"
+    frontend_origin          = local.backend_allowed_origins
   })
 
   user_data_replace_on_change = false
