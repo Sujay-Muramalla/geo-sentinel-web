@@ -90,4 +90,4 @@ serverless/
 # Testing / tooling caches
 # =========================================================
 .pytest_cache/tmp/
-tmp/
+tmp/backend/src/python/backups/
