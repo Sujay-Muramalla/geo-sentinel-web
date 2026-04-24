@@ -543,7 +543,7 @@ async function generateIntelligence(payload = {}) {
         const transformed = rawResults.map((item) => transformRawArticle(item, normalizedPayload));
         const filtered = strictGeographicFilter(transformed, normalizedPayload);
         const sorted = sortArticles(filtered, normalizedPayload.sortBy);
-        const finalResults = sorted.length ? sorted : buildFallbackResults(normalizedPayload);
+        const finalResults = sorted;
 
         logger.info("Intelligence generation completed", {
             mode: workerResponse.mode || "live",
