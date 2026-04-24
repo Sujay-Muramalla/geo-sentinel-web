@@ -5,7 +5,13 @@ import { ExampleChips } from "@/components/dashboard/example-chips";
 import { ResultsList } from "@/components/dashboard/results-list";
 import { ResultsPlaceholder } from "@/components/dashboard/results-placeholder";
 import { StatusPanel } from "@/components/dashboard/status-panel";
-import { generateIntelligence } from "@/lib/api";
+import {
+  generateIntelligence,
+  getApiCounts,
+  getApiMeta,
+  getAppliedFilters,
+  getSelectedSources,
+} from "@/lib/api";
 
 const INITIAL_FORM = {
   scenario: "",
@@ -43,6 +49,48 @@ function normalizeScore(value) {
   if (score > 100) return 100;
 
   return score;
+}
+
+function normalizeReasonScore(value) {
+  const score = Number(value);
+
+  if (!Number.isFinite(score)) return null;
+  if (score > 0 && score <= 1) return Math.round(score * 100);
+  if (score > 0 && score <= 10) return Math.round(score * 10);
+  if (score > 100) return 100;
+
+  return Math.round(score);
+}
+
+function mapRankingSignals(item) {
+  return {
+    queryRelevance: normalizeReasonScore(
+      item?.queryRelevance ??
+        item?.query_relevance ??
+        item?.relevanceScore ??
+        item?.relevance_score
+    ),
+    geoAlignment: normalizeReasonScore(
+      item?.geoAlignment ??
+        item?.geo_alignment ??
+        item?.geographicAlignment ??
+        item?.geographic_alignment
+    ),
+    sourceQuality: normalizeReasonScore(
+      item?.sourceQuality ??
+        item?.source_quality ??
+        item?.sourceReliability ??
+        item?.source_reliability ??
+        item?.reliabilityScore ??
+        item?.reliability_score
+    ),
+    recency: normalizeReasonScore(
+      item?.recencyScore ??
+        item?.recency_score ??
+        item?.freshnessScore ??
+        item?.freshness_score
+    ),
+  };
 }
 
 function mapApiResults(payload) {
@@ -117,6 +165,7 @@ function mapApiResults(payload) {
       ),
       score: normalizeScore(scoreRaw),
       region: sourceRegion || sourceCountry,
+      rankingSignals: mapRankingSignals(item),
     };
   });
 }
@@ -125,6 +174,12 @@ export default function App() {
   const [form, setForm] = useState(INITIAL_FORM);
   const [results, setResults] = useState([]);
   const [requestMeta, setRequestMeta] = useState(null);
+  const [sourceTransparency, setSourceTransparency] = useState({
+    selectedSources: [],
+    appliedFilters: {},
+    counts: { raw: 0, filtered: 0, returned: 0 },
+    meta: {},
+  });
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -175,21 +230,39 @@ export default function App() {
       rawCount: 0,
       timestamp: attemptTimestamp,
     });
+    setSourceTransparency({
+      selectedSources: [],
+      appliedFilters: {},
+      counts: { raw: 0, filtered: 0, returned: 0 },
+      meta: {},
+    });
 
     try {
       const response = await generateIntelligence(form);
       const mappedResults = mapApiResults(response);
+      const counts = getApiCounts(response);
+      const meta = getApiMeta(response);
+      const appliedFilters = getAppliedFilters(response);
+      const selectedSources = getSelectedSources(response);
 
       setResults(mappedResults);
+      setSourceTransparency({
+        selectedSources,
+        appliedFilters,
+        counts,
+        meta,
+      });
       setRequestMeta({
         requestedScenario: form.scenario,
-        rawCount: mappedResults.length,
-        timestamp: response?.meta?.timestamp || attemptTimestamp,
+        rawCount: counts?.raw ?? mappedResults.length,
+        filteredCount: counts?.filtered ?? mappedResults.length,
+        returnedCount: counts?.returned ?? mappedResults.length,
+        timestamp: meta?.timestamp || response?.meta?.timestamp || attemptTimestamp,
       });
 
       if (mappedResults.length === 0) {
         setErrorMessage(
-          "The backend responded successfully, but no results were returned for this scenario."
+          "The backend responded successfully, but no results passed the relevance and source-coverage filters for this scenario."
         );
       }
     } catch (error) {
@@ -233,6 +306,7 @@ export default function App() {
             hasResults={hasResults}
             requestMeta={requestMeta}
             stats={resultStats}
+            sourceTransparency={sourceTransparency}
           />
         </aside>
       </div>

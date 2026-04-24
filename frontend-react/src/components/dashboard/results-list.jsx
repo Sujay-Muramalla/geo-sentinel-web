@@ -12,7 +12,7 @@ export function ResultsList({ results = [], loading = false }) {
             Intelligence results
           </h2>
           <p className="mt-1 text-sm text-slate-500">
-            Cleaned, ranked, and rendered from the active backend response.
+            Cleaned, ranked, explained, and rendered from the active backend response.
           </p>
         </div>
 

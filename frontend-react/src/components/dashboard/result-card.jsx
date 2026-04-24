@@ -78,11 +78,46 @@ function getScoreTone(score) {
   return "text-slate-300";
 }
 
+function signalLabel(value) {
+  if (value === null || value === undefined || Number.isNaN(Number(value))) return "—";
+  return `${Math.round(Number(value))}%`;
+}
+
+function signalTone(value) {
+  const score = Number(value);
+
+  if (!Number.isFinite(score)) return "bg-slate-500/20";
+  if (score >= 70) return "bg-emerald-400/70";
+  if (score >= 45) return "bg-amber-400/70";
+  return "bg-slate-400/60";
+}
+
+function RankingSignal({ label, value }) {
+  const score = Number(value);
+  const width = Number.isFinite(score) ? Math.max(6, Math.min(score, 100)) : 0;
+
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center justify-between gap-3 text-xs">
+        <span className="text-slate-400">{label}</span>
+        <span className="font-medium text-slate-200">{signalLabel(value)}</span>
+      </div>
+      <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
+        <div
+          className={`h-full rounded-full ${signalTone(value)}`}
+          style={{ width: `${width}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
 export function ResultCard({ result }) {
   const summary = truncateText(result.summary);
   const sourceMeta = sourceLine(result);
   const region = cleanText(result.region || result.sourceRegion);
   const score = Number(result.score) || 0;
+  const rankingSignals = result.rankingSignals || {};
 
   return (
     <Card className="overflow-hidden p-0">
@@ -131,9 +166,41 @@ export function ResultCard({ result }) {
         <div className="space-y-5 p-5">
           <p className="text-sm leading-6 text-slate-300">{summary}</p>
 
+          <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-4">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div>
+                <h4 className="text-sm font-semibold text-slate-100">
+                  Ranking explanation
+                </h4>
+                <p className="mt-1 text-xs text-slate-500">
+                  Why this article was promoted by the intelligence engine.
+                </p>
+              </div>
+              <Badge className="border-cyan-400/30 bg-cyan-400/10 text-cyan-200">
+                Transparent scoring
+              </Badge>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <RankingSignal
+                label="Query relevance"
+                value={rankingSignals.queryRelevance}
+              />
+              <RankingSignal
+                label="Geo alignment"
+                value={rankingSignals.geoAlignment}
+              />
+              <RankingSignal
+                label="Source quality"
+                value={rankingSignals.sourceQuality}
+              />
+              <RankingSignal label="Recency" value={rankingSignals.recency} />
+            </div>
+          </div>
+
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-4">
             <p className="text-xs text-slate-500">
-              Live RSS intelligence result · cleaned for dashboard display
+              Live RSS intelligence result · source transparency enabled
             </p>
 
             <a

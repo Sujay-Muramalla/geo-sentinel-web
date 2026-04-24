@@ -5,11 +5,26 @@ function normalizeArray(value) {
   return Array.isArray(value) ? value : [];
 }
 
+function normalizeCountries(value) {
+  if (Array.isArray(value)) {
+    return value.filter(Boolean);
+  }
+
+  if (typeof value === "string") {
+    return value
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+  }
+
+  return [];
+}
+
 function buildGeneratePayload(form) {
   return {
     query: form.scenario?.trim() || "",
     scope: form.geographicScope || "world",
-    countries: normalizeArray(form.countries),
+    countries: normalizeCountries(form.countries),
     mediaType: form.mediaType || "all",
     publicationFocus: form.publicationFocus || "all",
     sentiment: form.sentiment || "all",
@@ -18,16 +33,17 @@ function buildGeneratePayload(form) {
 }
 
 export function getApiResults(payload) {
-  return normalizeArray(payload?.data?.results);
+  return normalizeArray(payload?.data?.results || payload?.results);
 }
 
 export function getApiMeta(payload) {
-  return payload?.meta || {};
+  return payload?.meta || payload?.data?.meta || {};
 }
 
 export function getApiCounts(payload) {
   return (
-    payload?.data?.counts || {
+    payload?.data?.counts ||
+    payload?.counts || {
       raw: 0,
       filtered: 0,
       returned: 0,
@@ -37,12 +53,22 @@ export function getApiCounts(payload) {
 
 export function getAppliedFilters(payload) {
   return (
-    payload?.data?.appliedFilters || {
+    payload?.data?.appliedFilters ||
+    payload?.appliedFilters || {
       regions: [],
       countries: [],
       publicationFocus: [],
       sentimentFilter: "all",
     }
+  );
+}
+
+export function getSelectedSources(payload) {
+  return normalizeArray(
+    payload?.data?.selectedSources ||
+      payload?.selectedSources ||
+      payload?.data?.sourceSelection?.selectedSources ||
+      payload?.sourceSelection?.selectedSources
   );
 }
 
