@@ -26,6 +26,25 @@ const EXAMPLE_SCENARIOS = [
   "Iran-Israel regional escalation",
 ];
 
+function normalizeSentiment(value) {
+  const normalized = String(value || "neutral").toLowerCase();
+
+  if (normalized.includes("positive")) return "positive";
+  if (normalized.includes("negative")) return "negative";
+  return "neutral";
+}
+
+function normalizeScore(value) {
+  const score = Number(value);
+
+  if (!Number.isFinite(score)) return 0;
+
+  if (score > 0 && score <= 10) return score * 10;
+  if (score > 100) return 100;
+
+  return score;
+}
+
 function mapApiResults(payload) {
   if (!payload) return [];
 
@@ -39,46 +58,65 @@ function mapApiResults(payload) {
   if (!Array.isArray(rawResults)) return [];
 
   return rawResults.map((item, index) => {
-    const sentimentRaw =
-      item?.sentiment_label ||
-      item?.sentiment ||
-      item?.sentimentCategory ||
-      "neutral";
-
-    const normalizedSentiment = String(sentimentRaw).toLowerCase();
-
     const scoreRaw =
+      item?.finalScore ??
       item?.final_score ??
       item?.score ??
+      item?.signalScore ??
       item?.signal_score ??
+      item?.relevanceScore ??
       item?.relevance_score ??
+      item?.sentimentScore ??
       item?.sentiment_score ??
       0;
 
+    const sourceCountry =
+      item?.sourceCountry ||
+      item?.source_country ||
+      item?.country ||
+      item?.publisherCountry ||
+      "";
+
+    const sourceRegion =
+      item?.sourceRegion ||
+      item?.source_region ||
+      item?.region ||
+      item?.geo_region ||
+      "";
+
     return {
-      id: item?.id || `${item?.source || "source"}-${index}`,
+      id:
+        item?.id ||
+        item?.url ||
+        item?.link ||
+        `${item?.source || item?.publisher || "source"}-${index}`,
       title: item?.title || "Untitled result",
-      source: item?.source || item?.publisher || "Unknown source",
+      source: item?.source || item?.sourceName || item?.publisher || "Unknown source",
+      sourceCountry,
+      sourceRegion,
+      country: sourceCountry,
       url: item?.url || item?.link || "#",
       summary:
         item?.summary ||
         item?.description ||
         item?.snippet ||
+        item?.contentSnippet ||
         "No summary was returned for this result.",
       publishedAt:
-        item?.published_at ||
         item?.publishedAt ||
+        item?.published_at ||
         item?.pubDate ||
+        item?.published ||
         item?.date ||
         "",
-      sentiment: normalizedSentiment,
-      score: Number(scoreRaw) || 0,
-      region:
-        item?.region ||
-        item?.geo_region ||
-        item?.country ||
-        item?.source_country ||
-        "",
+      sentiment: normalizeSentiment(
+        item?.sentimentLabel ||
+          item?.sentiment_label ||
+          item?.sentiment ||
+          item?.sentimentCategory
+      ),
+      score: normalizeScore(scoreRaw),
+      region: sourceRegion || sourceCountry,
     };
   });
 }
@@ -121,14 +159,14 @@ export default function App() {
 
   async function handleSubmit(event) {
     event.preventDefault();
-  
+
     if (!form.scenario.trim()) {
       setErrorMessage("Please enter a geopolitical scenario before generating intelligence.");
       return;
     }
-  
+
     const attemptTimestamp = new Date().toISOString();
-  
+
     setLoading(true);
     setErrorMessage("");
     setResults([]);
@@ -137,20 +175,22 @@ export default function App() {
       rawCount: 0,
       timestamp: attemptTimestamp,
     });
-  
+
     try {
       const response = await generateIntelligence(form);
       const mappedResults = mapApiResults(response);
-  
+
       setResults(mappedResults);
       setRequestMeta({
         requestedScenario: form.scenario,
         rawCount: mappedResults.length,
-        timestamp: attemptTimestamp,
+        timestamp: response?.meta?.timestamp || attemptTimestamp,
       });
-  
+
       if (mappedResults.length === 0) {
-        setErrorMessage("The API responded successfully, but no results were returned for this scenario.");
+        setErrorMessage(
+          "The backend responded successfully, but no results were returned for this scenario."
+        );
       }
     } catch (error) {
       setErrorMessage(
