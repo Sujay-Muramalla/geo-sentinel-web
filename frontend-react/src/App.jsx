@@ -10,6 +10,10 @@ import {
   getApiCounts,
   getApiMeta,
   getAppliedFilters,
+  getDiagnostics,
+  getExpandedQueries,
+  getFeedErrors,
+  getNoResultExplanation,
   getSelectedSources,
 } from "@/lib/api";
 
@@ -44,7 +48,6 @@ function normalizeScore(value) {
   const score = Number(value);
 
   if (!Number.isFinite(score)) return 0;
-
   if (score > 0 && score <= 10) return score * 10;
   if (score > 100) return 100;
 
@@ -65,19 +68,22 @@ function normalizeReasonScore(value) {
 function mapRankingSignals(item) {
   return {
     queryRelevance: normalizeReasonScore(
-      item?.queryRelevance ??
+      item?.queryMatchScore ??
+        item?.queryRelevance ??
         item?.query_relevance ??
         item?.relevanceScore ??
         item?.relevance_score
     ),
     geoAlignment: normalizeReasonScore(
-      item?.geoAlignment ??
+      item?.geoAlignmentScore ??
+        item?.geoAlignment ??
         item?.geo_alignment ??
         item?.geographicAlignment ??
         item?.geographic_alignment
     ),
     sourceQuality: normalizeReasonScore(
-      item?.sourceQuality ??
+      item?.sourceQualityScore ??
+        item?.sourceQuality ??
         item?.source_quality ??
         item?.sourceReliability ??
         item?.source_reliability ??
@@ -107,11 +113,11 @@ function mapApiResults(payload) {
 
   return rawResults.map((item, index) => {
     const scoreRaw =
+      item?.signalScore ??
+      item?.signal_score ??
       item?.finalScore ??
       item?.final_score ??
       item?.score ??
-      item?.signalScore ??
-      item?.signal_score ??
       item?.relevanceScore ??
       item?.relevance_score ??
       item?.sentimentScore ??
@@ -133,6 +139,7 @@ function mapApiResults(payload) {
       "";
 
     return {
+      ...item,
       id:
         item?.id ||
         item?.url ||
@@ -164,8 +171,18 @@ function mapApiResults(payload) {
           item?.sentimentCategory
       ),
       score: normalizeScore(scoreRaw),
+      signalScore: normalizeScore(item?.signalScore ?? scoreRaw),
+      finalScore: normalizeScore(item?.finalScore ?? scoreRaw),
       region: sourceRegion || sourceCountry,
       rankingSignals: mapRankingSignals(item),
+      matchedQuery: item?.matchedQuery || item?.relevanceBreakdown?.queryVariant || "",
+      expandedQueryUsed: Boolean(
+        item?.expandedQueryUsed || item?.relevanceBreakdown?.expandedQueryUsed
+      ),
+      sourceQuality: item?.sourceQuality || item?.sourceTier || "standard",
+      sourceQualityScore: item?.sourceQualityScore,
+      sourceTier: item?.sourceTier,
+      publicationFocus: item?.publicationFocus,
     };
   });
 }
@@ -177,8 +194,12 @@ export default function App() {
   const [sourceTransparency, setSourceTransparency] = useState({
     selectedSources: [],
     appliedFilters: {},
-    counts: { raw: 0, filtered: 0, returned: 0 },
+    counts: { raw: 0, filtered: 0, returned: 0, rawItemsSeen: 0, filteredOut: 0 },
     meta: {},
+    expandedQueries: [],
+    diagnostics: null,
+    noResultExplanation: null,
+    feedErrors: [],
   });
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
@@ -233,8 +254,12 @@ export default function App() {
     setSourceTransparency({
       selectedSources: [],
       appliedFilters: {},
-      counts: { raw: 0, filtered: 0, returned: 0 },
+      counts: { raw: 0, filtered: 0, returned: 0, rawItemsSeen: 0, filteredOut: 0 },
       meta: {},
+      expandedQueries: [],
+      diagnostics: null,
+      noResultExplanation: null,
+      feedErrors: [],
     });
 
     try {
@@ -244,6 +269,10 @@ export default function App() {
       const meta = getApiMeta(response);
       const appliedFilters = getAppliedFilters(response);
       const selectedSources = getSelectedSources(response);
+      const expandedQueries = getExpandedQueries(response);
+      const diagnostics = getDiagnostics(response);
+      const noResultExplanation = getNoResultExplanation(response);
+      const feedErrors = getFeedErrors(response);
 
       setResults(mappedResults);
       setSourceTransparency({
@@ -251,16 +280,22 @@ export default function App() {
         appliedFilters,
         counts,
         meta,
+        expandedQueries,
+        diagnostics,
+        noResultExplanation,
+        feedErrors,
       });
       setRequestMeta({
         requestedScenario: form.scenario,
         rawCount: counts?.raw ?? mappedResults.length,
         filteredCount: counts?.filtered ?? mappedResults.length,
         returnedCount: counts?.returned ?? mappedResults.length,
+        rawItemsSeen: counts?.rawItemsSeen ?? 0,
+        filteredOut: counts?.filteredOut ?? 0,
         timestamp: meta?.timestamp || response?.meta?.timestamp || attemptTimestamp,
       });
 
-      if (mappedResults.length === 0) {
+      if (mappedResults.length === 0 && !noResultExplanation) {
         setErrorMessage(
           "The backend responded successfully, but no results passed the relevance and source-coverage filters for this scenario."
         );
@@ -295,7 +330,13 @@ export default function App() {
           {hasResults ? (
             <ResultsList results={results} loading={loading} />
           ) : (
-            <ResultsPlaceholder loading={loading} errorMessage={errorMessage} />
+            <ResultsPlaceholder
+              loading={loading}
+              errorMessage={errorMessage}
+              noResultExplanation={sourceTransparency.noResultExplanation}
+              counts={sourceTransparency.counts}
+              expandedQueries={sourceTransparency.expandedQueries}
+            />
           )}
         </section>
 

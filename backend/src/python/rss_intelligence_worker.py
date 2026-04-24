@@ -14,6 +14,7 @@ REQUEST_TIMEOUT = 12
 MAX_RESULTS = 40
 MIN_RELEVANCE_SCORE = 0.42
 MAX_SELECTED_FEEDS = 12
+MAX_REJECTION_SAMPLES = 12
 
 SOURCE_CATALOG = [
     {
@@ -353,6 +354,78 @@ COUNTRY_KEYS = {
     "canada": "canada",
 }
 
+QUERY_EXPANSION_RULES = [
+    {
+        "triggers": ["south china sea"],
+        "expansions": [
+            "south china sea dispute",
+            "china philippines maritime dispute",
+            "spratly islands dispute",
+            "scarborough shoal",
+            "philippines china coast guard",
+            "taiwan strait naval activity",
+        ],
+    },
+    {
+        "triggers": ["taiwan semiconductor", "semiconductor disruption", "taiwan chip", "tsmc"],
+        "expansions": [
+            "taiwan semiconductor supply chain",
+            "tsmc geopolitical risk",
+            "china taiwan chip supply",
+            "taiwan strait technology security",
+            "semiconductor export controls",
+        ],
+    },
+    {
+        "triggers": ["taiwan"],
+        "expansions": [
+            "taiwan strait",
+            "china taiwan tensions",
+            "taiwan defence",
+            "taiwan election security",
+        ],
+    },
+    {
+        "triggers": ["israel iran", "iran israel"],
+        "expansions": [
+            "israel iran tensions",
+            "iran israel conflict",
+            "middle east escalation",
+            "iran nuclear diplomacy",
+            "israel security cabinet",
+        ],
+    },
+    {
+        "triggers": ["india pakistan", "pakistan india"],
+        "expansions": [
+            "india pakistan tensions",
+            "kashmir conflict",
+            "line of control",
+            "india pakistan border security",
+            "south asia nuclear rivals",
+        ],
+    },
+    {
+        "triggers": ["ukraine russia", "russia ukraine"],
+        "expansions": [
+            "russia ukraine war",
+            "ukraine battlefield",
+            "russian strikes ukraine",
+            "ukraine peace talks",
+            "nato ukraine support",
+        ],
+    },
+    {
+        "triggers": ["red sea"],
+        "expansions": [
+            "red sea shipping disruption",
+            "houthis red sea attacks",
+            "yemen maritime security",
+            "suez shipping risk",
+        ],
+    },
+]
+
 
 def normalize_text(value):
     return str(value or "").strip()
@@ -447,6 +520,40 @@ def query_terms(query):
     weak_tokens = [token for token in tokens if token in WEAK_CONTEXT_TERMS]
 
     return tokens, strong_tokens, weak_tokens
+
+
+def expand_query(query):
+    query = normalize_text(query)
+    query_l = query.lower()
+    expanded = [query]
+
+    query_countries = infer_query_countries(query)
+    if len(query_countries) >= 2:
+        countries = sorted(query_countries)
+        expanded.append(f"{' '.join(countries)} tensions")
+        expanded.append(f"{' '.join(countries)} conflict")
+        expanded.append(f"{' '.join(countries)} diplomacy")
+        expanded.append(f"{' '.join(countries)} security")
+
+    for rule in QUERY_EXPANSION_RULES:
+        if any(trigger in query_l for trigger in rule.get("triggers", [])):
+            expanded.extend(rule.get("expansions", []))
+
+    strong_tokens = [token for token in tokenize(query) if token not in WEAK_CONTEXT_TERMS]
+    if len(strong_tokens) >= 2:
+        expanded.append(" ".join(strong_tokens[:4]))
+
+    cleaned = []
+    seen = set()
+
+    for item in expanded:
+        item = normalize_text(item)
+        key = item.lower()
+        if item and key not in seen:
+            seen.add(key)
+            cleaned.append(item)
+
+    return cleaned[:10]
 
 
 def phrase_score(query, text):
@@ -547,6 +654,28 @@ def strict_match_gate(query, text):
     }
 
 
+def expanded_strict_match_gate(query_variants, text):
+    best_failed_gate = None
+    fallback_query = query_variants[0] if query_variants else ""
+
+    for query_variant in query_variants:
+        passed, gate = strict_match_gate(query_variant, text)
+        gate["queryVariant"] = query_variant
+
+        if passed:
+            return True, gate
+
+        if best_failed_gate is None or len(gate.get("matchedTokens", [])) > len(best_failed_gate.get("matchedTokens", [])):
+            best_failed_gate = gate
+
+    return False, best_failed_gate or {
+        "matchedTokens": [],
+        "matchedStrongTokens": [],
+        "requiredStrongMatch": False,
+        "reason": "failed-expanded-strict-gate",
+        "queryVariant": fallback_query
+    }
+
 def relevance_score(query, title, summary):
     text = f"{title} {summary}"
     tokens, strong_tokens, _ = query_terms(query)
@@ -604,6 +733,24 @@ def relevance_score(query, title, summary):
     }
 
 
+def best_relevance_score(query_variants, title, summary):
+    best_query = query_variants[0] if query_variants else ""
+    best_score = 0.0
+    best_breakdown = {}
+
+    for query_variant in query_variants:
+        score, breakdown = relevance_score(query_variant, title, summary)
+        if score > best_score:
+            best_query = query_variant
+            best_score = score
+            best_breakdown = breakdown
+
+    best_breakdown["queryVariant"] = best_query
+    best_breakdown["expandedQueryUsed"] = best_query != (query_variants[0] if query_variants else best_query)
+
+    return best_score, best_breakdown, best_query
+
+
 def recency_score(published):
     try:
         dt = datetime.fromisoformat(normalize_text(published).replace("Z", "+00:00"))
@@ -637,6 +784,16 @@ def source_score(feed):
         reliability = 0.85
 
     return round(max(0.3, min(1.0, (weight * 0.72) + (reliability * 0.28))), 4)
+
+
+def source_quality_label(score):
+    if score >= 0.9:
+        return "elite"
+    if score >= 0.8:
+        return "high"
+    if score >= 0.68:
+        return "standard"
+    return "limited"
 
 
 def selected_region_keys(payload):
@@ -748,7 +905,6 @@ def select_sources(payload, query):
         reverse=True,
     )
 
-    # Keep a controlled blend: targeted first, then global fallbacks.
     targeted = [source for source in selected if source.get("coverageSelectionScore", 0) >= 1.45]
     global_fallbacks = [
         source for source in selected
@@ -883,22 +1039,51 @@ def parse_feed_item(item, feed_type):
     return title, summary, url, published
 
 
-def parse_feed(feed, query, payload):
+def add_rejection_sample(samples, reason, feed, title, summary="", gate=None, relevance=None):
+    if len(samples) >= MAX_REJECTION_SAMPLES:
+        return
+
+    samples.append({
+        "reason": reason,
+        "source": feed.get("source"),
+        "sourceId": feed.get("id"),
+        "sourceCountry": feed.get("country", ""),
+        "sourceRegion": feed.get("region", ""),
+        "title": normalize_text(title)[:180],
+        "summary": normalize_text(summary)[:220],
+        "strictMatchGate": gate or {},
+        "relevanceBreakdown": relevance or {},
+    })
+
+
+def parse_feed(feed, query, payload, query_variants, diagnostics):
     xml = fetch_feed(feed)
     root = ET.fromstring(xml)
     feed_type, feed_items = extract_feed_items(root)
     items = []
 
+    diagnostics["rawItemsSeen"] += len(feed_items)
+
     for item in feed_items:
         title, summary, url, published = parse_feed_item(item, feed_type)
 
         if not title or not url:
+            diagnostics["rejectedMissingTitleOrUrl"] += 1
             continue
 
         text = f"{title} {summary}"
-        passed_gate, gate = strict_match_gate(query, text)
+        passed_gate, gate = expanded_strict_match_gate(query_variants, text)
 
         if not passed_gate:
+            diagnostics["rejectedByStrictGate"] += 1
+            add_rejection_sample(
+                diagnostics["rejectionSamples"],
+                "failed-strict-gate",
+                feed,
+                title,
+                summary,
+                gate=gate
+            )
             continue
 
         query_countries = infer_query_countries(query)
@@ -910,11 +1095,38 @@ def parse_feed(feed, query, payload):
             ]
 
             if len(matched_countries) < 2:
+                diagnostics["rejectedByMultiCountryGate"] += 1
+                add_rejection_sample(
+                    diagnostics["rejectionSamples"],
+                    "failed-multi-country-gate",
+                    feed,
+                    title,
+                    summary,
+                    gate={
+                        **gate,
+                        "queryCountries": sorted(query_countries),
+                        "matchedCountries": matched_countries,
+                    }
+                )
                 continue
 
-        q_score, relevance = relevance_score(query, title, summary)
+        q_score, relevance, matched_query = best_relevance_score(query_variants, title, summary)
 
         if q_score < MIN_RELEVANCE_SCORE:
+            diagnostics["rejectedByRelevanceThreshold"] += 1
+            add_rejection_sample(
+                diagnostics["rejectionSamples"],
+                "below-relevance-threshold",
+                feed,
+                title,
+                summary,
+                gate=gate,
+                relevance={
+                    **relevance,
+                    "score": q_score,
+                    "threshold": MIN_RELEVANCE_SCORE,
+                }
+            )
             continue
 
         sent, sent_score = sentiment(text)
@@ -923,6 +1135,7 @@ def parse_feed(feed, query, payload):
         s_score = source_score(feed)
 
         score = final_score(q_score, g_score, r_score, s_score, sent_score)
+        diagnostics["acceptedItems"] += 1
 
         items.append({
             "title": title,
@@ -935,6 +1148,7 @@ def parse_feed(feed, query, payload):
             "sourceTier": feed.get("tier", "standard"),
             "sourceWeight": feed.get("weight", 0.7),
             "sourceReliabilityScore": feed.get("reliabilityScore", 0.85),
+            "sourceQuality": source_quality_label(s_score),
             "publicationFocus": feed.get("focus", "international"),
             "coverage": feed.get("coverage", []),
             "categories": feed.get("categories", []),
@@ -943,6 +1157,8 @@ def parse_feed(feed, query, payload):
             "sentimentScore": sent_score,
             "mediaType": feed.get("mediaType", "news-article"),
             "queryMatchScore": q_score,
+            "matchedQuery": matched_query,
+            "expandedQueryUsed": matched_query != query,
             "relevanceBreakdown": relevance,
             "strictMatchGate": gate,
             "geoAlignmentScore": round(g_score, 4),
@@ -979,19 +1195,60 @@ def dedupe_items(items):
     return deduped
 
 
+def build_no_result_explanation(query, diagnostics, selected_sources):
+    if diagnostics["rawItemsSeen"] == 0:
+        primary_reason = "No RSS items were retrieved from the selected sources."
+    elif diagnostics["rejectedByStrictGate"] > 0 and diagnostics["acceptedItems"] == 0:
+        primary_reason = "RSS items were retrieved, but none passed the strict geopolitical relevance gate."
+    elif diagnostics["rejectedByMultiCountryGate"] > 0 and diagnostics["acceptedItems"] == 0:
+        primary_reason = "Some articles matched loosely, but not enough entities from the multi-country scenario were present."
+    elif diagnostics["rejectedByRelevanceThreshold"] > 0 and diagnostics["acceptedItems"] == 0:
+        primary_reason = "Some articles matched weakly, but their relevance scores stayed below the acceptance threshold."
+    else:
+        primary_reason = "No qualified matches survived the current source, relevance, and ranking filters."
+
+    return {
+        "status": "no-qualified-matches",
+        "message": primary_reason,
+        "query": query,
+        "selectedSourceCount": len(selected_sources),
+        "rawItemsSeen": diagnostics["rawItemsSeen"],
+        "acceptedItems": diagnostics["acceptedItems"],
+        "rejectedByStrictGate": diagnostics["rejectedByStrictGate"],
+        "rejectedByMultiCountryGate": diagnostics["rejectedByMultiCountryGate"],
+        "rejectedByRelevanceThreshold": diagnostics["rejectedByRelevanceThreshold"],
+        "suggestions": [
+            "Try a broader geopolitical phrase.",
+            "Use country names directly, for example 'Israel Iran tensions'.",
+            "Try a known regional phrase such as 'South China Sea dispute' or 'Taiwan Strait'.",
+            "The topic may be real but not present in the currently selected RSS feeds."
+        ],
+    }
+
+
 def main():
     payload = json.loads(sys.stdin.read() or "{}")
     query = normalize_text(payload.get("query") or payload.get("selectedTrend") or "")
+    query_variants = expand_query(query)
 
     selected_sources = select_sources(payload, query)
     selected_feeds = flatten_selected_feeds(selected_sources)
 
     all_items = []
     feed_errors = []
+    diagnostics = {
+        "rawItemsSeen": 0,
+        "acceptedItems": 0,
+        "rejectedMissingTitleOrUrl": 0,
+        "rejectedByStrictGate": 0,
+        "rejectedByMultiCountryGate": 0,
+        "rejectedByRelevanceThreshold": 0,
+        "rejectionSamples": [],
+    }
 
     for feed in selected_feeds:
         try:
-            all_items.extend(parse_feed(feed, query, payload))
+            all_items.extend(parse_feed(feed, query, payload, query_variants, diagnostics))
         except Exception as exc:
             feed_errors.append({
                 "source": feed.get("source"),
@@ -1002,19 +1259,41 @@ def main():
 
     deduped = dedupe_items(all_items)
     ranked = sorted(deduped, key=lambda item: item.get("finalScore", 0), reverse=True)
+    result_count = len(ranked[:MAX_RESULTS])
+    no_result_explanation = None
+
+    if result_count == 0:
+        no_result_explanation = build_no_result_explanation(query, diagnostics, selected_sources)
 
     print(json.dumps({
         "mode": "live",
         "query": query,
-        "resultCount": len(ranked[:MAX_RESULTS]),
+        "expandedQueries": query_variants,
+        "resultCount": result_count,
         "retrievedCount": len(all_items),
         "dedupedCount": len(deduped),
+        "rawItemsSeen": diagnostics["rawItemsSeen"],
+        "filteredOutCount": max(0, diagnostics["rawItemsSeen"] - diagnostics["acceptedItems"]),
+        "diagnostics": {
+            "acceptedItems": diagnostics["acceptedItems"],
+            "rejectedMissingTitleOrUrl": diagnostics["rejectedMissingTitleOrUrl"],
+            "rejectedByStrictGate": diagnostics["rejectedByStrictGate"],
+            "rejectedByMultiCountryGate": diagnostics["rejectedByMultiCountryGate"],
+            "rejectedByRelevanceThreshold": diagnostics["rejectedByRelevanceThreshold"],
+            "rejectionSamples": diagnostics["rejectionSamples"],
+        },
+        "noResultExplanation": no_result_explanation,
         "selectedSources": [
             {
                 "id": source.get("id"),
                 "name": source.get("source"),
                 "country": source.get("country"),
                 "region": source.get("region"),
+                "tier": source.get("tier", "standard"),
+                "weight": source.get("weight", 0.7),
+                "reliabilityScore": source.get("reliabilityScore", 0.85),
+                "sourceQualityScore": source_score(source),
+                "sourceQuality": source_quality_label(source_score(source)),
                 "coverageSelectionScore": source.get("coverageSelectionScore"),
             }
             for source in selected_sources

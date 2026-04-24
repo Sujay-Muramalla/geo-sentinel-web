@@ -34,11 +34,7 @@ function validatePayload(payload = {}) {
     const selectedTrend = String(payload.selectedTrend || "").trim();
 
     if (!query && !selectedTrend) {
-        throw new AppError(
-            "Scenario query is required",
-            400,
-            "VALIDATION_ERROR"
-        );
+        throw new AppError("Scenario query is required", 400, "VALIDATION_ERROR");
     }
 }
 
@@ -99,6 +95,13 @@ function findSourceRegistryEntry(article = {}) {
     }) || null;
 }
 
+function sourceQualityLabel(score) {
+    if (score >= 0.9) return "elite";
+    if (score >= 0.8) return "high";
+    if (score >= 0.68) return "standard";
+    return "limited";
+}
+
 function annotateSourceMetadata(article = {}) {
     const registryEntry = findSourceRegistryEntry(article);
 
@@ -114,8 +117,13 @@ function annotateSourceMetadata(article = {}) {
     ).toLowerCase();
 
     const influenceWeight = toNumber(
-        article.influenceWeight || (registryEntry ? registryEntry.influenceWeight : 1.0),
+        article.influenceWeight || article.sourceWeight || (registryEntry ? registryEntry.influenceWeight : 1.0),
         1.0
+    );
+
+    const sourceQualityScore = toNumber(
+        article.sourceQualityScore,
+        clamp((influenceWeight * 0.72) + (toNumber(article.sourceReliabilityScore, 0.85) * 0.28), 0.3, 1.0)
     );
 
     const publicationFocus = normalizeText(
@@ -129,26 +137,23 @@ function annotateSourceMetadata(article = {}) {
         sourceRegion: sourceRegion || "Unknown",
         sourceTier,
         influenceWeight,
+        sourceQualityScore,
+        sourceQuality: article.sourceQuality || sourceQualityLabel(sourceQualityScore),
         publicationFocus,
-        sourceId: registryEntry ? registryEntry.id : null,
+        sourceId: article.sourceId || (registryEntry ? registryEntry.id : null),
         domain: extractDomain(article.url || article.link || "")
     };
 }
 
 function matchesSelectedCountries(article, payload) {
     const selectedCountries = normalizeList(payload.countries).map(normalizeKey);
-    if (!selectedCountries.length) {
-        return true;
-    }
+    if (!selectedCountries.length) return true;
 
     const articleCountries = [
         article.sourceCountry,
         article.country,
         ...(Array.isArray(article.countries) ? article.countries : [])
-    ]
-        .map(normalizeText)
-        .filter(Boolean)
-        .map(normalizeKey);
+    ].map(normalizeText).filter(Boolean).map(normalizeKey);
 
     return articleCountries.some((country) => selectedCountries.includes(country));
 }
@@ -158,58 +163,45 @@ function matchesSelectedRegions(article, payload) {
         .map(normalizeKey)
         .filter((region) => region !== "world");
 
-    if (!selectedRegions.length) {
-        return true;
-    }
+    if (!selectedRegions.length) return true;
 
     const articleRegions = [
         article.sourceRegion,
         article.region,
         ...(Array.isArray(article.regions) ? article.regions : [])
-    ]
-        .map(normalizeText)
-        .filter(Boolean)
-        .map(normalizeKey);
+    ].map(normalizeText).filter(Boolean).map(normalizeKey);
 
     return articleRegions.some((region) => selectedRegions.includes(region));
 }
 
 function matchesPublicationFocus(article, payload) {
     const selectedFocus = normalizeList(payload.publicationFocus).map(normalizeKey);
-    if (!selectedFocus.length) {
-        return true;
-    }
-
-    if (selectedFocus.includes("all")) {
-        return true;
-    }
+    if (!selectedFocus.length || selectedFocus.includes("all")) return true;
 
     return selectedFocus.includes(normalizeKey(article.publicationFocus || "international"));
 }
 
 function matchesSentimentFilter(article, payload) {
     const filter = normalizeKey(payload.sentimentFilter || "all");
-    if (filter === "all") {
-        return true;
-    }
+    if (filter === "all") return true;
 
     return normalizeKey(article.sentiment || article.sentimentLabel || "neutral") === filter;
 }
 
 function computeGeoAlignmentScore(article, payload) {
+    if (Number.isFinite(Number(article.geoAlignmentScore))) {
+        return Number(article.geoAlignmentScore);
+    }
+
     const selectedCountries = normalizeList(payload.countries).map(normalizeKey);
     const selectedRegions = normalizeList(payload.regions).map(normalizeKey);
 
     let score = 0;
 
     if (selectedCountries.length) {
-        if (selectedCountries.includes(normalizeKey(article.sourceCountry))) {
-            score += 2.5;
-        }
+        if (selectedCountries.includes(normalizeKey(article.sourceCountry))) score += 2.5;
     } else if (selectedRegions.length && !selectedRegions.includes("world")) {
-        if (selectedRegions.includes(normalizeKey(article.sourceRegion))) {
-            score += 1.75;
-        }
+        if (selectedRegions.includes(normalizeKey(article.sourceRegion))) score += 1.75;
     } else if (selectedRegions.includes("world")) {
         score += 0.4;
     }
@@ -226,11 +218,13 @@ function computeTierScore(article) {
 }
 
 function computeRecencyScore(article) {
+    if (Number.isFinite(Number(article.recencyScore))) {
+        return Number(article.recencyScore);
+    }
+
     const publishedAt = article.publishedAt || article.pubDate || article.isoDate || "";
     const timestamp = Date.parse(publishedAt);
-    if (!Number.isFinite(timestamp)) {
-        return 0.25;
-    }
+    if (!Number.isFinite(timestamp)) return 0.25;
 
     const hoursOld = Math.max(0, (Date.now() - timestamp) / (1000 * 60 * 60));
 
@@ -242,25 +236,23 @@ function computeRecencyScore(article) {
 }
 
 function computeQueryRelevance(article, payload) {
-    const query = normalizeKey(payload.query || payload.selectedTrend || "");
-    if (!query) {
-        return 0;
+    if (Number.isFinite(Number(article.queryMatchScore))) {
+        return Number(article.queryMatchScore);
     }
+
+    const query = normalizeKey(payload.query || payload.selectedTrend || "");
+    if (!query) return 0;
 
     const title = normalizeKey(article.title || "");
     const summary = normalizeKey(article.summary || article.description || "");
     const combined = `${title} ${summary}`;
 
     const queryTerms = query.split(/\s+/).filter((term) => term.length > 2);
-    if (!queryTerms.length) {
-        return 0;
-    }
+    if (!queryTerms.length) return 0;
 
     let matches = 0;
     for (const term of queryTerms) {
-        if (combined.includes(term)) {
-            matches += 1;
-        }
+        if (combined.includes(term)) matches += 1;
     }
 
     return clamp(matches / queryTerms.length, 0, 1.5) * 2.0;
@@ -268,9 +260,7 @@ function computeQueryRelevance(article, payload) {
 
 function computeSentimentScore(article) {
     const numeric = toNumber(article.sentimentScore, null);
-    if (numeric === null) {
-        return 0.1;
-    }
+    if (numeric === null) return 0.1;
 
     return clamp(Math.abs(numeric), 0, 1);
 }
@@ -283,13 +273,17 @@ function scoreArticle(article, payload) {
     const sentimentStrength = computeSentimentScore(article);
     const influenceWeight = toNumber(article.influenceWeight, 1);
 
-    const finalScore =
+    const computedFinalScore =
         (queryRelevance * 2.0) +
         (geoAlignment * 2.4) +
         (tierScore * 1.0) +
         (recencyScore * 1.0) +
         (sentimentStrength * 0.35) +
         ((influenceWeight - 1) * 2.2);
+
+    const finalScore = Number.isFinite(Number(article.finalScore))
+        ? Number(article.finalScore)
+        : Number(computedFinalScore.toFixed(4));
 
     return {
         ...article,
@@ -298,7 +292,8 @@ function scoreArticle(article, payload) {
         recencyScore,
         queryRelevance,
         sentimentStrength,
-        finalScore: Number(finalScore.toFixed(4))
+        finalScore,
+        signalScore: Number.isFinite(Number(article.signalScore)) ? Number(article.signalScore) : finalScore
     };
 }
 
@@ -321,6 +316,7 @@ function sortArticles(articles = [], sortBy = "final-desc") {
 
 function transformRawArticle(raw = {}, payload) {
     const annotated = annotateSourceMetadata({
+        ...raw,
         id: raw.id || raw.guid || raw.link || `${raw.source || "source"}-${raw.title || "title"}`,
         title: normalizeText(raw.title),
         summary: normalizeText(raw.summary || raw.description || raw.contentSnippet || ""),
@@ -425,13 +421,7 @@ function runPythonWorker(payload) {
                     timeoutMs: PYTHON_WORKER_TIMEOUT_MS
                 });
 
-                reject(
-                    new AppError(
-                        "The intelligence worker timed out",
-                        504,
-                        "WORKER_TIMEOUT"
-                    )
-                );
+                reject(new AppError("The intelligence worker timed out", 504, "WORKER_TIMEOUT"));
             }
         }, PYTHON_WORKER_TIMEOUT_MS);
 
@@ -453,22 +443,14 @@ function runPythonWorker(payload) {
                     message: error.message
                 });
 
-                reject(
-                    new AppError(
-                        "Failed to start intelligence worker",
-                        500,
-                        "WORKER_EXECUTION_FAILED"
-                    )
-                );
+                reject(new AppError("Failed to start intelligence worker", 500, "WORKER_EXECUTION_FAILED"));
             }
         });
 
         child.on("close", (code) => {
             clearTimeout(timeout);
 
-            if (settled) {
-                return;
-            }
+            if (settled) return;
 
             if (code !== 0) {
                 settled = true;
@@ -480,14 +462,9 @@ function runPythonWorker(payload) {
                 });
 
                 reject(
-                    new AppError(
-                        "Intelligence worker execution failed",
-                        500,
-                        "WORKER_EXECUTION_FAILED",
-                        {
-                            exitCode: code
-                        }
-                    )
+                    new AppError("Intelligence worker execution failed", 500, "WORKER_EXECUTION_FAILED", {
+                        exitCode: code
+                    })
                 );
                 return;
             }
@@ -503,13 +480,7 @@ function runPythonWorker(payload) {
                     stderr: stderr.trim()
                 });
 
-                reject(
-                    new AppError(
-                        "Invalid response from intelligence worker",
-                        500,
-                        "WORKER_INVALID_RESPONSE"
-                    )
-                );
+                reject(new AppError("Invalid response from intelligence worker", 500, "WORKER_INVALID_RESPONSE"));
                 return;
             }
 
@@ -525,6 +496,18 @@ function runPythonWorker(payload) {
         child.stdin.write(JSON.stringify(payload));
         child.stdin.end();
     });
+}
+
+function buildWorkerMetadata(workerResponse = {}) {
+    return {
+        expandedQueries: Array.isArray(workerResponse.expandedQueries) ? workerResponse.expandedQueries : [],
+        selectedSources: Array.isArray(workerResponse.selectedSources) ? workerResponse.selectedSources : [],
+        diagnostics: workerResponse.diagnostics || null,
+        noResultExplanation: workerResponse.noResultExplanation || null,
+        rawItemsSeen: toNumber(workerResponse.rawItemsSeen, 0),
+        filteredOutCount: toNumber(workerResponse.filteredOutCount, 0),
+        feedErrors: Array.isArray(workerResponse.feedErrors) ? workerResponse.feedErrors : []
+    };
 }
 
 async function generateIntelligence(payload = {}) {
@@ -544,17 +527,34 @@ async function generateIntelligence(payload = {}) {
         const filtered = strictGeographicFilter(transformed, normalizedPayload);
         const sorted = sortArticles(filtered, normalizedPayload.sortBy);
         const finalResults = sorted;
+        const workerMetadata = buildWorkerMetadata(workerResponse);
+
+        const noResultExplanation = finalResults.length === 0
+            ? workerMetadata.noResultExplanation || {
+                status: "no-qualified-matches",
+                message: "The backend responded successfully, but no articles survived the active filters.",
+                query: normalizedPayload.query,
+                suggestions: [
+                    "Try a broader geopolitical phrase.",
+                    "Check whether country, region, or sentiment filters are too narrow.",
+                    "The topic may be real but not currently present in the selected RSS feeds."
+                ]
+            }
+            : null;
 
         logger.info("Intelligence generation completed", {
             mode: workerResponse.mode || "live",
             rawCount: rawResults.length,
             filteredCount: filtered.length,
-            returnedCount: finalResults.length
+            returnedCount: finalResults.length,
+            rawItemsSeen: workerMetadata.rawItemsSeen,
+            filteredOutCount: workerMetadata.filteredOutCount
         });
 
         return {
             mode: workerResponse.mode || "live",
             query: normalizedPayload.query,
+            expandedQueries: workerMetadata.expandedQueries,
             appliedFilters: {
                 regions: normalizedPayload.regions,
                 countries: normalizedPayload.countries,
@@ -564,8 +564,14 @@ async function generateIntelligence(payload = {}) {
             counts: {
                 raw: rawResults.length,
                 filtered: filtered.length,
-                returned: finalResults.length
+                returned: finalResults.length,
+                rawItemsSeen: workerMetadata.rawItemsSeen,
+                filteredOut: workerMetadata.filteredOutCount
             },
+            selectedSources: workerMetadata.selectedSources,
+            diagnostics: workerMetadata.diagnostics,
+            noResultExplanation,
+            feedErrors: workerMetadata.feedErrors,
             results: finalResults
         };
     } catch (error) {
@@ -580,6 +586,7 @@ async function generateIntelligence(payload = {}) {
             mode: "fallback",
             query: normalizedPayload.query,
             warning: error.message,
+            expandedQueries: [],
             appliedFilters: {
                 regions: normalizedPayload.regions,
                 countries: normalizedPayload.countries,
@@ -589,8 +596,14 @@ async function generateIntelligence(payload = {}) {
             counts: {
                 raw: 0,
                 filtered: fallbackResults.length,
-                returned: fallbackResults.length
+                returned: fallbackResults.length,
+                rawItemsSeen: 0,
+                filteredOut: 0
             },
+            selectedSources: [],
+            diagnostics: null,
+            noResultExplanation: null,
+            feedErrors: [],
             results: fallbackResults
         };
     }

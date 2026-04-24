@@ -11,7 +11,7 @@ function formatTimestamp(value) {
   return parsed.toLocaleString();
 }
 
-function stateDetails({ loading, errorMessage, hasResults }) {
+function stateDetails({ loading, errorMessage, hasResults, noResultExplanation }) {
   if (loading) {
     return {
       label: "Generating",
@@ -22,10 +22,10 @@ function stateDetails({ loading, errorMessage, hasResults }) {
 
   if (errorMessage) {
     return {
-      label: "Backend unavailable / no matches",
+      label: "API unavailable",
       className: "border-red-400/40 bg-red-400/10 text-red-200",
       message:
-        "The frontend is healthy. Either the backend is offline for cost saving, or the live worker returned zero qualified matches.",
+        "The frontend is healthy, but the backend request failed or the backend is offline for cost saving.",
     };
   }
 
@@ -34,6 +34,16 @@ function stateDetails({ loading, errorMessage, hasResults }) {
       label: "Live results loaded",
       className: "border-emerald-400/40 bg-emerald-400/10 text-emerald-200",
       message: "The dashboard is rendering real results from the backend API contract.",
+    };
+  }
+
+  if (noResultExplanation?.status === "no-qualified-matches") {
+    return {
+      label: "No qualified matches",
+      className: "border-amber-400/40 bg-amber-400/10 text-amber-200",
+      message:
+        noResultExplanation.message ||
+        "The backend completed successfully, but no article passed the active intelligence filters.",
     };
   }
 
@@ -49,8 +59,8 @@ function SentimentStat({ label, value, tone }) {
     tone === "positive"
       ? "border-emerald-400/40 bg-emerald-400/10"
       : tone === "negative"
-      ? "border-red-400/40 bg-red-400/10"
-      : "border-amber-400/40 bg-amber-400/10";
+        ? "border-red-400/40 bg-red-400/10"
+        : "border-amber-400/40 bg-amber-400/10";
 
   return (
     <div className={`rounded-2xl border p-4 ${toneClass}`}>
@@ -79,11 +89,14 @@ function SourceCoverageCard({ source }) {
   const name = source?.name || source?.source || source?.label || "Unknown source";
   const country = source?.country || source?.sourceCountry || "—";
   const region = source?.region || source?.sourceRegion || "—";
-  const reliability =
+  const qualityScore =
+    source?.sourceQualityScore ??
     source?.reliabilityScore ??
     source?.reliability_score ??
     source?.sourceReliability ??
     source?.qualityScore;
+  const sourceQuality = source?.sourceQuality || source?.tier || "standard";
+  const coverageScore = source?.coverageSelectionScore;
 
   const categories = Array.isArray(source?.categories) ? source.categories : [];
   const coverage = Array.isArray(source?.coverage) ? source.coverage : [];
@@ -98,10 +111,22 @@ function SourceCoverageCard({ source }) {
           </p>
         </div>
 
-        <Badge className="border-emerald-400/30 bg-emerald-400/10 text-emerald-200">
-          {formatPercent(reliability)}
-        </Badge>
+        <div className="flex flex-col items-end gap-2">
+          <Badge className="border-emerald-400/30 bg-emerald-400/10 text-emerald-200">
+            {formatPercent(qualityScore)}
+          </Badge>
+          <span className="text-[0.65rem] uppercase tracking-[0.18em] text-slate-500">
+            {sourceQuality}
+          </span>
+        </div>
       </div>
+
+      {Number.isFinite(Number(coverageScore)) ? (
+        <p className="mt-3 text-xs leading-5 text-slate-500">
+          Coverage selection score:{" "}
+          <span className="text-slate-300">{Number(coverageScore).toFixed(2)}</span>
+        </p>
+      ) : null}
 
       {coverage.length > 0 ? (
         <div className="mt-3 flex flex-wrap gap-2">
@@ -125,6 +150,17 @@ function SourceCoverageCard({ source }) {
   );
 }
 
+function DiagnosticStat({ label, value }) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-3">
+      <p className="text-[0.65rem] uppercase tracking-[0.18em] text-slate-500">
+        {label}
+      </p>
+      <p className="mt-1 text-lg font-semibold text-slate-100">{value ?? 0}</p>
+    </div>
+  );
+}
+
 export function StatusPanel({
   loading,
   errorMessage,
@@ -133,11 +169,20 @@ export function StatusPanel({
   stats,
   sourceTransparency,
 }) {
-  const currentState = stateDetails({ loading, errorMessage, hasResults });
   const selectedSources = sourceTransparency?.selectedSources || [];
   const counts = sourceTransparency?.counts || {};
   const appliedFilters = sourceTransparency?.appliedFilters || {};
+  const expandedQueries = sourceTransparency?.expandedQueries || [];
+  const diagnostics = sourceTransparency?.diagnostics || {};
+  const noResultExplanation = sourceTransparency?.noResultExplanation || null;
   const selectedSourceCount = selectedSources.length;
+
+  const currentState = stateDetails({
+    loading,
+    errorMessage,
+    hasResults,
+    noResultExplanation,
+  });
 
   return (
     <Panel className="p-5">
@@ -195,32 +240,87 @@ export function StatusPanel({
           </div>
 
           <div className="grid grid-cols-3 gap-2">
-            <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-3">
-              <p className="text-[0.65rem] uppercase tracking-[0.18em] text-slate-500">
-                Raw
-              </p>
-              <p className="mt-1 text-lg font-semibold text-slate-100">
-                {counts.raw ?? 0}
-              </p>
-            </div>
-            <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-3">
-              <p className="text-[0.65rem] uppercase tracking-[0.18em] text-slate-500">
-                Filtered
-              </p>
-              <p className="mt-1 text-lg font-semibold text-slate-100">
-                {counts.filtered ?? 0}
-              </p>
-            </div>
-            <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-3">
-              <p className="text-[0.65rem] uppercase tracking-[0.18em] text-slate-500">
-                Returned
-              </p>
-              <p className="mt-1 text-lg font-semibold text-slate-100">
-                {counts.returned ?? 0}
-              </p>
-            </div>
+            <DiagnosticStat label="Raw" value={counts.rawItemsSeen ?? counts.raw} />
+            <DiagnosticStat label="Filtered" value={counts.filtered ?? 0} />
+            <DiagnosticStat label="Returned" value={counts.returned ?? 0} />
+          </div>
+
+          <div className="grid grid-cols-2 gap-2">
+            <DiagnosticStat label="Filtered out" value={counts.filteredOut ?? 0} />
+            <DiagnosticStat label="Worker accepted" value={diagnostics.acceptedItems ?? 0} />
           </div>
         </div>
+
+        {expandedQueries.length > 0 ? (
+          <div className="space-y-3 rounded-2xl border border-white/10 bg-white/5 p-4">
+            <h3 className="text-sm font-semibold text-slate-100">
+              Query expansion
+            </h3>
+            <p className="text-sm leading-6 text-slate-400">
+              GEO-47I tried deterministic query variants before accepting or rejecting
+              RSS articles.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {expandedQueries.map((query) => (
+                <span
+                  key={query}
+                  className="rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-xs text-cyan-100"
+                >
+                  {query}
+                </span>
+              ))}
+            </div>
+          </div>
+        ) : null}
+
+        {diagnostics && Object.keys(diagnostics).length > 0 ? (
+          <div className="space-y-3 rounded-2xl border border-white/10 bg-white/5 p-4">
+            <h3 className="text-sm font-semibold text-slate-100">
+              Rejection diagnostics
+            </h3>
+
+            <div className="grid grid-cols-2 gap-2">
+              <DiagnosticStat
+                label="Strict gate"
+                value={diagnostics.rejectedByStrictGate ?? 0}
+              />
+              <DiagnosticStat
+                label="Country gate"
+                value={diagnostics.rejectedByMultiCountryGate ?? 0}
+              />
+              <DiagnosticStat
+                label="Low relevance"
+                value={diagnostics.rejectedByRelevanceThreshold ?? 0}
+              />
+              <DiagnosticStat
+                label="Missing data"
+                value={diagnostics.rejectedMissingTitleOrUrl ?? 0}
+              />
+            </div>
+
+            {Array.isArray(diagnostics.rejectionSamples) &&
+            diagnostics.rejectionSamples.length > 0 ? (
+              <div className="space-y-2">
+                <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
+                  Sample rejected articles
+                </p>
+                {diagnostics.rejectionSamples.slice(0, 3).map((sample, index) => (
+                  <div
+                    key={`${sample?.title || "sample"}-${index}`}
+                    className="rounded-xl border border-white/10 bg-slate-950/50 p-3"
+                  >
+                    <p className="text-xs font-semibold text-slate-300">
+                      {sample?.title || "Untitled article"}
+                    </p>
+                    <p className="mt-1 text-xs text-slate-500">
+                      {sample?.source || "Unknown source"} · {sample?.reason || "rejected"}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
 
         {selectedSources.length > 0 ? (
           <div className="space-y-3">
@@ -265,9 +365,9 @@ export function StatusPanel({
         <div className="space-y-2 rounded-2xl border border-white/10 bg-white/5 p-4">
           <h3 className="text-sm font-semibold text-slate-100">Backend contract note</h3>
           <p className="text-sm leading-6 text-slate-400">
-            GEO-47H exposes backend transparency fields from the source registry:
-            selected sources, source coverage, reliability signals, counts, filters,
-            and ranking reasons. Backend behavior remains unchanged.
+            GEO-47I preserves the strict relevance and source-registry engine, then adds
+            query expansion, no-result diagnostics, rejection visibility, and source-quality
+            transparency. No AI-generated facts are inserted into live results.
           </p>
         </div>
 
