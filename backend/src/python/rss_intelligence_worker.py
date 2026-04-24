@@ -12,22 +12,251 @@ import requests
 USER_AGENT = "Geo-Sentinel/1.0 (+RSS intelligence worker)"
 REQUEST_TIMEOUT = 12
 MAX_RESULTS = 40
-MIN_RELEVANCE_SCORE = 0.32
+MIN_RELEVANCE_SCORE = 0.42
+MAX_SELECTED_FEEDS = 12
 
-RSS_FEEDS = [
-    {"source": "Reuters", "url": "https://feeds.reuters.com/reuters/worldNews", "mediaType": "news-article", "country": "United Kingdom", "region": "Global", "tier": "top", "weight": 1.0},
-    {"source": "BBC", "url": "http://feeds.bbci.co.uk/news/world/rss.xml", "mediaType": "news-article", "country": "United Kingdom", "region": "Europe", "tier": "top", "weight": 0.98},
-    {"source": "CNN", "url": "http://rss.cnn.com/rss/edition_world.rss", "mediaType": "news-article", "country": "United States", "region": "North America", "tier": "top", "weight": 0.92},
-    {"source": "Al Jazeera", "url": "https://www.aljazeera.com/xml/rss/all.xml", "mediaType": "news-article", "country": "Qatar", "region": "Middle East", "tier": "top", "weight": 0.96},
-    {"source": "DW", "url": "https://rss.dw.com/xml/rss-en-world", "mediaType": "news-article", "country": "Germany", "region": "Europe", "tier": "top", "weight": 0.9},
-    {"source": "France 24", "url": "https://www.france24.com/en/rss", "mediaType": "news-article", "country": "France", "region": "Europe", "tier": "top", "weight": 0.9},
-
-    {"source": "The Guardian", "url": "https://www.theguardian.com/world/rss", "mediaType": "news-article", "country": "United Kingdom", "region": "Europe", "tier": "standard", "weight": 0.82},
-    {"source": "Euronews", "url": "https://www.euronews.com/rss?level=theme&name=news", "mediaType": "news-article", "country": "Europe", "region": "Europe", "tier": "standard", "weight": 0.78},
-
-    {"source": "SCMP", "url": "https://www.scmp.com/rss/91/feed", "mediaType": "news-article", "country": "Hong Kong", "region": "Asia", "tier": "standard", "weight": 0.78},
-    {"source": "CNA", "url": "https://www.channelnewsasia.com/rssfeeds/8395986", "mediaType": "news-article", "country": "Singapore", "region": "Asia", "tier": "standard", "weight": 0.76},
-    {"source": "Nikkei Asia", "url": "https://asia.nikkei.com/rss/feed/nar", "mediaType": "news-article", "country": "Japan", "region": "Asia", "tier": "standard", "weight": 0.8},
+SOURCE_CATALOG = [
+    {
+        "id": "reuters",
+        "source": "Reuters",
+        "urls": ["https://feeds.reuters.com/reuters/worldNews"],
+        "mediaType": "news-article",
+        "country": "United Kingdom",
+        "region": "Europe",
+        "tier": "top",
+        "focus": "international",
+        "coverage": ["global", "europe", "north-america", "middle-east", "asia"],
+        "categories": ["politics", "economy", "conflict", "diplomacy", "markets"],
+        "weight": 1.0,
+        "reliabilityScore": 0.95,
+    },
+    {
+        "id": "bbc",
+        "source": "BBC",
+        "urls": ["http://feeds.bbci.co.uk/news/world/rss.xml"],
+        "mediaType": "news-article",
+        "country": "United Kingdom",
+        "region": "Europe",
+        "tier": "top",
+        "focus": "international",
+        "coverage": ["global", "europe", "asia", "middle-east", "africa"],
+        "categories": ["politics", "conflict", "diplomacy", "society"],
+        "weight": 0.98,
+        "reliabilityScore": 0.93,
+    },
+    {
+        "id": "cnn",
+        "source": "CNN",
+        "urls": ["http://rss.cnn.com/rss/edition_world.rss"],
+        "mediaType": "news-article",
+        "country": "United States",
+        "region": "North America",
+        "tier": "top",
+        "focus": "international",
+        "coverage": ["global", "north-america", "middle-east", "asia", "europe"],
+        "categories": ["politics", "conflict", "diplomacy", "security"],
+        "weight": 0.92,
+        "reliabilityScore": 0.90,
+    },
+    {
+        "id": "al-jazeera",
+        "source": "Al Jazeera",
+        "urls": ["https://www.aljazeera.com/xml/rss/all.xml"],
+        "mediaType": "news-article",
+        "country": "Qatar",
+        "region": "Middle East",
+        "tier": "top",
+        "focus": "international",
+        "coverage": ["global", "middle-east", "asia", "africa"],
+        "categories": ["politics", "conflict", "diplomacy", "humanitarian"],
+        "weight": 0.96,
+        "reliabilityScore": 0.91,
+    },
+    {
+        "id": "dw",
+        "source": "DW",
+        "urls": ["https://rss.dw.com/xml/rss-en-world"],
+        "mediaType": "news-article",
+        "country": "Germany",
+        "region": "Europe",
+        "tier": "top",
+        "focus": "international",
+        "coverage": ["global", "europe", "asia", "middle-east"],
+        "categories": ["politics", "economy", "conflict", "diplomacy"],
+        "weight": 0.90,
+        "reliabilityScore": 0.91,
+    },
+    {
+        "id": "france24",
+        "source": "France 24",
+        "urls": ["https://www.france24.com/en/rss"],
+        "mediaType": "news-article",
+        "country": "France",
+        "region": "Europe",
+        "tier": "top",
+        "focus": "international",
+        "coverage": ["global", "europe", "africa", "middle-east"],
+        "categories": ["politics", "conflict", "diplomacy"],
+        "weight": 0.90,
+        "reliabilityScore": 0.90,
+    },
+    {
+        "id": "guardian",
+        "source": "The Guardian",
+        "urls": ["https://www.theguardian.com/world/rss"],
+        "mediaType": "news-article",
+        "country": "United Kingdom",
+        "region": "Europe",
+        "tier": "top",
+        "focus": "international",
+        "coverage": ["global", "europe", "middle-east", "asia", "north-america"],
+        "categories": ["politics", "conflict", "climate", "economy"],
+        "weight": 0.88,
+        "reliabilityScore": 0.90,
+    },
+    {
+        "id": "euronews",
+        "source": "Euronews",
+        "urls": ["https://www.euronews.com/rss?level=theme&name=news"],
+        "mediaType": "news-article",
+        "country": "France",
+        "region": "Europe",
+        "tier": "high",
+        "focus": "international",
+        "coverage": ["global", "europe"],
+        "categories": ["politics", "economy", "conflict"],
+        "weight": 0.78,
+        "reliabilityScore": 0.86,
+    },
+    {
+        "id": "ndtv",
+        "source": "NDTV",
+        "urls": ["https://feeds.feedburner.com/ndtvnews-top-stories"],
+        "mediaType": "news-article",
+        "country": "India",
+        "region": "Asia",
+        "tier": "top",
+        "focus": "national",
+        "coverage": ["india", "asia"],
+        "categories": ["politics", "economy", "security", "diplomacy"],
+        "weight": 0.88,
+        "reliabilityScore": 0.88,
+    },
+    {
+        "id": "times-of-india",
+        "source": "Times of India",
+        "urls": ["https://timesofindia.indiatimes.com/rssfeedstopstories.cms"],
+        "mediaType": "news-article",
+        "country": "India",
+        "region": "Asia",
+        "tier": "top",
+        "focus": "national",
+        "coverage": ["india", "asia"],
+        "categories": ["politics", "economy", "security"],
+        "weight": 0.82,
+        "reliabilityScore": 0.84,
+    },
+    {
+        "id": "the-hindu",
+        "source": "The Hindu",
+        "urls": [
+            "https://www.thehindu.com/news/national/feeder/default.rss",
+            "https://www.thehindu.com/news/international/feeder/default.rss",
+        ],
+        "mediaType": "news-article",
+        "country": "India",
+        "region": "Asia",
+        "tier": "top",
+        "focus": "national",
+        "coverage": ["india", "asia"],
+        "categories": ["politics", "economy", "diplomacy"],
+        "weight": 0.84,
+        "reliabilityScore": 0.89,
+    },
+    {
+        "id": "scmp",
+        "source": "SCMP",
+        "urls": ["https://www.scmp.com/rss/91/feed"],
+        "mediaType": "news-article",
+        "country": "Hong Kong",
+        "region": "Asia",
+        "tier": "top",
+        "focus": "regional",
+        "coverage": ["asia", "china", "hong-kong", "taiwan"],
+        "categories": ["politics", "economy", "security", "diplomacy"],
+        "weight": 0.78,
+        "reliabilityScore": 0.88,
+    },
+    {
+        "id": "channel-news-asia",
+        "source": "CNA",
+        "urls": ["https://www.channelnewsasia.com/rssfeeds/8395986"],
+        "mediaType": "news-article",
+        "country": "Singapore",
+        "region": "Asia",
+        "tier": "high",
+        "focus": "regional",
+        "coverage": ["asia", "singapore", "china", "taiwan"],
+        "categories": ["politics", "economy", "security"],
+        "weight": 0.76,
+        "reliabilityScore": 0.87,
+    },
+    {
+        "id": "nikkei",
+        "source": "Nikkei Asia",
+        "urls": ["https://asia.nikkei.com/rss/feed/nar"],
+        "mediaType": "news-article",
+        "country": "Japan",
+        "region": "Asia",
+        "tier": "top",
+        "focus": "regional",
+        "coverage": ["asia", "japan", "china", "taiwan"],
+        "categories": ["economy", "markets", "technology", "security"],
+        "weight": 0.80,
+        "reliabilityScore": 0.89,
+    },
+    {
+        "id": "arab-news",
+        "source": "Arab News",
+        "urls": ["https://www.arabnews.com/rss.xml"],
+        "mediaType": "news-article",
+        "country": "Saudi Arabia",
+        "region": "Middle East",
+        "tier": "high",
+        "focus": "regional",
+        "coverage": ["middle-east", "saudi-arabia", "iran", "israel"],
+        "categories": ["politics", "conflict", "energy", "diplomacy"],
+        "weight": 0.76,
+        "reliabilityScore": 0.84,
+    },
+    {
+        "id": "times-of-israel",
+        "source": "Times of Israel",
+        "urls": ["https://www.timesofisrael.com/feed/"],
+        "mediaType": "news-article",
+        "country": "Israel",
+        "region": "Middle East",
+        "tier": "high",
+        "focus": "national",
+        "coverage": ["middle-east", "israel", "iran"],
+        "categories": ["politics", "conflict", "security", "diplomacy"],
+        "weight": 0.78,
+        "reliabilityScore": 0.84,
+    },
+    {
+        "id": "ap-news",
+        "source": "Associated Press",
+        "urls": ["https://apnews.com/hub/world-news?output=rss"],
+        "mediaType": "news-article",
+        "country": "United States",
+        "region": "North America",
+        "tier": "top",
+        "focus": "international",
+        "coverage": ["global", "north-america", "europe", "asia", "middle-east"],
+        "categories": ["politics", "conflict", "economy", "diplomacy"],
+        "weight": 0.92,
+        "reliabilityScore": 0.94,
+    },
 ]
 
 POSITIVE_WORDS = {
@@ -66,11 +295,14 @@ COUNTRY_REGION_HINTS = {
     "kuwait": "Middle East",
     "syria": "Middle East",
     "turkey": "Middle East",
+    "saudi arabia": "Middle East",
     "pakistan": "Asia",
     "india": "Asia",
     "china": "Asia",
     "taiwan": "Asia",
     "japan": "Asia",
+    "singapore": "Asia",
+    "hong kong": "Asia",
     "russia": "Europe",
     "ukraine": "Europe",
     "norway": "Europe",
@@ -82,14 +314,52 @@ COUNTRY_REGION_HINTS = {
     "usa": "North America",
     "us": "North America",
     "united states": "North America",
+    "canada": "North America",
     "australia": "Oceania",
     "ghana": "Africa",
     "kenya": "Africa",
 }
 
+REGION_KEYS = {
+    "world": "global",
+    "global": "global",
+    "asia": "asia",
+    "europe": "europe",
+    "middle east": "middle-east",
+    "middle-east": "middle-east",
+    "north america": "north-america",
+    "north-america": "north-america",
+    "africa": "africa",
+    "oceania": "oceania",
+}
+
+COUNTRY_KEYS = {
+    "india": "india",
+    "china": "china",
+    "taiwan": "taiwan",
+    "japan": "japan",
+    "singapore": "singapore",
+    "hong kong": "hong-kong",
+    "israel": "israel",
+    "iran": "iran",
+    "saudi arabia": "saudi-arabia",
+    "united kingdom": "united-kingdom",
+    "uk": "united-kingdom",
+    "germany": "germany",
+    "france": "france",
+    "united states": "united-states",
+    "usa": "united-states",
+    "us": "united-states",
+    "canada": "canada",
+}
+
 
 def normalize_text(value):
     return str(value or "").strip()
+
+
+def normalize_key(value):
+    return re.sub(r"[^a-z0-9]+", "-", normalize_text(value).lower()).strip("-")
 
 
 def clean_html(value):
@@ -129,6 +399,7 @@ def parse_date(value):
     except Exception:
         return ""
 
+
 def sentiment(text):
     words = tokenize(text)
     if not words:
@@ -157,6 +428,17 @@ def infer_query_regions(query):
             regions.add(region)
 
     return regions
+
+
+def infer_query_countries(query):
+    query_l = normalize_text(query).lower()
+    countries = set()
+
+    for country in COUNTRY_REGION_HINTS.keys():
+        if re.search(rf"\b{re.escape(country)}\b", query_l):
+            countries.add(country)
+
+    return countries
 
 
 def query_terms(query):
@@ -340,33 +622,186 @@ def recency_score(published):
         return 0.25
 
 
-def geo_score(query, feed):
-    inferred_regions = infer_query_regions(query)
-
-    if not inferred_regions:
-        return 0.7
-
-    source_region = normalize_text(feed.get("region"))
-    source_country = normalize_text(feed.get("country")).lower()
-    query_l = normalize_text(query).lower()
-
-    if source_country and source_country in query_l:
-        return 1.0
-
-    if source_region in inferred_regions:
-        return 0.92
-
-    if source_region == "Global":
-        return 0.78
-
-    return 0.48
-
-
 def source_score(feed):
+    weight = 0.7
+    reliability = 0.85
+
     try:
-        return max(0.3, min(1.0, float(feed.get("weight", 0.7))))
+        weight = float(feed.get("weight", 0.7))
     except Exception:
-        return 0.7
+        weight = 0.7
+
+    try:
+        reliability = float(feed.get("reliabilityScore", 0.85))
+    except Exception:
+        reliability = 0.85
+
+    return round(max(0.3, min(1.0, (weight * 0.72) + (reliability * 0.28))), 4)
+
+
+def selected_region_keys(payload):
+    selected = set()
+    regions = payload.get("regions") if isinstance(payload.get("regions"), list) else []
+
+    for region in regions:
+        key = REGION_KEYS.get(normalize_text(region).lower(), normalize_key(region))
+        if key:
+            selected.add(key)
+
+    if not selected:
+        selected.add("global")
+
+    return selected
+
+
+def selected_country_keys(payload, query):
+    selected = set()
+    countries = payload.get("countries") if isinstance(payload.get("countries"), list) else []
+
+    for country in countries:
+        raw = normalize_text(country).lower()
+        selected.add(COUNTRY_KEYS.get(raw, normalize_key(raw)))
+
+    for country in infer_query_countries(query):
+        selected.add(COUNTRY_KEYS.get(country, normalize_key(country)))
+
+    return {item for item in selected if item}
+
+
+def region_to_key(region):
+    return REGION_KEYS.get(normalize_text(region).lower(), normalize_key(region))
+
+
+def feed_geo_selection_score(feed, payload, query):
+    region_keys = selected_region_keys(payload)
+    country_keys = selected_country_keys(payload, query)
+    inferred_regions = {region_to_key(region) for region in infer_query_regions(query)}
+
+    source_region_key = region_to_key(feed.get("region", ""))
+    source_country_key = COUNTRY_KEYS.get(normalize_text(feed.get("country", "")).lower(), normalize_key(feed.get("country", "")))
+    coverage = {normalize_key(item) for item in feed.get("coverage", [])}
+
+    score = 0.0
+
+    if "global" in coverage:
+        score += 0.45
+
+    if country_keys:
+        if source_country_key in country_keys:
+            score += 2.4
+        if coverage.intersection(country_keys):
+            score += 2.0
+
+    active_regions = {item for item in region_keys.union(inferred_regions) if item and item != "global"}
+    if active_regions:
+        if source_region_key in active_regions:
+            score += 1.5
+        if coverage.intersection(active_regions):
+            score += 1.2
+
+    if "global" in region_keys:
+        score += 0.65 if "global" in coverage else 0.25
+
+    if feed.get("tier") == "top":
+        score += 0.35
+    elif feed.get("tier") == "high":
+        score += 0.2
+
+    try:
+        score += float(feed.get("reliabilityScore", 0.85)) * 0.25
+    except Exception:
+        score += 0.2
+
+    return round(score, 4)
+
+
+def flatten_selected_feeds(selected_sources):
+    feeds = []
+
+    for source in selected_sources:
+        for url in source.get("urls", []):
+            feed = {
+                **source,
+                "url": url,
+            }
+            feeds.append(feed)
+
+    return feeds
+
+
+def select_sources(payload, query):
+    scored = [
+        {
+            **source,
+            "coverageSelectionScore": feed_geo_selection_score(source, payload, query),
+        }
+        for source in SOURCE_CATALOG
+    ]
+
+    selected = sorted(
+        scored,
+        key=lambda item: (
+            item.get("coverageSelectionScore", 0),
+            item.get("weight", 0),
+            item.get("reliabilityScore", 0),
+        ),
+        reverse=True,
+    )
+
+    # Keep a controlled blend: targeted first, then global fallbacks.
+    targeted = [source for source in selected if source.get("coverageSelectionScore", 0) >= 1.45]
+    global_fallbacks = [
+        source for source in selected
+        if "global" in {normalize_key(item) for item in source.get("coverage", [])}
+    ]
+
+    merged = []
+    seen = set()
+
+    for source in targeted + global_fallbacks + selected:
+        if source["id"] in seen:
+            continue
+        seen.add(source["id"])
+        merged.append(source)
+
+        if len(merged) >= MAX_SELECTED_FEEDS:
+            break
+
+    return merged
+
+
+def geo_score(query, feed, payload=None):
+    payload = payload or {}
+    region_keys = selected_region_keys(payload)
+    country_keys = selected_country_keys(payload, query)
+    inferred_regions = {region_to_key(region) for region in infer_query_regions(query)}
+
+    source_region_key = region_to_key(feed.get("region", ""))
+    source_country_key = COUNTRY_KEYS.get(normalize_text(feed.get("country", "")).lower(), normalize_key(feed.get("country", "")))
+    coverage = {normalize_key(item) for item in feed.get("coverage", [])}
+
+    if country_keys:
+        if source_country_key in country_keys:
+            return 1.0
+        if coverage.intersection(country_keys):
+            return 0.94
+
+    active_regions = {item for item in region_keys.union(inferred_regions) if item and item != "global"}
+    if active_regions:
+        if source_region_key in active_regions:
+            return 0.92
+        if coverage.intersection(active_regions):
+            return 0.86
+        if "global" in coverage:
+            return 0.72
+        return 0.46
+
+    if "global" in region_keys or not region_keys:
+        if "global" in coverage:
+            return 0.82
+        return 0.58
+
+    return 0.55
 
 
 def final_score(query_relevance, geo_alignment, recency, source_quality, sentiment_value):
@@ -391,16 +826,71 @@ def fetch_feed(feed):
     return response.text
 
 
-def parse_feed(feed, query):
+def find_atom_text(entry, names):
+    for name in names:
+        value = entry.findtext(name)
+        if value:
+            return value
+
+        namespaced = entry.findtext(f"{{http://www.w3.org/2005/Atom}}{name}")
+        if namespaced:
+            return namespaced
+
+    return ""
+
+
+def find_atom_link(entry):
+    link = entry.find("{http://www.w3.org/2005/Atom}link")
+    if link is not None:
+        return normalize_text(link.attrib.get("href"))
+
+    link = entry.find("link")
+    if link is not None:
+        return normalize_text(link.attrib.get("href") or link.text)
+
+    return ""
+
+
+def extract_feed_items(root):
+    rss_items = root.findall(".//item")
+    if rss_items:
+        return "rss", rss_items
+
+    atom_items = root.findall(".//{http://www.w3.org/2005/Atom}entry")
+    if atom_items:
+        return "atom", atom_items
+
+    plain_atom_items = root.findall(".//entry")
+    if plain_atom_items:
+        return "atom", plain_atom_items
+
+    return "unknown", []
+
+
+def parse_feed_item(item, feed_type):
+    if feed_type == "atom":
+        title = clean_html(find_atom_text(item, ["title"]))
+        summary = clean_html(find_atom_text(item, ["summary", "content"]))
+        url = normalize_text(find_atom_link(item))
+        published = parse_date(find_atom_text(item, ["published", "updated"]))
+        return title, summary, url, published
+
+    title = clean_html(item.findtext("title"))
+    summary = clean_html(item.findtext("description"))
+    url = normalize_text(item.findtext("link"))
+    published = parse_date(item.findtext("pubDate"))
+
+    return title, summary, url, published
+
+
+def parse_feed(feed, query, payload):
     xml = fetch_feed(feed)
     root = ET.fromstring(xml)
+    feed_type, feed_items = extract_feed_items(root)
     items = []
 
-    for item in root.findall(".//item"):
-        title = clean_html(item.findtext("title"))
-        summary = clean_html(item.findtext("description"))
-        url = normalize_text(item.findtext("link"))
-        published = parse_date(item.findtext("pubDate"))
+    for item in feed_items:
+        title, summary, url, published = parse_feed_item(item, feed_type)
 
         if not title or not url:
             continue
@@ -411,6 +901,17 @@ def parse_feed(feed, query):
         if not passed_gate:
             continue
 
+        query_countries = infer_query_countries(query)
+        if len(query_countries) >= 2:
+            text_l = normalize_text(text).lower()
+            matched_countries = [
+                country for country in query_countries
+                if re.search(rf"\b{re.escape(country)}\b", text_l)
+            ]
+
+            if len(matched_countries) < 2:
+                continue
+
         q_score, relevance = relevance_score(query, title, summary)
 
         if q_score < MIN_RELEVANCE_SCORE:
@@ -418,7 +919,7 @@ def parse_feed(feed, query):
 
         sent, sent_score = sentiment(text)
         r_score = recency_score(published)
-        g_score = geo_score(query, feed)
+        g_score = geo_score(query, feed, payload)
         s_score = source_score(feed)
 
         score = final_score(q_score, g_score, r_score, s_score, sent_score)
@@ -428,10 +929,15 @@ def parse_feed(feed, query):
             "summary": summary,
             "url": url,
             "source": feed["source"],
+            "sourceId": feed.get("id", ""),
             "sourceCountry": feed.get("country", ""),
             "sourceRegion": feed.get("region", ""),
             "sourceTier": feed.get("tier", "standard"),
             "sourceWeight": feed.get("weight", 0.7),
+            "sourceReliabilityScore": feed.get("reliabilityScore", 0.85),
+            "publicationFocus": feed.get("focus", "international"),
+            "coverage": feed.get("coverage", []),
+            "categories": feed.get("categories", []),
             "publishedAt": published,
             "sentiment": sent,
             "sentimentScore": sent_score,
@@ -442,6 +948,7 @@ def parse_feed(feed, query):
             "geoAlignmentScore": round(g_score, 4),
             "recencyScore": round(r_score, 4),
             "sourceQualityScore": round(s_score, 4),
+            "coverageSelectionScore": feed.get("coverageSelectionScore", 0),
             "workerScore": round(score / 100, 4),
             "signalScore": score,
             "finalScore": score
@@ -462,7 +969,7 @@ def dedupe_items(items):
             normalize_text(item.get("title")).lower()
         ).strip()
 
-        key = url or title_key
+        key = url or f"{item.get('source', '')}:{title_key}"
         if not key or key in seen:
             continue
 
@@ -476,15 +983,20 @@ def main():
     payload = json.loads(sys.stdin.read() or "{}")
     query = normalize_text(payload.get("query") or payload.get("selectedTrend") or "")
 
+    selected_sources = select_sources(payload, query)
+    selected_feeds = flatten_selected_feeds(selected_sources)
+
     all_items = []
     feed_errors = []
 
-    for feed in RSS_FEEDS:
+    for feed in selected_feeds:
         try:
-            all_items.extend(parse_feed(feed, query))
+            all_items.extend(parse_feed(feed, query, payload))
         except Exception as exc:
             feed_errors.append({
                 "source": feed.get("source"),
+                "sourceId": feed.get("id"),
+                "url": feed.get("url"),
                 "error": str(exc)
             })
 
@@ -497,7 +1009,17 @@ def main():
         "resultCount": len(ranked[:MAX_RESULTS]),
         "retrievedCount": len(all_items),
         "dedupedCount": len(deduped),
-        "feedErrors": feed_errors[:5],
+        "selectedSources": [
+            {
+                "id": source.get("id"),
+                "name": source.get("source"),
+                "country": source.get("country"),
+                "region": source.get("region"),
+                "coverageSelectionScore": source.get("coverageSelectionScore"),
+            }
+            for source in selected_sources
+        ],
+        "feedErrors": feed_errors[:8],
         "results": ranked[:MAX_RESULTS]
     }, ensure_ascii=False))
 
