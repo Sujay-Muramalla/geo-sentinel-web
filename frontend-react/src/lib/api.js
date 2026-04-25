@@ -20,15 +20,33 @@ function normalizeCountries(value) {
   return [];
 }
 
+function normalizePublicationFocus(value) {
+  if (Array.isArray(value)) {
+    return value.filter(Boolean);
+  }
+
+  if (!value || value === "all") {
+    return ["all"];
+  }
+
+  return [value];
+}
+
+function normalizeSentimentFilter(value) {
+  return value && value !== "all" ? value : "all";
+}
+
 function buildGeneratePayload(form) {
+  const scope = form.geographicScope || "world";
+
   return {
     query: form.scenario?.trim() || "",
-    scope: form.geographicScope || "world",
+    regions: [scope],
     countries: normalizeCountries(form.countries),
-    mediaType: form.mediaType || "all",
-    publicationFocus: form.publicationFocus || "all",
-    sentiment: form.sentiment || "all",
-    sort: form.sortBy || "final-desc",
+    mediaTypes: form.mediaType && form.mediaType !== "all" ? [form.mediaType] : ["newspapers", "news-channels"],
+    publicationFocus: normalizePublicationFocus(form.publicationFocus),
+    sentimentFilter: normalizeSentimentFilter(form.sentiment),
+    sortBy: form.sortBy || "final-desc",
   };
 }
 
@@ -47,6 +65,8 @@ export function getApiCounts(payload) {
       raw: 0,
       filtered: 0,
       returned: 0,
+      rawItemsSeen: 0,
+      filteredOut: 0,
     }
   );
 }
@@ -70,6 +90,22 @@ export function getSelectedSources(payload) {
       payload?.data?.sourceSelection?.selectedSources ||
       payload?.sourceSelection?.selectedSources
   );
+}
+
+export function getExpandedQueries(payload) {
+  return normalizeArray(payload?.data?.expandedQueries || payload?.expandedQueries);
+}
+
+export function getDiagnostics(payload) {
+  return payload?.data?.diagnostics || payload?.diagnostics || null;
+}
+
+export function getNoResultExplanation(payload) {
+  return payload?.data?.noResultExplanation || payload?.noResultExplanation || null;
+}
+
+export function getFeedErrors(payload) {
+  return normalizeArray(payload?.data?.feedErrors || payload?.feedErrors);
 }
 
 export async function generateIntelligence(form) {
