@@ -74,9 +74,26 @@ output "backend_api_generate_url" {
 }
 
 output "dynamodb_cache_table_name" {
-  value = aws_dynamodb_table.geo_sentinel_cache.name
+  description = "Name of the DynamoDB cache metadata table"
+  value       = aws_dynamodb_table.geo_sentinel_cache.name
 }
 
 output "dynamodb_cache_table_arn" {
-  value = aws_dynamodb_table.geo_sentinel_cache.arn
+  description = "ARN of the DynamoDB cache metadata table"
+  value       = aws_dynamodb_table.geo_sentinel_cache.arn
+}
+
+output "reports_bucket_name" {
+  description = "Name of the private S3 reports and snapshots bucket"
+  value       = aws_s3_bucket.reports_bucket.id
+}
+
+output "reports_bucket_arn" {
+  description = "ARN of the private S3 reports and snapshots bucket"
+  value       = aws_s3_bucket.reports_bucket.arn
+}
+
+output "reports_snapshot_prefix" {
+  description = "Default S3 prefix used for intelligence result snapshots"
+  value       = "snapshots/"
 }
