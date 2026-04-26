@@ -13,8 +13,10 @@ const {
     generateQueryHash,
     getCache,
     putCache,
-    buildCacheItem
+    buildCacheItem,
+    buildExpiryTimestamp
 } = require("./cacheService");
+const { putSnapshot } = require("./snapshotService");
 
 const PYTHON_WORKER_TIMEOUT_MS = env.pythonWorkerTimeoutMs;
 
@@ -538,7 +540,8 @@ async function generateIntelligence(payload = {}) {
             queryHash,
             sourceCount: cachedItem.sourceCount || 0,
             createdAt: cachedItem.createdAt,
-            expiresAt: cachedItem.expiresAt
+            expiresAt: cachedItem.expiresAt,
+            s3SnapshotKey: cachedItem.s3SnapshotKey || null
         });
 
         return {
@@ -615,13 +618,55 @@ async function generateIntelligence(payload = {}) {
             results: finalResults
         };
 
-        await putCache(buildCacheItem(queryHash, normalizedPayload, responsePayload));
+        const createdAt = Date.now();
+        const expiresAt = buildExpiryTimestamp(createdAt);
+        let snapshotResult = null;
+
+        try {
+            snapshotResult = await putSnapshot({
+                queryHash,
+                payload: normalizedPayload,
+                responsePayload,
+                createdAt,
+                expiresAt
+            });
+
+            if (snapshotResult?.s3SnapshotKey) {
+                logger.info("S3 intelligence snapshot written", {
+                    queryHash,
+                    bucket: snapshotResult.bucket,
+                    s3SnapshotKey: snapshotResult.s3SnapshotKey,
+                    sourceCount: snapshotResult.sourceCount
+                });
+            } else {
+                logger.info("S3 snapshot skipped; no reports bucket configured", {
+                    queryHash
+                });
+            }
+        } catch (snapshotError) {
+            logger.warn("S3 snapshot write failed; continuing without snapshot", {
+                queryHash,
+                message: snapshotError.message
+            });
+        }
+
+        await putCache(buildCacheItem(queryHash, normalizedPayload, responsePayload, {
+            createdAt,
+            expiresAt,
+            s3SnapshotKey: snapshotResult?.s3SnapshotKey || null,
+            s3SnapshotBucket: snapshotResult?.bucket || null
+        }));
 
         return {
             ...responsePayload,
             cache: buildCacheMetadata({
                 hit: false,
-                queryHash
+                queryHash,
+                cachedItem: {
+                    createdAt,
+                    expiresAt,
+                    s3SnapshotKey: snapshotResult?.s3SnapshotKey || null
+                }
             })
         };
     } catch (error) {

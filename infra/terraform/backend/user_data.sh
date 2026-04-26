@@ -132,6 +132,8 @@ echo "📝 Writing environment file"
 cat > "\$${ENV_FILE}" <<EOT
 NODE_ENV=production
 PORT=\$${BACKEND_PORT}
+S3_REPORTS_BUCKET=geo-sentinel-web-reports-632150488936
+S3_SNAPSHOT_PREFIX=snapshots
 CORS_ALLOWED_ORIGINS=\$${FRONTEND_ORIGIN}
 PYTHON_COMMAND=\$${BACKEND_DIR}/.venv/bin/python
 PYTHON_INTELLIGENCE_WORKER=\$${BACKEND_DIR}/src/python/rss_intelligence_worker.py
