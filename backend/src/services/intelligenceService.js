@@ -9,6 +9,12 @@ const {
 const env = require("../config/env");
 const AppError = require("../utils/appError");
 const logger = require("../utils/logger");
+const {
+    generateQueryHash,
+    getCache,
+    putCache,
+    buildCacheItem
+} = require("./cacheService");
 
 const PYTHON_WORKER_TIMEOUT_MS = env.pythonWorkerTimeoutMs;
 
@@ -510,9 +516,41 @@ function buildWorkerMetadata(workerResponse = {}) {
     };
 }
 
+function buildCacheMetadata({ hit, queryHash, cachedItem = null }) {
+    return {
+        hit,
+        queryHash,
+        createdAt: cachedItem ? cachedItem.createdAt : null,
+        expiresAt: cachedItem ? cachedItem.expiresAt : null,
+        s3SnapshotKey: cachedItem ? cachedItem.s3SnapshotKey || null : null
+    };
+}
+
 async function generateIntelligence(payload = {}) {
     const normalizedPayload = normalizePayload(payload);
     validatePayload(normalizedPayload);
+
+    const queryHash = generateQueryHash(normalizedPayload);
+    const cachedItem = await getCache(queryHash);
+
+    if (cachedItem && cachedItem.responsePayload) {
+        logger.info("Returning cached intelligence response", {
+            queryHash,
+            sourceCount: cachedItem.sourceCount || 0,
+            createdAt: cachedItem.createdAt,
+            expiresAt: cachedItem.expiresAt
+        });
+
+        return {
+            ...cachedItem.responsePayload,
+            mode: "cache",
+            cache: buildCacheMetadata({
+                hit: true,
+                queryHash,
+                cachedItem
+            })
+        };
+    }
 
     try {
         const workerResponse = await runPythonWorker(normalizedPayload);
@@ -548,10 +586,12 @@ async function generateIntelligence(payload = {}) {
             filteredCount: filtered.length,
             returnedCount: finalResults.length,
             rawItemsSeen: workerMetadata.rawItemsSeen,
-            filteredOutCount: workerMetadata.filteredOutCount
+            filteredOutCount: workerMetadata.filteredOutCount,
+            cacheHit: false,
+            queryHash
         });
 
-        return {
+        const responsePayload = {
             mode: workerResponse.mode || "live",
             query: normalizedPayload.query,
             expandedQueries: workerMetadata.expandedQueries,
@@ -574,10 +614,22 @@ async function generateIntelligence(payload = {}) {
             feedErrors: workerMetadata.feedErrors,
             results: finalResults
         };
+
+        await putCache(buildCacheItem(queryHash, normalizedPayload, responsePayload));
+
+        return {
+            ...responsePayload,
+            cache: buildCacheMetadata({
+                hit: false,
+                queryHash
+            })
+        };
     } catch (error) {
         logger.warn("Falling back to synthetic intelligence results", {
             code: error.code || "UNKNOWN_ERROR",
-            message: error.message
+            message: error.message,
+            cacheHit: false,
+            queryHash
         });
 
         const fallbackResults = buildFallbackResults(normalizedPayload);
@@ -604,7 +656,11 @@ async function generateIntelligence(payload = {}) {
             diagnostics: null,
             noResultExplanation: null,
             feedErrors: [],
-            results: fallbackResults
+            results: fallbackResults,
+            cache: buildCacheMetadata({
+                hit: false,
+                queryHash
+            })
         };
     }
 }
