@@ -19,6 +19,7 @@ resource "aws_instance" "backend" {
   vpc_security_group_ids      = [aws_security_group.backend.id]
   associate_public_ip_address = true
   key_name                    = var.backend_key_name != "" ? var.backend_key_name : null
+  iam_instance_profile        = aws_iam_instance_profile.backend_instance_profile.name
 
   user_data = templatefile("${path.module}/backend/user_data.sh", {
     github_repository_url    = var.github_repository_url

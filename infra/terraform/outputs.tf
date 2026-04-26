@@ -72,3 +72,11 @@ output "backend_api_generate_url" {
   description = "Generate endpoint for the backend intelligence API"
   value       = try(format("http://%s:%d/api/intelligence/generate", aws_instance.backend[0].public_ip, var.backend_port), null)
 }
+
+output "dynamodb_cache_table_name" {
+  value = aws_dynamodb_table.geo_sentinel_cache.name
+}
+
+output "dynamodb_cache_table_arn" {
+  value = aws_dynamodb_table.geo_sentinel_cache.arn
+}
