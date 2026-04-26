@@ -9,11 +9,6 @@ resource "aws_dynamodb_table" "geo_sentinel_cache" {
     type = "S"
   }
 
-  attribute {
-    name = "createdAt"
-    type = "N"
-  }
-
   ttl {
     attribute_name = "expiresAt"
     enabled        = true
@@ -22,5 +17,6 @@ resource "aws_dynamodb_table" "geo_sentinel_cache" {
   tags = {
     Project = "geo-sentinel"
     Env     = "dev"
+    Story   = "GEO-47J"
   }
 }
