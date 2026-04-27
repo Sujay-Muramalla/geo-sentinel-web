@@ -241,3 +241,44 @@ export async function fetchReportItemByResultId(queryHash, resultId) {
 
   return payload;
 }
+
+export async function fetchReportItemPdfByResultId(queryHash, resultId) {
+  if (!queryHash) {
+    throw new Error("No report query hash is available for this intelligence run.");
+  }
+
+  if (!resultId) {
+    throw new Error("No result id is available for this intelligence result.");
+  }
+
+  const endpoint = `${DEFAULT_API_BASE_URL}/api/reports/${encodeURIComponent(
+    queryHash
+  )}/items/${encodeURIComponent(resultId)}?format=pdf`;
+
+  const response = await fetch(endpoint, {
+    headers: {
+      Accept: "application/pdf",
+    },
+  });
+
+  if (!response.ok) {
+    let message = `Per-card PDF report download failed with status ${response.status}`;
+
+    try {
+      const payload = await response.json();
+      message = payload?.error?.message || payload?.message || message;
+    } catch {
+      // PDF endpoint may return non-JSON errors. Keep the HTTP status message.
+    }
+
+    throw new Error(message);
+  }
+
+  const contentType = response.headers.get("content-type") || "";
+
+  if (!contentType.toLowerCase().includes("application/pdf")) {
+    throw new Error("Backend did not return a PDF report.");
+  }
+
+  return response.blob();
+}
