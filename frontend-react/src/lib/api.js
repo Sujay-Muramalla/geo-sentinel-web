@@ -199,3 +199,45 @@ export async function fetchReportByQueryHash(queryHash) {
 
   return payload;
 }
+
+export async function fetchReportItemByResultId(queryHash, resultId) {
+  if (!queryHash) {
+    throw new Error("No report query hash is available for this intelligence run.");
+  }
+
+  if (!resultId) {
+    throw new Error("No result id is available for this intelligence result.");
+  }
+
+  const endpoint = `${DEFAULT_API_BASE_URL}/api/reports/${encodeURIComponent(
+    queryHash
+  )}/items/${encodeURIComponent(resultId)}`;
+
+  const response = await fetch(endpoint);
+
+  let payload = null;
+
+  try {
+    payload = await response.json();
+  } catch {
+    payload = null;
+  }
+
+  if (!response.ok) {
+    const message =
+      payload?.error?.message ||
+      payload?.message ||
+      `Per-card report download failed with status ${response.status}`;
+    throw new Error(message);
+  }
+
+  if (payload?.success === false) {
+    const message =
+      payload?.error?.message ||
+      payload?.message ||
+      "Backend returned an unsuccessful per-card report response.";
+    throw new Error(message);
+  }
+
+  return payload;
+}
