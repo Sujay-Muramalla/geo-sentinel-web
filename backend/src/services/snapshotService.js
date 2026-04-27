@@ -1,4 +1,8 @@
-const { S3Client, PutObjectCommand } = require("@aws-sdk/client-s3");
+const {
+    S3Client,
+    PutObjectCommand,
+    GetObjectCommand
+} = require("@aws-sdk/client-s3");
 
 const AWS_REGION = process.env.AWS_REGION || "eu-central-1";
 const SNAPSHOT_BUCKET = process.env.S3_REPORTS_BUCKET || process.env.S3_SNAPSHOT_BUCKET || "";
@@ -20,6 +24,16 @@ function buildSnapshotKey(queryHash, createdAt = Date.now()) {
     const day = pad(date.getUTCDate());
 
     return `${SNAPSHOT_PREFIX}/${year}/${month}/${day}/${queryHash}.json`;
+}
+
+async function streamToString(stream) {
+    return await new Promise((resolve, reject) => {
+        const chunks = [];
+
+        stream.on("data", (chunk) => chunks.push(Buffer.from(chunk)));
+        stream.on("error", reject);
+        stream.on("end", () => resolve(Buffer.concat(chunks).toString("utf-8")));
+    });
 }
 
 async function putSnapshot({ queryHash, payload, responsePayload, createdAt = Date.now(), expiresAt = null }) {
@@ -65,7 +79,24 @@ async function putSnapshot({ queryHash, payload, responsePayload, createdAt = Da
     };
 }
 
+async function getSnapshotByKey(s3SnapshotKey) {
+    if (!SNAPSHOT_BUCKET || !s3SnapshotKey) {
+        return null;
+    }
+
+    const result = await s3Client.send(
+        new GetObjectCommand({
+            Bucket: SNAPSHOT_BUCKET,
+            Key: s3SnapshotKey
+        })
+    );
+
+    const body = await streamToString(result.Body);
+    return JSON.parse(body);
+}
+
 module.exports = {
     buildSnapshotKey,
-    putSnapshot
+    putSnapshot,
+    getSnapshotByKey
 };
