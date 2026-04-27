@@ -1,0 +1,488 @@
+{
+    "success": true,
+    "data": {
+        "mode": "cache",
+        "query": "israel iran tensions 2026",
+        "expandedQueries": [
+            "israel iran tensions 2026",
+            "iran israel tensions",
+            "iran israel conflict",
+            "iran israel diplomacy",
+            "iran israel security",
+            "israel iran tensions",
+            "middle east escalation",
+            "iran nuclear diplomacy",
+            "israel security cabinet",
+            "israel iran"
+        ],
+        "appliedFilters": {
+            "regions": [
+                "world"
+            ],
+            "countries": [
+                "Israel",
+                "Iran"
+            ],
+            "publicationFocus": [
+                "all"
+            ],
+            "sentimentFilter": "all"
+        },
+        "counts": {
+            "raw": 8,
+            "filtered": 0,
+            "returned": 0,
+            "rawItemsSeen": 342,
+            "filteredOut": 333
+        },
+        "selectedSources": [
+            {
+                "id": "times-of-israel",
+                "name": "Times of Israel",
+                "country": "Israel",
+                "region": "Middle East",
+                "tier": "high",
+                "weight": 0.78,
+                "reliabilityScore": 0.84,
+                "sourceQualityScore": 0.7968,
+                "sourceQuality": "standard",
+                "coverageSelectionScore": 7.76
+            },
+            {
+                "id": "arab-news",
+                "name": "Arab News",
+                "country": "Saudi Arabia",
+                "region": "Middle East",
+                "tier": "high",
+                "weight": 0.76,
+                "reliabilityScore": 0.84,
+                "sourceQualityScore": 0.7824,
+                "sourceQuality": "standard",
+                "coverageSelectionScore": 5.36
+            },
+            {
+                "id": "al-jazeera",
+                "name": "Al Jazeera",
+                "country": "Qatar",
+                "region": "Middle East",
+                "tier": "top",
+                "weight": 0.96,
+                "reliabilityScore": 0.91,
+                "sourceQualityScore": 0.946,
+                "sourceQuality": "elite",
+                "coverageSelectionScore": 4.3775
+            },
+            {
+                "id": "reuters",
+                "name": "Reuters",
+                "country": "United Kingdom",
+                "region": "Europe",
+                "tier": "top",
+                "weight": 1,
+                "reliabilityScore": 0.95,
+                "sourceQualityScore": 0.986,
+                "sourceQuality": "elite",
+                "coverageSelectionScore": 2.8875
+            },
+            {
+                "id": "ap-news",
+                "name": "Associated Press",
+                "country": "United States",
+                "region": "North America",
+                "tier": "top",
+                "weight": 0.92,
+                "reliabilityScore": 0.94,
+                "sourceQualityScore": 0.9256,
+                "sourceQuality": "elite",
+                "coverageSelectionScore": 2.885
+            },
+            {
+                "id": "bbc",
+                "name": "BBC",
+                "country": "United Kingdom",
+                "region": "Europe",
+                "tier": "top",
+                "weight": 0.98,
+                "reliabilityScore": 0.93,
+                "sourceQualityScore": 0.966,
+                "sourceQuality": "elite",
+                "coverageSelectionScore": 2.8825
+            },
+            {
+                "id": "dw",
+                "name": "DW",
+                "country": "Germany",
+                "region": "Europe",
+                "tier": "top",
+                "weight": 0.9,
+                "reliabilityScore": 0.91,
+                "sourceQualityScore": 0.9028,
+                "sourceQuality": "elite",
+                "coverageSelectionScore": 2.8775
+            },
+            {
+                "id": "cnn",
+                "name": "CNN",
+                "country": "United States",
+                "region": "North America",
+                "tier": "top",
+                "weight": 0.92,
+                "reliabilityScore": 0.9,
+                "sourceQualityScore": 0.9144,
+                "sourceQuality": "elite",
+                "coverageSelectionScore": 2.875
+            },
+            {
+                "id": "france24",
+                "name": "France 24",
+                "country": "France",
+                "region": "Europe",
+                "tier": "top",
+                "weight": 0.9,
+                "reliabilityScore": 0.9,
+                "sourceQualityScore": 0.9,
+                "sourceQuality": "elite",
+                "coverageSelectionScore": 2.875
+            },
+            {
+                "id": "guardian",
+                "name": "The Guardian",
+                "country": "United Kingdom",
+                "region": "Europe",
+                "tier": "top",
+                "weight": 0.88,
+                "reliabilityScore": 0.9,
+                "sourceQualityScore": 0.8856,
+                "sourceQuality": "high",
+                "coverageSelectionScore": 2.875
+            },
+            {
+                "id": "euronews",
+                "name": "Euronews",
+                "country": "France",
+                "region": "Europe",
+                "tier": "high",
+                "weight": 0.78,
+                "reliabilityScore": 0.86,
+                "sourceQualityScore": 0.8024,
+                "sourceQuality": "high",
+                "coverageSelectionScore": 1.515
+            },
+            {
+                "id": "the-hindu",
+                "name": "The Hindu",
+                "country": "India",
+                "region": "Asia",
+                "tier": "top",
+                "weight": 0.84,
+                "reliabilityScore": 0.89,
+                "sourceQualityScore": 0.854,
+                "sourceQuality": "high",
+                "coverageSelectionScore": 0.8225
+            }
+        ],
+        "diagnostics": {
+            "acceptedItems": 9,
+            "rejectedMissingTitleOrUrl": 0,
+            "rejectedByStrictGate": 321,
+            "rejectedByMultiCountryGate": 12,
+            "rejectedByRelevanceThreshold": 0,
+            "rejectionSamples": [
+                {
+                    "reason": "failed-strict-gate",
+                    "source": "Al Jazeera",
+                    "sourceId": "al-jazeera",
+                    "sourceCountry": "Qatar",
+                    "sourceRegion": "Middle East",
+                    "title": "\u00e2\u20ac\u02dcI have to protect them\u00e2\u20ac\u2122: The man guarding Mauritania\u00e2\u20ac\u2122s rare Islamic books",
+                    "summary": "Chinguetti was once a popular desert library town attracting scholars from the Muslim world to its precious collections.",
+                    "strictMatchGate": {
+                        "matchedTokens": [],
+                        "matchedStrongTokens": [],
+                        "requiredStrongMatch": true,
+                        "reason": "failed-strict-gate",
+                        "queryVariant": "israel iran tensions 2026"
+                    },
+                    "relevanceBreakdown": {}
+                },
+                {
+                    "reason": "failed-strict-gate",
+                    "source": "Al Jazeera",
+                    "sourceId": "al-jazeera",
+                    "sourceCountry": "Qatar",
+                    "sourceRegion": "Middle East",
+                    "title": "ACL injury ends Xavi Simons\u00e2\u20ac\u2122 World Cup 2026 dream with Netherlands",
+                    "summary": "Dutch midfielder suffers a suspected ACL injury in his right knee, ending his chances of playing in the FIFA World Cup.",
+                    "strictMatchGate": {
+                        "matchedTokens": [],
+                        "matchedStrongTokens": [],
+                        "requiredStrongMatch": true,
+                        "reason": "failed-strict-gate",
+                        "queryVariant": "israel iran tensions 2026"
+                    },
+                    "relevanceBreakdown": {}
+                },
+                {
+                    "reason": "failed-multi-country-gate",
+                    "source": "Al Jazeera",
+                    "sourceId": "al-jazeera",
+                    "sourceCountry": "Qatar",
+                    "sourceRegion": "Middle East",
+                    "title": "Iran war: What\u00e2\u20ac\u2122s happening on day 59 amid diplomatic push to end conflict?",
+                    "summary": "Iran discusses diplomatic solutions with regional partners as Trump says Iran could telephone if it wants to talk.",
+                    "strictMatchGate": {
+                        "matchedTokens": [
+                            "iran",
+                            "conflict"
+                        ],
+                        "matchedStrongTokens": [
+                            "iran"
+                        ],
+                        "requiredStrongMatch": true,
+                        "reason": "passed",
+                        "queryVariant": "iran israel conflict",
+                        "queryCountries": [
+                            "iran",
+                            "israel"
+                        ],
+                        "matchedCountries": [
+                            "iran"
+                        ]
+                    },
+                    "relevanceBreakdown": {}
+                },
+                {
+                    "reason": "failed-strict-gate",
+                    "source": "Al Jazeera",
+                    "sourceId": "al-jazeera",
+                    "sourceCountry": "Qatar",
+                    "sourceRegion": "Middle East",
+                    "title": "Zaragoza goalkeeper punches player, sparks brawl in La Liga 2 derby match",
+                    "summary": "Real Zaragoza's Esteban Andrada faces a ban for punching Huesca's Jorge Pulido after being shown a red card.",
+                    "strictMatchGate": {
+                        "matchedTokens": [],
+                        "matchedStrongTokens": [],
+                        "requiredStrongMatch": true,
+                        "reason": "failed-strict-gate",
+                        "queryVariant": "israel iran tensions 2026"
+                    },
+                    "relevanceBreakdown": {}
+                },
+                {
+                    "reason": "failed-strict-gate",
+                    "source": "Al Jazeera",
+                    "sourceId": "al-jazeera",
+                    "sourceCountry": "Qatar",
+                    "sourceRegion": "Middle East",
+                    "title": "King Charles US visit: What to know about the itinerary, Congress address",
+                    "summary": "King Charles III and Queen Camilla\u00e2\u20ac\u2122s visit comes amid US\u00e2\u20ac\u201cUK tensions and the 250th anniversary of US independence.",
+                    "strictMatchGate": {
+                        "matchedTokens": [
+                            "tension"
+                        ],
+                        "matchedStrongTokens": [],
+                        "requiredStrongMatch": true,
+                        "reason": "failed-strict-gate",
+                        "queryVariant": "israel iran tensions 2026"
+                    },
+                    "relevanceBreakdown": {}
+                },
+                {
+                    "reason": "failed-strict-gate",
+                    "source": "Al Jazeera",
+                    "sourceId": "al-jazeera",
+                    "sourceCountry": "Qatar",
+                    "sourceRegion": "Middle East",
+                    "title": "Activists accused of raiding Israeli weapons factory face trial in Germany",
+                    "summary": "Five European nationals known as the 'Ulm Five' are said to have targeted a site linked to Elbit Systems.",
+                    "strictMatchGate": {
+                        "matchedTokens": [
+                            "israel"
+                        ],
+                        "matchedStrongTokens": [
+                            "israel"
+                        ],
+                        "requiredStrongMatch": true,
+                        "reason": "failed-strict-gate",
+                        "queryVariant": "israel iran tensions 2026"
+                    },
+                    "relevanceBreakdown": {}
+                },
+                {
+                    "reason": "failed-strict-gate",
+                    "source": "Al Jazeera",
+                    "sourceId": "al-jazeera",
+                    "sourceCountry": "Qatar",
+                    "sourceRegion": "Middle East",
+                    "title": "Rockets thrash LeBron\u00e2\u20ac\u2122s Lakers; Wembanyama triumphant on Spurs\u00e2\u20ac\u2122 return",
+                    "summary": "Spurs beat Trail Blazers 114\u00e2\u20ac\u201c93 series lead as DPOY Wembanyama returns from concussion protocol.",
+                    "strictMatchGate": {
+                        "matchedTokens": [],
+                        "matchedStrongTokens": [],
+                        "requiredStrongMatch": true,
+                        "reason": "failed-strict-gate",
+                        "queryVariant": "israel iran tensions 2026"
+                    },
+                    "relevanceBreakdown": {}
+                },
+                {
+                    "reason": "failed-strict-gate",
+                    "source": "Al Jazeera",
+                    "sourceId": "al-jazeera",
+                    "sourceCountry": "Qatar",
+                    "sourceRegion": "Middle East",
+                    "title": "Taiwan court hands down jail terms in TSMC trade secrets case",
+                    "summary": "Ex-Tokyo Electron employee sentenced to 10 years, four other defendants receive between 10 months and six years.",
+                    "strictMatchGate": {
+                        "matchedTokens": [],
+                        "matchedStrongTokens": [],
+                        "requiredStrongMatch": true,
+                        "reason": "failed-strict-gate",
+                        "queryVariant": "israel iran tensions 2026"
+                    },
+                    "relevanceBreakdown": {}
+                },
+                {
+                    "reason": "failed-multi-country-gate",
+                    "source": "Al Jazeera",
+                    "sourceId": "al-jazeera",
+                    "sourceCountry": "Qatar",
+                    "sourceRegion": "Middle East",
+                    "title": "From Australia to Vietnam, the Iran war is fuelling demand for EVs",
+                    "summary": "Electric vehicle sales are surging in many markets as conflict drives up the cost of running petrol and diesel vehicles.",
+                    "strictMatchGate": {
+                        "matchedTokens": [
+                            "iran",
+                            "conflict"
+                        ],
+                        "matchedStrongTokens": [
+                            "iran"
+                        ],
+                        "requiredStrongMatch": true,
+                        "reason": "passed",
+                        "queryVariant": "iran israel conflict",
+                        "queryCountries": [
+                            "iran",
+                            "israel"
+                        ],
+                        "matchedCountries": [
+                            "iran"
+                        ]
+                    },
+                    "relevanceBreakdown": {}
+                },
+                {
+                    "reason": "failed-strict-gate",
+                    "source": "Al Jazeera",
+                    "sourceId": "al-jazeera",
+                    "sourceCountry": "Qatar",
+                    "sourceRegion": "Middle East",
+                    "title": "Satellite images show scale of Israeli destruction of south Lebanon towns",
+                    "summary": "Satellite images taken reveal the Israeli military's massive scale of damage to towns in south Lebanon.",
+                    "strictMatchGate": {
+                        "matchedTokens": [
+                            "israel"
+                        ],
+                        "matchedStrongTokens": [
+                            "israel"
+                        ],
+                        "requiredStrongMatch": true,
+                        "reason": "failed-strict-gate",
+                        "queryVariant": "israel iran tensions 2026"
+                    },
+                    "relevanceBreakdown": {}
+                },
+                {
+                    "reason": "failed-strict-gate",
+                    "source": "Al Jazeera",
+                    "sourceId": "al-jazeera",
+                    "sourceCountry": "Qatar",
+                    "sourceRegion": "Middle East",
+                    "title": "Oil prices rise amid stalled US-Iran peace talks",
+                    "summary": "Brent crude rises more than 2 percent after Washington and Tehran fail to hold second round of talks in Pakistan.",
+                    "strictMatchGate": {
+                        "matchedTokens": [
+                            "iran"
+                        ],
+                        "matchedStrongTokens": [
+                            "iran"
+                        ],
+                        "requiredStrongMatch": true,
+                        "reason": "failed-strict-gate",
+                        "queryVariant": "israel iran tensions 2026"
+                    },
+                    "relevanceBreakdown": {}
+                },
+                {
+                    "reason": "failed-strict-gate",
+                    "source": "Al Jazeera",
+                    "sourceId": "al-jazeera",
+                    "sourceCountry": "Qatar",
+                    "sourceRegion": "Middle East",
+                    "title": "Iran war live: Araghchi to meet Putin; Trump says Tehran can call for talks",
+                    "summary": "Iran's foreign minister heads to Russia as Trump says Iranian leaders can call on the phone if they want to talk.",
+                    "strictMatchGate": {
+                        "matchedTokens": [
+                            "iran"
+                        ],
+                        "matchedStrongTokens": [
+                            "iran"
+                        ],
+                        "requiredStrongMatch": true,
+                        "reason": "failed-strict-gate",
+                        "queryVariant": "israel iran tensions 2026"
+                    },
+                    "relevanceBreakdown": {}
+                }
+            ]
+        },
+        "noResultExplanation": {
+            "status": "no-qualified-matches",
+            "message": "The backend responded successfully, but no articles survived the active filters.",
+            "query": "israel iran tensions 2026",
+            "suggestions": [
+                "Try a broader geopolitical phrase.",
+                "Check whether country, region, or sentiment filters are too narrow.",
+                "The topic may be real but not currently present in the selected RSS feeds."
+            ]
+        },
+        "feedErrors": [
+            {
+                "source": "Times of Israel",
+                "sourceId": "times-of-israel",
+                "url": "https://www.timesofisrael.com/feed/",
+                "error": "403 Client Error: Forbidden for url: https://www.timesofisrael.com/feed/"
+            },
+            {
+                "source": "Arab News",
+                "sourceId": "arab-news",
+                "url": "https://www.arabnews.com/rss.xml",
+                "error": "403 Client Error: Forbidden for url: https://www.arabnews.com/rss.xml"
+            },
+            {
+                "source": "Reuters",
+                "sourceId": "reuters",
+                "url": "https://feeds.reuters.com/reuters/worldNews",
+                "error": "HTTPSConnectionPool(host='feeds.reuters.com', port=443): Max retries exceeded with url: /reuters/worldNews (Caused by NameResolutionError(\"HTTPSConnection(host='feeds.reuters.com', port=443): Failed to resolve 'feeds.reuters.com' ([Errno -2] Name or service not known)\"))"
+            },
+            {
+                "source": "Associated Press",
+                "sourceId": "ap-news",
+                "url": "https://apnews.com/hub/world-news?output=rss",
+                "error": "not well-formed (invalid token): line 352, column 32"
+            }
+        ],
+        "results": [],
+        "cache": {
+            "hit": true,
+            "queryHash": "973f707ab4ad4828b40a987f1adb7daf7b187b55907dc826a4acb5ef5d5b109f",
+            "createdAt": 1777276778100,
+            "expiresAt": 1777277378,
+            "s3SnapshotKey": null
+        }
+    },
+    "meta": {
+        "timestamp": "2026-04-27T07:59:54.952Z"
+    },
+    "error": null
+}
