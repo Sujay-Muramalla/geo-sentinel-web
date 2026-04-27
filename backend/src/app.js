@@ -9,6 +9,7 @@ const { successResponse } = require("./utils/apiResponse");
 const requestLogger = require("./middleware/requestLogger");
 const errorHandler = require("./middleware/errorHandler");
 const intelligenceRoutes = require("./routes/intelligenceRoutes");
+const reportRoutes = require("./routes/reportRoutes");
 
 const app = express();
 
@@ -70,6 +71,7 @@ app.get("/api/health", (req, res) => {
 });
 
 app.use("/api/intelligence", intelligenceRoutes);
+app.use("/api/reports", reportRoutes);
 
 app.use((req, res, next) => {
     next(
