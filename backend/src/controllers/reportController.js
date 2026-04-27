@@ -3,6 +3,7 @@ const { successResponse } = require("../utils/apiResponse");
 const AppError = require("../utils/appError");
 const { getCache } = require("../services/cacheService");
 const { getSnapshotByKey } = require("../services/snapshotService");
+const { buildPerCardReport } = require("../services/reportBuilderService");
 
 function isValidQueryHash(queryHash) {
     return Boolean(queryHash && /^[a-f0-9]{64}$/i.test(queryHash));
@@ -65,79 +66,6 @@ function findSnapshotResult(snapshot, resultId) {
             : [];
 
     return results.find((result) => normalizeResultId(result) === resultId) || null;
-}
-
-function buildPerCardReport({ queryHash, resultId, snapshot, result, cacheItem }) {
-    const rankingSignals = result.rankingSignals || {
-        queryRelevance: result.queryMatchScore ?? result.queryRelevance ?? null,
-        geoAlignment: result.geoAlignmentScore ?? result.geoAlignment ?? null,
-        sourceQuality: result.sourceQualityScore ?? null,
-        recency: result.recencyScore ?? null
-    };
-
-    return {
-        reportType: "geo-sentinel-per-card-intelligence-report",
-        version: "GEO-49D",
-        queryHash,
-        resultId,
-        generatedAt: new Date().toISOString(),
-        snapshot: {
-            s3SnapshotKey: cacheItem.s3SnapshotKey,
-            s3SnapshotBucket: cacheItem.s3SnapshotBucket || null,
-            createdAt: cacheItem.createdAt,
-            expiresAt: cacheItem.expiresAt,
-            sourceCount: cacheItem.sourceCount || 0,
-            mode: cacheItem.mode || snapshot.mode || "live"
-        },
-        scenario: {
-            query: snapshot.query || snapshot?.payload?.query || snapshot?.responsePayload?.query || "",
-            payload: snapshot.payload || null,
-            appliedFilters: snapshot?.responsePayload?.appliedFilters || null,
-            expandedQueries: snapshot?.responsePayload?.expandedQueries || []
-        },
-        article: {
-            id: result.id || resultId,
-            resultId,
-            title: result.title || "Untitled result",
-            source: result.source || "Unknown source",
-            sourceCountry: result.sourceCountry || result.country || "",
-            sourceRegion: result.sourceRegion || result.region || "",
-            sourceTier: result.sourceTier || "",
-            sourceQuality: result.sourceQuality || "",
-            publicationFocus: result.publicationFocus || "",
-            publishedAt: result.publishedAt || "",
-            url: result.url || result.link || "",
-            summary: result.summary || ""
-        },
-        intelligenceBrief: {
-            headline: result.title || "Untitled result",
-            brief:
-                result.summary ||
-                "No article summary was available for this result.",
-            relevanceExplanation:
-                result.relevanceExplanation ||
-                "This report explains why the selected article was included in the Geo-Sentinel intelligence result set.",
-            matchedQuery: result.matchedQuery || "",
-            expandedQueryUsed: Boolean(result.expandedQueryUsed)
-        },
-        analytics: {
-            sentiment: result.sentiment || "neutral",
-            sentimentScore: result.sentimentScore ?? null,
-            signalScore: result.signalScore ?? result.finalScore ?? result.score ?? null,
-            finalScore: result.finalScore ?? null,
-            queryRelevance: rankingSignals.queryRelevance,
-            geoAlignment: rankingSignals.geoAlignment,
-            sourceQuality: rankingSignals.sourceQuality,
-            recency: rankingSignals.recency,
-            rankingSignals
-        },
-        sourceMetadata: {
-            sourceId: result.sourceId || null,
-            domain: result.domain || "",
-            mediaType: result.mediaType || "",
-            influenceWeight: result.influenceWeight ?? null
-        }
-    };
 }
 
 const handleGetReportByQueryHash = asyncHandler(async (req, res) => {
