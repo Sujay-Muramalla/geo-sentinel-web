@@ -1,5 +1,7 @@
+import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { fetchReportByQueryHash } from "@/lib/api";
 
 const SUMMARY_LIMIT = 360;
 
@@ -175,7 +177,35 @@ function getRankingSignals(result) {
   };
 }
 
-export function ResultCard({ result }) {
+function buildReportFilename(queryHash) {
+  const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+  const shortHash = queryHash ? queryHash.slice(0, 12) : "unknown";
+  return `geo-sentinel-report-${shortHash}-${timestamp}.json`;
+}
+
+function triggerJsonDownload(payload, queryHash) {
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {
+    type: "application/json",
+  });
+
+  const url = window.URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+
+  anchor.href = url;
+  anchor.download = buildReportFilename(queryHash);
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+
+  window.URL.revokeObjectURL(url);
+}
+
+export function ResultCard({ result, reportQueryHash = "" }) {
+  const [downloadState, setDownloadState] = useState({
+    loading: false,
+    error: "",
+  });
+
   const summary = truncateText(result.summary);
   const sourceMeta = sourceLine(result);
   const region = cleanText(result.sourceRegion || result.region);
@@ -185,6 +215,26 @@ export function ResultCard({ result }) {
   const matchedQuery = cleanText(result.matchedQuery);
   const expandedQueryUsed = Boolean(result.expandedQueryUsed);
   const sourceTier = cleanText(result.sourceTier);
+  const canDownloadReport = Boolean(reportQueryHash);
+
+  async function handleReportDownload() {
+    if (!canDownloadReport || downloadState.loading) return;
+
+    setDownloadState({ loading: true, error: "" });
+
+    try {
+      const reportPayload = await fetchReportByQueryHash(reportQueryHash);
+      triggerJsonDownload(reportPayload, reportQueryHash);
+      setDownloadState({ loading: false, error: "" });
+    } catch (error) {
+      setDownloadState({
+        loading: false,
+        error:
+          error?.message ||
+          "Report download failed. The backend may be offline or the report snapshot may be unavailable.",
+      });
+    }
+  }
 
   return (
     <Card className="overflow-hidden p-0">
@@ -317,9 +367,45 @@ export function ResultCard({ result }) {
             </div>
           </div>
 
+          <div className="rounded-2xl border border-cyan-400/20 bg-cyan-400/5 p-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h4 className="text-sm font-semibold text-slate-100">
+                  Persistent intelligence report
+                </h4>
+                <p className="mt-1 text-xs text-slate-500">
+                  Download the full stored JSON snapshot linked to this intelligence run.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleReportDownload}
+                disabled={!canDownloadReport || downloadState.loading}
+                className="inline-flex items-center rounded-lg border border-cyan-400/20 bg-cyan-400/10 px-3 py-2 text-sm font-medium text-cyan-200 transition hover:border-cyan-300/40 hover:bg-cyan-400/15 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/5 disabled:text-slate-500"
+              >
+                {downloadState.loading ? "Downloading…" : "Download report JSON"}
+              </button>
+            </div>
+
+            {reportQueryHash ? (
+              <p className="mt-3 break-all text-[0.7rem] text-slate-500">
+                Report key: <span className="text-slate-400">{reportQueryHash}</span>
+              </p>
+            ) : (
+              <p className="mt-3 text-[0.7rem] text-amber-200/80">
+                Report download will appear when the backend response includes a cache query hash.
+              </p>
+            )}
+
+            {downloadState.error ? (
+              <p className="mt-3 text-xs text-red-300">{downloadState.error}</p>
+            ) : null}
+          </div>
+
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-4">
             <p className="text-xs text-slate-500">
-              Live RSS intelligence result · GEO-47I query expansion and transparency enabled
+              Live RSS intelligence result · GEO-49B report download enabled
             </p>
 
             <a

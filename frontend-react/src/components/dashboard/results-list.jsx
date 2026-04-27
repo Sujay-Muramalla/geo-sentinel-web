@@ -1,6 +1,6 @@
 import { ResultCard } from "@/components/dashboard/result-card";
 
-export function ResultsList({ results = [], loading = false }) {
+export function ResultsList({ results = [], loading = false, reportQueryHash = "" }) {
   return (
     <section className="space-y-4">
       <div className="flex items-center justify-between gap-3">
@@ -27,7 +27,11 @@ export function ResultsList({ results = [], loading = false }) {
 
       <div className="grid gap-4">
         {results.map((result) => (
-          <ResultCard key={result.id} result={result} />
+          <ResultCard
+            key={result.id}
+            result={result}
+            reportQueryHash={reportQueryHash}
+          />
         ))}
       </div>
     </section>

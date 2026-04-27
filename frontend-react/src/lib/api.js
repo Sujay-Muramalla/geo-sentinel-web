@@ -43,7 +43,10 @@ function buildGeneratePayload(form) {
     query: form.scenario?.trim() || "",
     regions: [scope],
     countries: normalizeCountries(form.countries),
-    mediaTypes: form.mediaType && form.mediaType !== "all" ? [form.mediaType] : ["newspapers", "news-channels"],
+    mediaTypes:
+      form.mediaType && form.mediaType !== "all"
+        ? [form.mediaType]
+        : ["newspapers", "news-channels"],
     publicationFocus: normalizePublicationFocus(form.publicationFocus),
     sentimentFilter: normalizeSentimentFilter(form.sentiment),
     sortBy: form.sortBy || "final-desc",
@@ -108,6 +111,19 @@ export function getFeedErrors(payload) {
   return normalizeArray(payload?.data?.feedErrors || payload?.feedErrors);
 }
 
+export function getReportQueryHash(payload) {
+  return (
+    payload?.meta?.cache?.queryHash ||
+    payload?.data?.meta?.cache?.queryHash ||
+    payload?.data?.cache?.queryHash ||
+    payload?.cache?.queryHash ||
+    payload?.meta?.queryHash ||
+    payload?.data?.queryHash ||
+    payload?.queryHash ||
+    ""
+  );
+}
+
 export async function generateIntelligence(form) {
   const endpoint = `${DEFAULT_API_BASE_URL}/api/intelligence/generate`;
 
@@ -140,6 +156,44 @@ export async function generateIntelligence(form) {
       payload?.error?.message ||
       payload?.message ||
       "Backend returned an unsuccessful response.";
+    throw new Error(message);
+  }
+
+  return payload;
+}
+
+export async function fetchReportByQueryHash(queryHash) {
+  if (!queryHash) {
+    throw new Error("No report query hash is available for this intelligence run.");
+  }
+
+  const endpoint = `${DEFAULT_API_BASE_URL}/api/reports/${encodeURIComponent(
+    queryHash
+  )}`;
+
+  const response = await fetch(endpoint);
+
+  let payload = null;
+
+  try {
+    payload = await response.json();
+  } catch {
+    payload = null;
+  }
+
+  if (!response.ok) {
+    const message =
+      payload?.error?.message ||
+      payload?.message ||
+      `Report download failed with status ${response.status}`;
+    throw new Error(message);
+  }
+
+  if (payload?.success === false) {
+    const message =
+      payload?.error?.message ||
+      payload?.message ||
+      "Backend returned an unsuccessful report response.";
     throw new Error(message);
   }
 
