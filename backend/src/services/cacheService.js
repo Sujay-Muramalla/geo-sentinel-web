@@ -4,42 +4,42 @@ const { DynamoDBClient, GetItemCommand, PutItemCommand } = require("@aws-sdk/cli
 const REGION = process.env.AWS_REGION || "eu-central-1";
 const TABLE_NAME = process.env.DYNAMODB_CACHE_TABLE || "geo-sentinel-cache";
 
-// TTL default (seconds)
 const DEFAULT_TTL_SECONDS = Number(process.env.CACHE_TTL_SECONDS || 600);
 
 const dynamoClient = new DynamoDBClient({ region: REGION });
 
-/**
- * Generate deterministic hash for query payload
- */
 function generateQueryHash(payload) {
     const normalized = JSON.stringify(payload);
     return crypto.createHash("sha256").update(normalized).digest("hex");
 }
 
-/**
- * Build expiry timestamp (used for metadata + S3 snapshot logic)
- */
 function buildExpiryTimestamp(createdAtMs, ttlSeconds = DEFAULT_TTL_SECONDS) {
     return Math.floor(createdAtMs / 1000) + ttlSeconds;
 }
 
-/**
- * Build cache item
- */
-function buildCacheItem(queryHash, payload, responsePayload) {
-    const now = Date.now();
+function buildCacheItem(queryHash, payload, responsePayload, options = {}) {
+    const createdAt = Number.isFinite(Number(options.createdAt))
+        ? Number(options.createdAt)
+        : Date.now();
+
     const ttlSeconds = Number.isFinite(DEFAULT_TTL_SECONDS) && DEFAULT_TTL_SECONDS > 0
         ? DEFAULT_TTL_SECONDS
         : 600;
+
+    const expiresAt = Number.isFinite(Number(options.expiresAt))
+        ? Number(options.expiresAt)
+        : buildExpiryTimestamp(createdAt, ttlSeconds);
+
+    const s3SnapshotKey = options.s3SnapshotKey || responsePayload?.cache?.s3SnapshotKey || null;
 
     return {
         queryHash,
         payload,
         responsePayload,
-        createdAt: now,
-        expiresAt: buildExpiryTimestamp(now, ttlSeconds),
-        s3SnapshotKey: null,
+        createdAt,
+        expiresAt,
+        s3SnapshotKey,
+        s3SnapshotBucket: options.s3SnapshotBucket || null,
         sourceCount: Array.isArray(responsePayload?.results)
             ? responsePayload.results.length
             : 0,
@@ -47,9 +47,6 @@ function buildCacheItem(queryHash, payload, responsePayload) {
     };
 }
 
-/**
- * Get cache from DynamoDB
- */
 async function getCache(queryHash) {
     try {
         const command = new GetItemCommand({
@@ -69,42 +66,50 @@ async function getCache(queryHash) {
             responsePayload: JSON.parse(result.Item.responsePayload.S),
             createdAt: Number(result.Item.createdAt.N),
             expiresAt: Number(result.Item.expiresAt.N),
-            s3SnapshotKey: result.Item.s3SnapshotKey?.S || null
+            s3SnapshotKey: result.Item.s3SnapshotKey?.S || null,
+            s3SnapshotBucket: result.Item.s3SnapshotBucket?.S || null,
+            sourceCount: result.Item.sourceCount?.N ? Number(result.Item.sourceCount.N) : 0,
+            mode: result.Item.mode?.S || "cache"
         };
 
-        // Expiry check
         const now = Math.floor(Date.now() / 1000);
         if (item.expiresAt && item.expiresAt < now) {
             return null;
         }
 
         return item;
-
     } catch (error) {
         console.error("[CACHE][GET] Error:", error.message);
         return null;
     }
 }
 
-/**
- * Put cache into DynamoDB
- */
 async function putCache(cacheItem) {
     try {
+        const item = {
+            queryHash: { S: cacheItem.queryHash },
+            payload: { S: JSON.stringify(cacheItem.payload) },
+            responsePayload: { S: JSON.stringify(cacheItem.responsePayload) },
+            createdAt: { N: String(cacheItem.createdAt) },
+            expiresAt: { N: String(cacheItem.expiresAt) },
+            sourceCount: { N: String(cacheItem.sourceCount || 0) },
+            mode: { S: cacheItem.mode || "live" }
+        };
+
+        if (cacheItem.s3SnapshotKey) {
+            item.s3SnapshotKey = { S: cacheItem.s3SnapshotKey };
+        }
+
+        if (cacheItem.s3SnapshotBucket) {
+            item.s3SnapshotBucket = { S: cacheItem.s3SnapshotBucket };
+        }
+
         const command = new PutItemCommand({
             TableName: TABLE_NAME,
-            Item: {
-                queryHash: { S: cacheItem.queryHash },
-                payload: { S: JSON.stringify(cacheItem.payload) },
-                responsePayload: { S: JSON.stringify(cacheItem.responsePayload) },
-                createdAt: { N: String(cacheItem.createdAt) },
-                expiresAt: { N: String(cacheItem.expiresAt) },
-                s3SnapshotKey: { S: cacheItem.s3SnapshotKey || "" }
-            }
+            Item: item
         });
 
         await dynamoClient.send(command);
-
     } catch (error) {
         console.error("[CACHE][PUT] Error:", error.message);
     }
