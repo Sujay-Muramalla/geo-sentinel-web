@@ -1,4 +1,5 @@
 const path = require("path");
+const crypto = require("crypto");
 const { spawn } = require("child_process");
 const { URL } = require("url");
 const {
@@ -89,6 +90,20 @@ function extractDomain(url = "") {
     } catch {
         return "";
     }
+}
+
+function buildStableResultId(article = {}) {
+    const identity = [
+        article.url || article.link || "",
+        article.guid || article.id || "",
+        article.title || "",
+        article.source || article.outlet || article.publisher || "",
+        article.publishedAt || article.pubDate || article.isoDate || ""
+    ]
+        .map((value) => String(value || "").trim().toLowerCase())
+        .join("|");
+
+    return crypto.createHash("sha256").update(identity).digest("hex");
 }
 
 function findSourceRegistryEntry(article = {}) {
@@ -323,9 +338,12 @@ function sortArticles(articles = [], sortBy = "final-desc") {
 }
 
 function transformRawArticle(raw = {}, payload) {
+    const resultId = buildStableResultId(raw);
+
     const annotated = annotateSourceMetadata({
         ...raw,
         id: raw.id || raw.guid || raw.link || `${raw.source || "source"}-${raw.title || "title"}`,
+        resultId,
         title: normalizeText(raw.title),
         summary: normalizeText(raw.summary || raw.description || raw.contentSnippet || ""),
         url: normalizeText(raw.url || raw.link),

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { fetchReportByQueryHash } from "@/lib/api";
+import { fetchReportByQueryHash, fetchReportItemByResultId } from "@/lib/api";
 
 const SUMMARY_LIMIT = 360;
 
@@ -177,13 +177,19 @@ function getRankingSignals(result) {
   };
 }
 
-function buildReportFilename(queryHash) {
-  const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-  const shortHash = queryHash ? queryHash.slice(0, 12) : "unknown";
-  return `geo-sentinel-report-${shortHash}-${timestamp}.json`;
+function getResultId(result) {
+  return result.resultId || result.id || "";
 }
 
-function triggerJsonDownload(payload, queryHash) {
+function buildReportFilename(queryHash, resultId = "", reportType = "query") {
+  const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+  const shortHash = queryHash ? queryHash.slice(0, 12) : "unknown";
+  const shortResultId = resultId ? resultId.slice(0, 12) : "run";
+
+  return `geo-sentinel-${reportType}-report-${shortHash}-${shortResultId}-${timestamp}.json`;
+}
+
+function triggerJsonDownload(payload, queryHash, resultId = "", reportType = "query") {
   const blob = new Blob([JSON.stringify(payload, null, 2)], {
     type: "application/json",
   });
@@ -192,7 +198,7 @@ function triggerJsonDownload(payload, queryHash) {
   const anchor = document.createElement("a");
 
   anchor.href = url;
-  anchor.download = buildReportFilename(queryHash);
+  anchor.download = buildReportFilename(queryHash, resultId, reportType);
   document.body.appendChild(anchor);
   anchor.click();
   anchor.remove();
@@ -202,7 +208,8 @@ function triggerJsonDownload(payload, queryHash) {
 
 export function ResultCard({ result, reportQueryHash = "" }) {
   const [downloadState, setDownloadState] = useState({
-    loading: false,
+    loadingQuery: false,
+    loadingItem: false,
     error: "",
   });
 
@@ -215,23 +222,46 @@ export function ResultCard({ result, reportQueryHash = "" }) {
   const matchedQuery = cleanText(result.matchedQuery);
   const expandedQueryUsed = Boolean(result.expandedQueryUsed);
   const sourceTier = cleanText(result.sourceTier);
-  const canDownloadReport = Boolean(reportQueryHash);
+  const resultId = getResultId(result);
+  const canDownloadQueryReport = Boolean(reportQueryHash);
+  const canDownloadItemReport = Boolean(reportQueryHash && resultId);
 
-  async function handleReportDownload() {
-    if (!canDownloadReport || downloadState.loading) return;
+  async function handleQueryReportDownload() {
+    if (!canDownloadQueryReport || downloadState.loadingQuery) return;
 
-    setDownloadState({ loading: true, error: "" });
+    setDownloadState({ loadingQuery: true, loadingItem: false, error: "" });
 
     try {
       const reportPayload = await fetchReportByQueryHash(reportQueryHash);
-      triggerJsonDownload(reportPayload, reportQueryHash);
-      setDownloadState({ loading: false, error: "" });
+      triggerJsonDownload(reportPayload, reportQueryHash, "", "query");
+      setDownloadState({ loadingQuery: false, loadingItem: false, error: "" });
     } catch (error) {
       setDownloadState({
-        loading: false,
+        loadingQuery: false,
+        loadingItem: false,
         error:
           error?.message ||
-          "Report download failed. The backend may be offline or the report snapshot may be unavailable.",
+          "Query report download failed. The backend may be offline or the report snapshot may be unavailable.",
+      });
+    }
+  }
+
+  async function handleItemReportDownload() {
+    if (!canDownloadItemReport || downloadState.loadingItem) return;
+
+    setDownloadState({ loadingQuery: false, loadingItem: true, error: "" });
+
+    try {
+      const reportPayload = await fetchReportItemByResultId(reportQueryHash, resultId);
+      triggerJsonDownload(reportPayload, reportQueryHash, resultId, "card");
+      setDownloadState({ loadingQuery: false, loadingItem: false, error: "" });
+    } catch (error) {
+      setDownloadState({
+        loadingQuery: false,
+        loadingItem: false,
+        error:
+          error?.message ||
+          "Per-card report download failed. The backend may be offline or the report item may be unavailable.",
       });
     }
   }
@@ -371,30 +401,57 @@ export function ResultCard({ result, reportQueryHash = "" }) {
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h4 className="text-sm font-semibold text-slate-100">
-                  Persistent intelligence report
+                  Persistent intelligence reports
                 </h4>
                 <p className="mt-1 text-xs text-slate-500">
-                  Download the full stored JSON snapshot linked to this intelligence run.
+                  Download either the full query snapshot or this card’s dedicated signal report.
                 </p>
               </div>
 
-              <button
-                type="button"
-                onClick={handleReportDownload}
-                disabled={!canDownloadReport || downloadState.loading}
-                className="inline-flex items-center rounded-lg border border-cyan-400/20 bg-cyan-400/10 px-3 py-2 text-sm font-medium text-cyan-200 transition hover:border-cyan-300/40 hover:bg-cyan-400/15 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/5 disabled:text-slate-500"
-              >
-                {downloadState.loading ? "Downloading…" : "Download report JSON"}
-              </button>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={handleItemReportDownload}
+                  disabled={!canDownloadItemReport || downloadState.loadingItem}
+                  className="inline-flex items-center rounded-lg border border-emerald-400/20 bg-emerald-400/10 px-3 py-2 text-sm font-medium text-emerald-200 transition hover:border-emerald-300/40 hover:bg-emerald-400/15 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/5 disabled:text-slate-500"
+                >
+                  {downloadState.loadingItem
+                    ? "Downloading…"
+                    : "Download card report"}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleQueryReportDownload}
+                  disabled={!canDownloadQueryReport || downloadState.loadingQuery}
+                  className="inline-flex items-center rounded-lg border border-cyan-400/20 bg-cyan-400/10 px-3 py-2 text-sm font-medium text-cyan-200 transition hover:border-cyan-300/40 hover:bg-cyan-400/15 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/5 disabled:text-slate-500"
+                >
+                  {downloadState.loadingQuery
+                    ? "Downloading…"
+                    : "Download full JSON"}
+                </button>
+              </div>
             </div>
 
             {reportQueryHash ? (
               <p className="mt-3 break-all text-[0.7rem] text-slate-500">
-                Report key: <span className="text-slate-400">{reportQueryHash}</span>
+                Query report key:{" "}
+                <span className="text-slate-400">{reportQueryHash}</span>
               </p>
             ) : (
               <p className="mt-3 text-[0.7rem] text-amber-200/80">
                 Report download will appear when the backend response includes a cache query hash.
+              </p>
+            )}
+
+            {resultId ? (
+              <p className="mt-2 break-all text-[0.7rem] text-slate-500">
+                Card report id:{" "}
+                <span className="text-slate-400">{resultId}</span>
+              </p>
+            ) : (
+              <p className="mt-2 text-[0.7rem] text-amber-200/80">
+                Per-card report download requires a stable result id from the backend.
               </p>
             )}
 
@@ -405,7 +462,7 @@ export function ResultCard({ result, reportQueryHash = "" }) {
 
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-4">
             <p className="text-xs text-slate-500">
-              Live RSS intelligence result · GEO-49B report download enabled
+              Live RSS intelligence result · GEO-49D per-card reporting enabled
             </p>
 
             <a
