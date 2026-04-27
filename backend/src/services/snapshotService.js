@@ -6,7 +6,7 @@ const {
 
 const AWS_REGION = process.env.AWS_REGION || "eu-central-1";
 const SNAPSHOT_BUCKET = process.env.S3_REPORTS_BUCKET || process.env.S3_SNAPSHOT_BUCKET || "";
-const SNAPSHOT_PREFIX = process.env.S3_SNAPSHOT_PREFIX || "snapshots";
+const SNAPSHOT_PREFIX = (process.env.S3_SNAPSHOT_PREFIX || "snapshots").replace(/^\/+|\/+$/g, "");
 
 const s3Client = new S3Client({
     region: AWS_REGION
