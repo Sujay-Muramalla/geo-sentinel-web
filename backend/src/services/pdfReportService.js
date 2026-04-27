@@ -1,10 +1,11 @@
 const PDFDocument = require("pdfkit");
 
-function safeText(value, fallback = "N/A") {
-    if (value === undefined || value === null || value === "") {
-        return fallback;
-    }
+const PAGE_MARGIN = 50;
+const PAGE_WIDTH = 595.28;
+const CONTENT_WIDTH = PAGE_WIDTH - PAGE_MARGIN * 2;
 
+function safeText(value, fallback = "N/A") {
+    if (value === undefined || value === null || value === "") return fallback;
     return String(value);
 }
 
@@ -21,6 +22,27 @@ function sanitizeFilename(value) {
         .slice(0, 120);
 }
 
+function ensureSpace(doc, requiredHeight = 80) {
+    const bottomLimit = doc.page.height - PAGE_MARGIN - 45;
+
+    if (doc.y + requiredHeight > bottomLimit) {
+        doc.addPage();
+    }
+}
+
+function addDivider(doc) {
+    ensureSpace(doc, 20);
+
+    doc.moveDown(0.5);
+    doc.moveTo(PAGE_MARGIN, doc.y)
+        .lineTo(PAGE_MARGIN + CONTENT_WIDTH, doc.y)
+        .strokeColor("#d1d5db")
+        .lineWidth(1)
+        .stroke();
+
+    doc.moveDown(0.8);
+}
+
 function addHeader(doc, report) {
     doc.fontSize(20)
         .font("Helvetica-Bold")
@@ -29,34 +51,29 @@ function addHeader(doc, report) {
             align: "center"
         });
 
-    doc.moveDown(0.5);
+    doc.moveDown(0.4);
 
-    doc.fontSize(10)
+    doc.fontSize(9.5)
         .font("Helvetica")
         .fillColor("#374151")
         .text(`Report Version: ${safeText(report.version)}`, { align: "center" })
         .text(`Generated At: ${safeText(report.generatedAt)}`, { align: "center" });
 
-    doc.moveDown();
-
-    doc.moveTo(50, doc.y)
-        .lineTo(545, doc.y)
-        .strokeColor("#d1d5db")
-        .lineWidth(1)
-        .stroke();
-
-    doc.moveDown();
+    addDivider(doc);
 }
 
 function addTitleBlock(doc, report) {
+    ensureSpace(doc, 120);
+
     doc.fontSize(16)
         .font("Helvetica-Bold")
         .fillColor("#111827")
         .text(safeText(report.title, "Untitled Intelligence Report"), {
-            align: "left"
+            align: "left",
+            lineGap: 4
         });
 
-    doc.moveDown(0.5);
+    doc.moveDown(0.6);
 
     doc.fontSize(10)
         .font("Helvetica")
@@ -65,21 +82,25 @@ function addTitleBlock(doc, report) {
         .text(`Published: ${safeText(report.article?.publishedAt)}`)
         .text(`Scenario Query: ${safeText(report.scenario?.query)}`);
 
-    doc.moveDown();
+    doc.moveDown(0.5);
 }
 
 function addSectionTitle(doc, title) {
-    doc.moveDown(0.8);
+    ensureSpace(doc, 60);
+
+    doc.moveDown(0.7);
 
     doc.fontSize(13)
         .font("Helvetica-Bold")
         .fillColor("#111827")
         .text(title);
 
-    doc.moveDown(0.3);
+    doc.moveDown(0.35);
 }
 
 function addParagraph(doc, text) {
+    ensureSpace(doc, 90);
+
     doc.fontSize(10.5)
         .font("Helvetica")
         .fillColor("#1f2937")
@@ -88,10 +109,12 @@ function addParagraph(doc, text) {
             lineGap: 4
         });
 
-    doc.moveDown(0.4);
+    doc.moveDown(0.55);
 }
 
 function addMetadataLine(doc, label, value) {
+    ensureSpace(doc, 22);
+
     doc.fontSize(9.5)
         .font("Helvetica-Bold")
         .fillColor("#111827")
@@ -100,48 +123,74 @@ function addMetadataLine(doc, label, value) {
         })
         .font("Helvetica")
         .fillColor("#374151")
-        .text(safeText(value));
+        .text(safeText(value), {
+            lineGap: 2
+        });
 }
 
 function drawScoreBar(doc, label, value, maxValue = 1) {
-    const score = safeNumber(value, 0);
-    const normalized = Math.max(0, Math.min(1, score / maxValue));
-    const barX = 50;
-    const barY = doc.y + 4;
-    const barWidth = 260;
-    const barHeight = 9;
-    const filledWidth = barWidth * normalized;
+    ensureSpace(doc, 42);
+
+    const rawScore = safeNumber(value, 0);
+    const normalized = Math.max(0, Math.min(1, rawScore / maxValue));
+
+    const rowX = PAGE_MARGIN;
+    const labelWidth = 125;
+    const valueWidth = 55;
+    const barX = rowX + labelWidth + valueWidth + 12;
+    const barWidth = 240;
+    const barHeight = 8;
+
+    const labelY = doc.y;
+    const barY = labelY + 4;
 
     doc.fontSize(9.5)
         .font("Helvetica-Bold")
         .fillColor("#111827")
-        .text(`${label}: `, {
-            continued: true
-        })
+        .text(`${label}:`, rowX, labelY, {
+            width: labelWidth,
+            continued: false
+        });
+
+    doc.fontSize(9.5)
         .font("Helvetica")
         .fillColor("#374151")
-        .text(String(value ?? "N/A"));
+        .text(String(value ?? "N/A"), rowX + labelWidth, labelY, {
+            width: valueWidth,
+            align: "right"
+        });
 
     doc.rect(barX, barY, barWidth, barHeight)
         .strokeColor("#9ca3af")
         .lineWidth(0.8)
         .stroke();
 
-    doc.rect(barX, barY, filledWidth, barHeight)
+    doc.rect(barX, barY, barWidth * normalized, barHeight)
         .fillColor("#2563eb")
         .fill();
 
-    doc.moveDown(1.1);
+    doc.y = labelY + 24;
 }
 
 function addSignalBreakdown(doc, report) {
     addSectionTitle(doc, "Signal Breakdown");
+
+    doc.fontSize(9)
+        .font("Helvetica")
+        .fillColor("#6b7280")
+        .text("Scores are shown as normalized bars for quick visual interpretation. Signal score is normalized against 100.", {
+            lineGap: 3
+        });
+
+    doc.moveDown(0.6);
 
     drawScoreBar(doc, "Query Relevance", report.analytics?.queryRelevance, 1);
     drawScoreBar(doc, "Geo Alignment", report.analytics?.geoAlignment, 1);
     drawScoreBar(doc, "Source Quality", report.analytics?.sourceQuality, 1);
     drawScoreBar(doc, "Recency", report.analytics?.recency, 1);
     drawScoreBar(doc, "Signal Score", report.analytics?.signalScore, 100);
+
+    doc.moveDown(0.4);
 }
 
 function addAnalysisSection(doc, report) {
@@ -189,21 +238,33 @@ function addMetadataSection(doc, report) {
     addMetadataLine(doc, "Snapshot Key", report.snapshot?.s3SnapshotKey);
 }
 
-function addFooter(doc) {
-    const bottom = doc.page.height - 45;
+function addFooterToAllPages(doc) {
+    const range = doc.bufferedPageRange();
 
-    doc.fontSize(8)
-        .font("Helvetica")
-        .fillColor("#6b7280")
-        .text(
-            "Generated by Geo-Sentinel. Deterministic report generated from captured article metadata and ranking signals. No AI-generated claims added.",
-            50,
-            bottom,
-            {
-                align: "center",
-                width: 495
-            }
-        );
+    for (let i = range.start; i < range.start + range.count; i += 1) {
+        doc.switchToPage(i);
+
+        const footerY = doc.page.height - 40;
+
+        doc.moveTo(PAGE_MARGIN, footerY - 8)
+            .lineTo(PAGE_MARGIN + CONTENT_WIDTH, footerY - 8)
+            .strokeColor("#e5e7eb")
+            .lineWidth(0.8)
+            .stroke();
+
+        doc.fontSize(8)
+            .font("Helvetica")
+            .fillColor("#6b7280")
+            .text(
+                `Generated by Geo-Sentinel. Deterministic report generated from captured article metadata and ranking signals. Page ${i + 1}.`,
+                PAGE_MARGIN,
+                footerY,
+                {
+                    align: "center",
+                    width: CONTENT_WIDTH
+                }
+            );
+    }
 }
 
 function generatePdfReport(report) {
@@ -211,7 +272,7 @@ function generatePdfReport(report) {
         try {
             const doc = new PDFDocument({
                 size: "A4",
-                margin: 50,
+                margin: PAGE_MARGIN,
                 bufferPages: true
             });
 
@@ -240,7 +301,8 @@ function generatePdfReport(report) {
             addParagraph(doc, report.conclusion);
 
             addMetadataSection(doc, report);
-            addFooter(doc);
+
+            addFooterToAllPages(doc);
 
             doc.end();
         } catch (error) {
