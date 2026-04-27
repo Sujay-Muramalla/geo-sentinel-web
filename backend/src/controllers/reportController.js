@@ -4,6 +4,10 @@ const AppError = require("../utils/appError");
 const { getCache } = require("../services/cacheService");
 const { getSnapshotByKey } = require("../services/snapshotService");
 const { buildPerCardReport } = require("../services/reportBuilderService");
+const {
+    generatePdfReport,
+    sanitizeFilename
+} = require("../services/pdfReportService");
 
 function isValidQueryHash(queryHash) {
     return Boolean(queryHash && /^[a-f0-9]{64}$/i.test(queryHash));
@@ -93,6 +97,7 @@ const handleGetReportByQueryHash = asyncHandler(async (req, res) => {
 
 const handleGetReportItemByResultId = asyncHandler(async (req, res) => {
     const { queryHash, resultId } = req.params;
+    const format = String(req.query.format || "").toLowerCase();
 
     if (!isValidResultId(resultId)) {
         throw new AppError(
@@ -126,6 +131,23 @@ const handleGetReportItemByResultId = asyncHandler(async (req, res) => {
         result,
         cacheItem
     });
+
+    if (format === "pdf") {
+        const pdfBuffer = await generatePdfReport(report);
+        const filename = sanitizeFilename(
+            `geo-sentinel-report-${report.article?.source || "source"}-${resultId}`
+        );
+
+        res.setHeader("Content-Type", "application/pdf");
+        res.setHeader(
+            "Content-Disposition",
+            `attachment; filename="${filename}.pdf"`
+        );
+        res.setHeader("Content-Length", pdfBuffer.length);
+        res.setHeader("Cache-Control", "no-store");
+
+        return res.status(200).send(pdfBuffer);
+    }
 
     return res.status(200).json(
         successResponse(
