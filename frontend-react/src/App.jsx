@@ -14,6 +14,7 @@ import {
   getExpandedQueries,
   getFeedErrors,
   getNoResultExplanation,
+  getReportQueryHash,
   getSelectedSources,
 } from "@/lib/api";
 
@@ -191,6 +192,7 @@ export default function App() {
   const [form, setForm] = useState(INITIAL_FORM);
   const [results, setResults] = useState([]);
   const [requestMeta, setRequestMeta] = useState(null);
+  const [reportQueryHash, setReportQueryHash] = useState("");
   const [sourceTransparency, setSourceTransparency] = useState({
     selectedSources: [],
     appliedFilters: {},
@@ -246,6 +248,7 @@ export default function App() {
     setLoading(true);
     setErrorMessage("");
     setResults([]);
+    setReportQueryHash("");
     setRequestMeta({
       requestedScenario: form.scenario,
       rawCount: 0,
@@ -273,8 +276,10 @@ export default function App() {
       const diagnostics = getDiagnostics(response);
       const noResultExplanation = getNoResultExplanation(response);
       const feedErrors = getFeedErrors(response);
+      const queryHash = getReportQueryHash(response);
 
       setResults(mappedResults);
+      setReportQueryHash(queryHash);
       setSourceTransparency({
         selectedSources,
         appliedFilters,
@@ -293,6 +298,7 @@ export default function App() {
         rawItemsSeen: counts?.rawItemsSeen ?? 0,
         filteredOut: counts?.filteredOut ?? 0,
         timestamp: meta?.timestamp || response?.meta?.timestamp || attemptTimestamp,
+        queryHash,
       });
 
       if (mappedResults.length === 0 && !noResultExplanation) {
@@ -328,7 +334,11 @@ export default function App() {
           />
 
           {hasResults ? (
-            <ResultsList results={results} loading={loading} />
+            <ResultsList
+              results={results}
+              loading={loading}
+              reportQueryHash={reportQueryHash}
+            />
           ) : (
             <ResultsPlaceholder
               loading={loading}
