@@ -99,3 +99,8 @@ variable "python_worker_timeout_ms" {
   description = "Timeout in milliseconds for the Python intelligence worker"
   default     = 25000
 }
+
+variable "custom_domain" {
+  description = "Custom domain (subdomain)"
+  type        = string
+}
