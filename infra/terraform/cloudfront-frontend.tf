@@ -10,6 +10,9 @@ resource "aws_cloudfront_distribution" "frontend_cdn" {
 
   wait_for_deployment = false
 
+  # 🔥 GEO-50B: Custom domain alias
+  aliases = [var.custom_domain]
+
   origin {
     domain_name = aws_s3_bucket.frontend_bucket.bucket_regional_domain_name
     origin_id   = "s3-frontend-origin"
@@ -37,6 +40,7 @@ resource "aws_cloudfront_distribution" "frontend_cdn" {
     compress = true
   }
 
+  # SPA routing support (React)
   custom_error_response {
     error_code         = 403
     response_code      = 200
@@ -57,7 +61,14 @@ resource "aws_cloudfront_distribution" "frontend_cdn" {
     }
   }
 
+  # 🔥 GEO-50B: Replace default cert with ACM cert
   viewer_certificate {
-    cloudfront_default_certificate = true
+    acm_certificate_arn      = aws_acm_certificate.cloudfront_cert.arn
+    ssl_support_method       = "sni-only"
+    minimum_protocol_version = "TLSv1.2_2021"
+  }
+
+  tags = {
+    Name = "geo-sentinel-frontend-cdn"
   }
 }
