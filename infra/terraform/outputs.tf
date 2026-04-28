@@ -64,13 +64,43 @@ output "backend_public_dns" {
 }
 
 output "backend_health_url" {
-  description = "Health endpoint for the backend API"
+  description = "Direct EC2 health endpoint for the backend API"
   value       = try(format("http://%s:%d/api/health", aws_instance.backend[0].public_ip, var.backend_port), null)
 }
 
 output "backend_api_generate_url" {
-  description = "Generate endpoint for the backend intelligence API"
+  description = "Direct EC2 generate endpoint for the backend intelligence API"
   value       = try(format("http://%s:%d/api/intelligence/generate", aws_instance.backend[0].public_ip, var.backend_port), null)
+}
+
+output "backend_alb_dns_name" {
+  description = "DNS name of the backend Application Load Balancer"
+  value       = try(aws_lb.backend_api[0].dns_name, null)
+}
+
+output "backend_alb_zone_id" {
+  description = "Canonical hosted zone ID of the backend Application Load Balancer"
+  value       = try(aws_lb.backend_api[0].zone_id, null)
+}
+
+output "backend_alb_http_url" {
+  description = "HTTP URL for the backend ALB"
+  value       = try("http://${aws_lb.backend_api[0].dns_name}", null)
+}
+
+output "backend_alb_https_url" {
+  description = "HTTPS URL for the backend API custom domain"
+  value       = var.enable_backend_alb && var.enable_backend_https ? "https://${var.backend_api_domain}" : null
+}
+
+output "backend_api_domain" {
+  description = "Custom backend API domain"
+  value       = var.backend_api_domain
+}
+
+output "backend_target_group_arn" {
+  description = "ARN of the backend ALB target group"
+  value       = try(aws_lb_target_group.backend_api[0].arn, null)
 }
 
 output "dynamodb_cache_table_name" {
@@ -99,16 +129,16 @@ output "reports_snapshot_prefix" {
 }
 
 output "cloudfront_distribution_id" {
-description = "CloudFront distribution ID"
-value       = aws_cloudfront_distribution.frontend_cdn.id
+  description = "CloudFront distribution ID"
+  value       = aws_cloudfront_distribution.frontend_cdn.id
 }
 
 output "cloudfront_domain_name" {
-description = "CloudFront distribution domain name"
-value       = aws_cloudfront_distribution.frontend_cdn.domain_name
+  description = "CloudFront distribution domain name"
+  value       = aws_cloudfront_distribution.frontend_cdn.domain_name
 }
 
 output "cloudfront_url" {
-description = "Public HTTPS URL via CloudFront"
-value       = "https://${aws_cloudfront_distribution.frontend_cdn.domain_name}"
+  description = "Public HTTPS URL via CloudFront"
+  value       = "https://${aws_cloudfront_distribution.frontend_cdn.domain_name}"
 }
