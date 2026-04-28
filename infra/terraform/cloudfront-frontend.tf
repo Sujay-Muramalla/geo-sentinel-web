@@ -63,7 +63,7 @@ resource "aws_cloudfront_distribution" "frontend_cdn" {
 
   # 🔥 GEO-50B: Replace default cert with ACM cert
   viewer_certificate {
-    acm_certificate_arn      = aws_acm_certificate.cloudfront_cert.arn
+    acm_certificate_arn = aws_acm_certificate_validation.cloudfront_cert_validation.certificate_arn
     ssl_support_method       = "sni-only"
     minimum_protocol_version = "TLSv1.2_2021"
   }
