@@ -142,3 +142,33 @@ output "cloudfront_url" {
   description = "Public HTTPS URL via CloudFront"
   value       = "https://${aws_cloudfront_distribution.frontend_cdn.domain_name}"
 }
+
+output "cognito_user_pool_id" {
+  description = "ID of the Geo-Sentinel Cognito User Pool"
+  value       = aws_cognito_user_pool.geo_sentinel_auth.id
+}
+
+output "cognito_user_pool_arn" {
+  description = "ARN of the Geo-Sentinel Cognito User Pool"
+  value       = aws_cognito_user_pool.geo_sentinel_auth.arn
+}
+
+output "cognito_user_pool_endpoint" {
+  description = "Endpoint of the Geo-Sentinel Cognito User Pool"
+  value       = aws_cognito_user_pool.geo_sentinel_auth.endpoint
+}
+
+output "cognito_web_app_client_id" {
+  description = "Client ID of the Geo-Sentinel Cognito web app client"
+  value       = aws_cognito_user_pool_client.geo_sentinel_web_app.id
+}
+
+output "cognito_domain_prefix" {
+  description = "Cognito hosted UI domain prefix"
+  value       = aws_cognito_user_pool_domain.geo_sentinel_auth_domain.domain
+}
+
+output "cognito_hosted_ui_base_url" {
+  description = "Base URL for the Cognito hosted UI domain"
+  value       = "https://${aws_cognito_user_pool_domain.geo_sentinel_auth_domain.domain}.auth.${var.aws_region}.amazoncognito.com"
+}

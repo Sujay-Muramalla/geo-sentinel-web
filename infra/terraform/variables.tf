@@ -122,3 +122,33 @@ variable "custom_domain" {
   description = "Custom frontend domain"
   type        = string
 }
+
+variable "cognito_domain_prefix" {
+  type        = string
+  description = "Globally unique Cognito hosted UI domain prefix for Geo-Sentinel authentication"
+  default     = "geo-sentinel-dev-auth-632150488936"
+}
+
+variable "cognito_callback_urls" {
+  type        = list(string)
+  description = "Allowed callback URLs for the Geo-Sentinel Cognito app client"
+  default = [
+    "https://geo.sujaymuramalla.eu",
+    "http://localhost:5173",
+    "http://localhost:5174",
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:5174"
+  ]
+}
+
+variable "cognito_logout_urls" {
+  type        = list(string)
+  description = "Allowed logout URLs for the Geo-Sentinel Cognito app client"
+  default = [
+    "https://geo.sujaymuramalla.eu",
+    "http://localhost:5173",
+    "http://localhost:5174",
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:5174"
+  ]
+}
