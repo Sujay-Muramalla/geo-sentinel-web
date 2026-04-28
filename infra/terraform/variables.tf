@@ -52,6 +52,24 @@ variable "enable_backend_ec2" {
   default     = false
 }
 
+variable "enable_backend_alb" {
+  type        = bool
+  description = "Whether to create the Geo-Sentinel backend Application Load Balancer"
+  default     = false
+}
+
+variable "enable_backend_https" {
+  type        = bool
+  description = "Whether to create HTTPS listener and ACM certificate validation for the backend ALB"
+  default     = false
+}
+
+variable "backend_api_domain" {
+  type        = string
+  description = "Custom backend API domain for the Geo-Sentinel ALB"
+  default     = "api.geo.sujaymuramalla.eu"
+}
+
 variable "backend_instance_type" {
   type        = string
   description = "EC2 instance type for the Geo-Sentinel backend"
@@ -101,6 +119,6 @@ variable "python_worker_timeout_ms" {
 }
 
 variable "custom_domain" {
-  description = "Custom domain (subdomain)"
+  description = "Custom frontend domain"
   type        = string
 }

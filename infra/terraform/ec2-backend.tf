@@ -1,13 +1,15 @@
 locals {
   public_subnet_ids = values(aws_subnet.public)[*].id
 
-  backend_allowed_origins = join(",", [
+  backend_allowed_origins = join(",", compact([
+    "https://${var.custom_domain}",
+    "https://${aws_cloudfront_distribution.frontend_cdn.domain_name}",
     "http://${aws_s3_bucket_website_configuration.frontend_bucket_website.website_endpoint}",
     "http://localhost:5173",
     "http://localhost:5174",
     "http://127.0.0.1:5173",
     "http://127.0.0.1:5174"
-  ])
+  ]))
 }
 
 resource "aws_instance" "backend" {
