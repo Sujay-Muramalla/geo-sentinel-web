@@ -13,14 +13,14 @@ resource "aws_acm_certificate" "cloudfront_cert" {
   }
 }
 
-# 🔥 THIS WAS MISSING
 resource "aws_acm_certificate_validation" "cloudfront_cert_validation" {
   provider = aws.us_east_1
 
   certificate_arn = aws_acm_certificate.cloudfront_cert.arn
 
   validation_record_fqdns = [
-    aws_acm_certificate.cloudfront_cert.domain_validation_options[0].resource_record_name
+    for dvo in aws_acm_certificate.cloudfront_cert.domain_validation_options :
+    dvo.resource_record_name
   ]
 }
 
