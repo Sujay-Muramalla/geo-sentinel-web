@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { AppShell } from "@/components/layout/app-shell";
 import { QueryPanel } from "@/components/dashboard/query-panel";
 import { ExampleChips } from "@/components/dashboard/example-chips";
@@ -17,6 +17,14 @@ import {
   getReportQueryHash,
   getSelectedSources,
 } from "@/lib/api";
+import {
+  buildLoginUrl,
+  buildLogoutUrl,
+  clearAuthSession,
+  consumeHostedUiCallback,
+  isAuthConfigured,
+  readStoredAuthSession,
+} from "@/lib/auth";
 
 const INITIAL_FORM = {
   scenario: "",
@@ -193,6 +201,8 @@ export default function App() {
   const [results, setResults] = useState([]);
   const [requestMeta, setRequestMeta] = useState(null);
   const [reportQueryHash, setReportQueryHash] = useState("");
+  const [authSession, setAuthSession] = useState(() => readStoredAuthSession());
+  const [authMessage, setAuthMessage] = useState("");
   const [sourceTransparency, setSourceTransparency] = useState({
     selectedSources: [],
     appliedFilters: {},
@@ -208,6 +218,23 @@ export default function App() {
 
   const hasResults = results.length > 0;
 
+  useEffect(() => {
+    const callbackResult = consumeHostedUiCallback();
+
+    if (callbackResult.handled && callbackResult.session) {
+      setAuthSession(callbackResult.session);
+      setAuthMessage("Cognito Hosted UI callback detected. Basic frontend session stored.");
+    }
+
+    if (callbackResult.handled && callbackResult.error) {
+      setAuthMessage(
+        callbackResult.errorDescription ||
+          callbackResult.error ||
+          "Cognito returned an authentication error."
+      );
+    }
+  }, []);
+
   const resultStats = useMemo(() => {
     const positive = results.filter((item) => item.sentiment === "positive").length;
     const neutral = results.filter((item) => item.sentiment === "neutral").length;
@@ -221,6 +248,17 @@ export default function App() {
     };
   }, [results]);
 
+  const authState = useMemo(
+    () => ({
+      configured: isAuthConfigured(),
+      authenticated: Boolean(authSession?.authenticated),
+      provider: authSession?.provider || "",
+      storedAt: authSession?.storedAt || "",
+      message: authMessage,
+    }),
+    [authSession, authMessage]
+  );
+
   function updateField(name, value) {
     setForm((prev) => ({
       ...prev,
@@ -233,6 +271,29 @@ export default function App() {
       ...prev,
       scenario: value,
     }));
+  }
+
+  function handleLogin() {
+    const loginUrl = buildLoginUrl();
+
+    if (!loginUrl) {
+      setAuthMessage("Cognito auth is not configured for this frontend environment.");
+      return;
+    }
+
+    window.location.assign(loginUrl);
+  }
+
+  function handleLogout() {
+    clearAuthSession();
+    setAuthSession(null);
+    setAuthMessage("Local frontend session cleared.");
+
+    const logoutUrl = buildLogoutUrl();
+
+    if (logoutUrl) {
+      window.location.assign(logoutUrl);
+    }
   }
 
   async function handleSubmit(event) {
@@ -317,7 +378,11 @@ export default function App() {
   }
 
   return (
-    <AppShell>
+    <AppShell
+      authState={authState}
+      onLogin={handleLogin}
+      onLogout={handleLogout}
+    >
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_380px]">
         <section className="space-y-6">
           <QueryPanel
@@ -358,6 +423,7 @@ export default function App() {
             requestMeta={requestMeta}
             stats={resultStats}
             sourceTransparency={sourceTransparency}
+            authState={authState}
           />
         </aside>
       </div>
