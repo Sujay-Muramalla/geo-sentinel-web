@@ -8,18 +8,29 @@ function normalizeArray(value) {
 }
 
 function normalizeCountries(value) {
-  if (Array.isArray(value)) return value.filter(Boolean);
+  if (Array.isArray(value)) {
+    return value.filter(Boolean);
+  }
 
   if (typeof value === "string") {
-    return value.split(",").map((item) => item.trim()).filter(Boolean);
+    return value
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
   }
 
   return [];
 }
 
 function normalizePublicationFocus(value) {
-  if (Array.isArray(value)) return value.filter(Boolean);
-  if (!value || value === "all") return ["all"];
+  if (Array.isArray(value)) {
+    return value.filter(Boolean);
+  }
+
+  if (!value || value === "all") {
+    return ["all"];
+  }
+
   return [value];
 }
 
