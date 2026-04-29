@@ -1,3 +1,4 @@
+import { ArrowLeft, LogIn, LogOut } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
@@ -11,7 +12,13 @@ function formatAuthTime(value) {
   return parsed.toLocaleString();
 }
 
-export function Topbar({ authState, onLogin, onLogout }) {
+export function Topbar({
+  authState,
+  onLogin,
+  onLogout,
+  onBackToLanding,
+  demoMode = false,
+}) {
   const isConfigured = Boolean(authState?.configured);
   const isAuthenticated = Boolean(authState?.authenticated);
 
@@ -25,8 +32,9 @@ export function Topbar({ authState, onLogin, onLogout }) {
           Geo-Sentinel Intelligence Dashboard
         </h1>
         <p className="mt-2 max-w-2xl text-sm text-slate-400">
-          Public intelligence queries remain available. Cognito authentication is now
-          wired as an optional entry point for the upcoming user and premium layers.
+          {demoMode
+            ? "You are viewing the public demo. Sign in when ready to enter authenticated intelligence workflows."
+            : "Public intelligence queries remain available. Cognito authentication is wired as an optional entry point for the user and premium layers."}
         </p>
 
         {authState?.message ? (
@@ -37,7 +45,16 @@ export function Topbar({ authState, onLogin, onLogout }) {
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
-        <Badge variant="green">Public demo active</Badge>
+        {onBackToLanding ? (
+          <Button variant="outline" onClick={onBackToLanding}>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Exit Demo
+          </Button>
+        ) : null}
+
+        <Badge variant="green">
+          {demoMode ? "Demo mode active" : "Public demo active"}
+        </Badge>
 
         {isConfigured ? (
           <Badge
@@ -60,13 +77,20 @@ export function Topbar({ authState, onLogin, onLogout }) {
               <p>{formatAuthTime(authState?.storedAt) || "Stored locally"}</p>
             </div>
             <Button variant="outline" onClick={onLogout}>
+              <LogOut className="mr-2 h-4 w-4" />
               Logout
             </Button>
           </>
         ) : (
-          <Button variant="outline" onClick={onLogin} disabled={!isConfigured}>
-            Login
-          </Button>
+          <>
+            <Button variant="outline" onClick={onLogin} disabled={!isConfigured}>
+              <LogIn className="mr-2 h-4 w-4" />
+              Login
+            </Button>
+            <Button onClick={onLogin} disabled={!isConfigured}>
+              Get Started
+            </Button>
+          </>
         )}
       </div>
     </header>
