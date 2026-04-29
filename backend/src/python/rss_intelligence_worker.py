@@ -441,6 +441,48 @@ def clean_html(value):
     return re.sub(r"\s+", " ", text).strip()
 
 
+def extract_thumbnail(item):
+    media_namespaces = [
+        "{http://search.yahoo.com/mrss/}",
+        "{http://purl.org/rss/1.0/modules/content/}",
+    ]
+
+    for namespace in media_namespaces:
+        for tag in ["content", "thumbnail"]:
+            node = item.find(f".//{namespace}{tag}")
+            if node is not None:
+                url = normalize_text(node.attrib.get("url") or node.attrib.get("href"))
+                if url:
+                    return unescape(url)
+
+    enclosure = item.find("enclosure")
+    if enclosure is not None:
+        enclosure_type = normalize_text(enclosure.attrib.get("type")).lower()
+        enclosure_url = normalize_text(enclosure.attrib.get("url") or enclosure.attrib.get("href"))
+        if enclosure_url and (not enclosure_type or enclosure_type.startswith("image/")):
+            return unescape(enclosure_url)
+
+    html_candidates = [
+        item.findtext("description"),
+        item.findtext("summary"),
+        item.findtext("content"),
+        item.findtext("{http://www.w3.org/2005/Atom}summary"),
+        item.findtext("{http://www.w3.org/2005/Atom}content"),
+        item.findtext("{http://purl.org/rss/1.0/modules/content/}encoded"),
+    ]
+
+    for html in html_candidates:
+        match = re.search(
+            r'<img[^>]+src=["\']([^"\']+)["\']',
+            normalize_text(html),
+            flags=re.IGNORECASE,
+        )
+        if match:
+            return unescape(match.group(1))
+
+    return None
+
+
 def canonical_token(token):
     token = normalize_text(token).lower()
 
@@ -675,6 +717,7 @@ def expanded_strict_match_gate(query_variants, text):
         "reason": "failed-expanded-strict-gate",
         "queryVariant": fallback_query
     }
+
 
 def relevance_score(query, title, summary):
     text = f"{title} {summary}"
@@ -1024,19 +1067,21 @@ def extract_feed_items(root):
 
 
 def parse_feed_item(item, feed_type):
+    thumbnail = extract_thumbnail(item)
+
     if feed_type == "atom":
         title = clean_html(find_atom_text(item, ["title"]))
         summary = clean_html(find_atom_text(item, ["summary", "content"]))
         url = normalize_text(find_atom_link(item))
         published = parse_date(find_atom_text(item, ["published", "updated"]))
-        return title, summary, url, published
+        return title, summary, url, published, thumbnail
 
     title = clean_html(item.findtext("title"))
     summary = clean_html(item.findtext("description"))
     url = normalize_text(item.findtext("link"))
     published = parse_date(item.findtext("pubDate"))
 
-    return title, summary, url, published
+    return title, summary, url, published, thumbnail
 
 
 def add_rejection_sample(samples, reason, feed, title, summary="", gate=None, relevance=None):
@@ -1065,7 +1110,7 @@ def parse_feed(feed, query, payload, query_variants, diagnostics):
     diagnostics["rawItemsSeen"] += len(feed_items)
 
     for item in feed_items:
-        title, summary, url, published = parse_feed_item(item, feed_type)
+        title, summary, url, published, thumbnail = parse_feed_item(item, feed_type)
 
         if not title or not url:
             diagnostics["rejectedMissingTitleOrUrl"] += 1
@@ -1141,6 +1186,7 @@ def parse_feed(feed, query, payload, query_variants, diagnostics):
             "title": title,
             "summary": summary,
             "url": url,
+            "thumbnail": thumbnail,
             "source": feed["source"],
             "sourceId": feed.get("id", ""),
             "sourceCountry": feed.get("country", ""),
