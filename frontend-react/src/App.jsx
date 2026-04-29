@@ -5,6 +5,7 @@ import { ExampleChips } from "@/components/dashboard/example-chips";
 import { ResultsList } from "@/components/dashboard/results-list";
 import { ResultsPlaceholder } from "@/components/dashboard/results-placeholder";
 import { StatusPanel } from "@/components/dashboard/status-panel";
+import { LandingPage } from "@/pages/landing";
 import {
   generateIntelligence,
   getApiCounts,
@@ -197,6 +198,9 @@ function mapApiResults(payload) {
 }
 
 export default function App() {
+  const [view, setView] = useState(() =>
+    readStoredAuthSession()?.authenticated ? "dashboard" : "landing"
+  );
   const [form, setForm] = useState(INITIAL_FORM);
   const [results, setResults] = useState([]);
   const [requestMeta, setRequestMeta] = useState(null);
@@ -230,6 +234,7 @@ export default function App() {
         if (callbackResult.handled && callbackResult.session) {
           setAuthSession(callbackResult.session);
           setAuthMessage("Cognito login complete. JWT session stored.");
+          setView("dashboard");
         }
 
         if (callbackResult.handled && callbackResult.error) {
@@ -238,6 +243,7 @@ export default function App() {
               callbackResult.error ||
               "Cognito returned an authentication error."
           );
+          setView("landing");
         }
       } catch (error) {
         if (!mounted) return;
@@ -246,6 +252,7 @@ export default function App() {
           error?.message ||
             "Cognito login completed, but token exchange failed."
         );
+        setView("landing");
       }
     }
 
@@ -279,6 +286,8 @@ export default function App() {
     }),
     [authSession, authMessage]
   );
+
+  const demoMode = view === "dashboard" && !authState.authenticated;
 
   function updateField(name, value) {
     setForm((prev) => ({
@@ -314,7 +323,20 @@ export default function App() {
 
     if (logoutUrl) {
       window.location.assign(logoutUrl);
+      return;
     }
+
+    setView("landing");
+  }
+
+  function handleViewDemo() {
+    setView("dashboard");
+    setAuthMessage("Public demo mode active. Login remains optional.");
+  }
+
+  function handleBackToLanding() {
+    setView("landing");
+    setErrorMessage("");
   }
 
   async function handleSubmit(event) {
@@ -399,11 +421,23 @@ export default function App() {
     }
   }
 
+  if (view === "landing" && !authState.authenticated) {
+    return (
+      <LandingPage
+        authConfigured={authState.configured}
+        onLogin={handleLogin}
+        onViewDemo={handleViewDemo}
+      />
+    );
+  }
+
   return (
     <AppShell
       authState={authState}
       onLogin={handleLogin}
       onLogout={handleLogout}
+      onBackToLanding={demoMode ? handleBackToLanding : undefined}
+      demoMode={demoMode}
     >
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_380px]">
         <section className="space-y-6">
