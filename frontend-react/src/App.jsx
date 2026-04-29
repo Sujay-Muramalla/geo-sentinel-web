@@ -219,20 +219,41 @@ export default function App() {
   const hasResults = results.length > 0;
 
   useEffect(() => {
-    const callbackResult = consumeHostedUiCallback();
+    let mounted = true;
 
-    if (callbackResult.handled && callbackResult.session) {
-      setAuthSession(callbackResult.session);
-      setAuthMessage("Cognito Hosted UI callback detected. Basic frontend session stored.");
+    async function handleAuthCallback() {
+      try {
+        const callbackResult = await consumeHostedUiCallback();
+
+        if (!mounted) return;
+
+        if (callbackResult.handled && callbackResult.session) {
+          setAuthSession(callbackResult.session);
+          setAuthMessage("Cognito login complete. JWT session stored.");
+        }
+
+        if (callbackResult.handled && callbackResult.error) {
+          setAuthMessage(
+            callbackResult.errorDescription ||
+              callbackResult.error ||
+              "Cognito returned an authentication error."
+          );
+        }
+      } catch (error) {
+        if (!mounted) return;
+
+        setAuthMessage(
+          error?.message ||
+            "Cognito login completed, but token exchange failed."
+        );
+      }
     }
 
-    if (callbackResult.handled && callbackResult.error) {
-      setAuthMessage(
-        callbackResult.errorDescription ||
-          callbackResult.error ||
-          "Cognito returned an authentication error."
-      );
-    }
+    handleAuthCallback();
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   const resultStats = useMemo(() => {
@@ -273,8 +294,8 @@ export default function App() {
     }));
   }
 
-  function handleLogin() {
-    const loginUrl = buildLoginUrl();
+  async function handleLogin() {
+    const loginUrl = await buildLoginUrl();
 
     if (!loginUrl) {
       setAuthMessage("Cognito auth is not configured for this frontend environment.");
@@ -360,6 +381,7 @@ export default function App() {
         filteredOut: counts?.filteredOut ?? 0,
         timestamp: meta?.timestamp || response?.meta?.timestamp || attemptTimestamp,
         queryHash,
+        auth: response?.meta?.auth || null,
       });
 
       if (mappedResults.length === 0 && !noResultExplanation) {

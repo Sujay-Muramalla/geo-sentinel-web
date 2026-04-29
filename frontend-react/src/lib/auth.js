@@ -6,6 +6,7 @@ const COGNITO_LOGOUT_URI =
   import.meta.env.VITE_COGNITO_LOGOUT_URI || window.location.origin;
 
 const AUTH_STORAGE_KEY = "geoSentinelAuthSession";
+const PKCE_STORAGE_KEY = "geoSentinelPkceVerifier";
 
 function buildUrl(baseUrl, params) {
   const url = new URL(baseUrl);
@@ -19,18 +20,49 @@ function buildUrl(baseUrl, params) {
   return url.toString();
 }
 
+function base64UrlEncode(buffer) {
+  return btoa(String.fromCharCode(...new Uint8Array(buffer)))
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/g, "");
+}
+
+async function sha256(value) {
+  const encoded = new TextEncoder().encode(value);
+  return window.crypto.subtle.digest("SHA-256", encoded);
+}
+
+function generateCodeVerifier() {
+  const array = new Uint8Array(32);
+  window.crypto.getRandomValues(array);
+
+  return base64UrlEncode(array);
+}
+
+async function generateCodeChallenge(verifier) {
+  const digest = await sha256(verifier);
+  return base64UrlEncode(digest);
+}
+
 export function isAuthConfigured() {
   return Boolean(COGNITO_DOMAIN && COGNITO_CLIENT_ID);
 }
 
-export function buildLoginUrl() {
+export async function buildLoginUrl() {
   if (!isAuthConfigured()) return "";
+
+  const codeVerifier = generateCodeVerifier();
+  const codeChallenge = await generateCodeChallenge(codeVerifier);
+
+  window.sessionStorage.setItem(PKCE_STORAGE_KEY, codeVerifier);
 
   return buildUrl(`${COGNITO_DOMAIN}/login`, {
     client_id: COGNITO_CLIENT_ID,
     response_type: "code",
     scope: "openid email profile",
     redirect_uri: COGNITO_REDIRECT_URI,
+    code_challenge_method: "S256",
+    code_challenge: codeChallenge,
   });
 }
 
@@ -64,9 +96,55 @@ export function storeAuthSession(session) {
 
 export function clearAuthSession() {
   window.localStorage.removeItem(AUTH_STORAGE_KEY);
+  window.sessionStorage.removeItem(PKCE_STORAGE_KEY);
 }
 
-export function consumeHostedUiCallback() {
+export function getStoredAccessToken() {
+  const session = readStoredAuthSession();
+  return session?.accessToken || "";
+}
+
+export function getStoredIdToken() {
+  const session = readStoredAuthSession();
+  return session?.idToken || "";
+}
+
+async function exchangeCodeForTokens(code) {
+  const codeVerifier = window.sessionStorage.getItem(PKCE_STORAGE_KEY) || "";
+
+  const body = new URLSearchParams({
+    grant_type: "authorization_code",
+    client_id: COGNITO_CLIENT_ID,
+    code,
+    redirect_uri: COGNITO_REDIRECT_URI,
+  });
+
+  if (codeVerifier) {
+    body.set("code_verifier", codeVerifier);
+  }
+
+  const response = await fetch(`${COGNITO_DOMAIN}/oauth2/token`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+    },
+    body,
+  });
+
+  const payload = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    throw new Error(
+      payload?.error_description ||
+        payload?.error ||
+        `Token exchange failed with status ${response.status}`
+    );
+  }
+
+  return payload;
+}
+
+export async function consumeHostedUiCallback() {
   const url = new URL(window.location.href);
   const code = url.searchParams.get("code");
   const error = url.searchParams.get("error");
@@ -90,14 +168,21 @@ export function consumeHostedUiCallback() {
     };
   }
 
+  const tokens = await exchangeCodeForTokens(code);
+
   const session = {
     authenticated: true,
     provider: "cognito-hosted-ui",
-    code,
+    accessToken: tokens.access_token || "",
+    idToken: tokens.id_token || "",
+    refreshToken: tokens.refresh_token || "",
+    tokenType: tokens.token_type || "Bearer",
+    expiresIn: tokens.expires_in || null,
     redirectUri: COGNITO_REDIRECT_URI,
   };
 
   storeAuthSession(session);
+  window.sessionStorage.removeItem(PKCE_STORAGE_KEY);
 
   url.searchParams.delete("code");
   url.searchParams.delete("state");
