@@ -35,7 +35,6 @@ async function sha256(value) {
 function generateCodeVerifier() {
   const array = new Uint8Array(32);
   window.crypto.getRandomValues(array);
-
   return base64UrlEncode(array);
 }
 
