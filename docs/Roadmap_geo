@@ -1,0 +1,55 @@
+Roadmap I suggest
+Phase 1 — Finish current GEO-49F
+Merge frontend PDF wiring
+Destroy backend EC2
+Save WCP
+Clean branch
+Phase 2 — CloudFront for frontend
+GEO-50A CloudFront + S3 frontend distribution
+GEO-50B HTTPS/domain-ready frontend
+
+This gives global access before adding users.
+
+Phase 3 — Cognito Auth
+GEO-51A Cognito User Pool + App Client via Terraform
+GEO-51B React login/logout using Cognito
+GEO-51C Backend JWT verification middleware
+Phase 4 — Premium subscription
+GEO-52A Stripe Checkout endpoint
+GEO-52B Stripe webhook + DynamoDB user plan table
+GEO-52C Frontend upgrade/billing UI
+Phase 5 — Premium AI fallback
+GEO-53A AI fallback prototype behind backend feature flag
+GEO-53B Premium-only AI no-result fallback
+GEO-53C AI fallback reports + cache/S3 integration
+Phase 6 — Medium architecture upgrade
+GEO-54A Backend Launch Template
+GEO-54B ALB + target group + health checks
+GEO-54C Auto Scaling Group across public/private subnet design
+GEO-54D CloudFront routing frontend + API path strategy
+
+AWS recommends Application Load Balancer for load-balanced Auto Scaling setups, and ALB can integrate with CloudFront and AWS WAF for broader production architecture.
+
+Effort comparison
+Clerk auth:     fastest, 1–2 stories
+Auth0 auth:     medium, 2–4 stories
+Cognito auth:   medium/higher, 3–5 stories
+
+But for your project:
+
+Cognito = best architecture fit
+Stripe = best payment fit
+OpenAI/API fallback = premium intelligence fit
+CloudFront + ALB + ASG = medium architecture upgrade
+Final call
+
+I recommend:
+
+Cognito + Stripe + AI fallback
+
+Not Clerk. Not Auth0.
+
+It is more work, but it fits Geo-Sentinel’s AWS-first identity and keeps your learning roadmap aligned with the real architecture.
+
+
+

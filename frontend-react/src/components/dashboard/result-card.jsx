@@ -184,7 +184,12 @@ function getResultId(result) {
   return result.resultId || result.id || "";
 }
 
-function buildReportFilename(queryHash, resultId = "", reportType = "query", extension = "json") {
+function buildReportFilename(
+  queryHash,
+  resultId = "",
+  reportType = "query",
+  extension = "json"
+) {
   const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
   const shortHash = queryHash ? queryHash.slice(0, 12) : "unknown";
   const shortResultId = resultId ? resultId.slice(0, 12) : "run";
@@ -239,6 +244,7 @@ export function ResultCard({ result, reportQueryHash = "" }) {
   const expandedQueryUsed = Boolean(result.expandedQueryUsed);
   const sourceTier = cleanText(result.sourceTier);
   const resultId = getResultId(result);
+  const thumbnail = cleanText(result.thumbnail || result.image || result.imageUrl);
   const canDownloadQueryReport = Boolean(reportQueryHash);
   const canDownloadItemReport = Boolean(reportQueryHash && resultId);
 
@@ -286,7 +292,7 @@ export function ResultCard({ result, reportQueryHash = "" }) {
     <Card className="overflow-hidden p-0">
       <article className="flex flex-col gap-0">
         <div className="border-b border-white/10 bg-white/[0.03] p-5">
-          <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div className="min-w-0 flex-1 space-y-3">
               <div className="flex flex-wrap gap-2">
                 <Badge className={sentimentBadgeClass(result.sentiment)}>
@@ -338,13 +344,33 @@ export function ResultCard({ result, reportQueryHash = "" }) {
               ) : null}
             </div>
 
-            <div className="rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-right">
-              <p className="text-[0.65rem] uppercase tracking-[0.2em] text-slate-500">
-                Relevance
-              </p>
-              <p className={`mt-1 text-2xl font-semibold ${getScoreTone(score)}`}>
-                {scoreLabel(score)}
-              </p>
+            <div className="flex shrink-0 gap-3">
+              <div className="h-28 w-36 overflow-hidden rounded-2xl border border-white/10 bg-slate-950/80 shadow-lg shadow-black/20">
+                {thumbnail ? (
+                  <img
+                    src={thumbnail}
+                    alt={cleanText(result.title) || "Article thumbnail"}
+                    className="h-full w-full object-cover"
+                    loading="lazy"
+                    onError={(event) => {
+                      event.currentTarget.style.display = "none";
+                    }}
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center bg-white/[0.03] px-3 text-center text-xs text-slate-500">
+                    No image
+                  </div>
+                )}
+              </div>
+
+              <div className="rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-right">
+                <p className="text-[0.65rem] uppercase tracking-[0.2em] text-slate-500">
+                  Relevance
+                </p>
+                <p className={`mt-1 text-2xl font-semibold ${getScoreTone(score)}`}>
+                  {scoreLabel(score)}
+                </p>
+              </div>
             </div>
           </div>
         </div>
@@ -478,7 +504,7 @@ export function ResultCard({ result, reportQueryHash = "" }) {
 
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-4">
             <p className="text-xs text-slate-500">
-              Live RSS intelligence result · GEO-49F PDF reporting enabled
+              Live RSS intelligence result · GEO-51E article thumbnails enabled
             </p>
 
             <a
