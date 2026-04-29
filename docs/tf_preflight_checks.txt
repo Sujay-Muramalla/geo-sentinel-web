@@ -1,0 +1,18 @@
+cd /c/Projects/geo-sentinel-web/infra/terraform
+
+echo "=== BACKEND ==="
+terraform state list | grep aws_instance.backend || echo "No backend EC2"
+
+echo "=== LOAD BALANCER ==="
+terraform state list | grep aws_lb || echo "No ALB"
+
+echo "=== CORE INFRA ==="
+terraform state list | grep aws_s3_bucket | wc -l
+terraform state list | grep aws_dynamodb_table | wc -l
+
+
+
+cd infra/terraform
+terraform state list | grep aws_instance.backend || echo "Backend OFF"
+
+
