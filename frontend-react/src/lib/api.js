@@ -1,3 +1,5 @@
+import { getStoredAccessToken } from "@/lib/auth";
+
 const DEFAULT_API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
 
@@ -6,29 +8,18 @@ function normalizeArray(value) {
 }
 
 function normalizeCountries(value) {
-  if (Array.isArray(value)) {
-    return value.filter(Boolean);
-  }
+  if (Array.isArray(value)) return value.filter(Boolean);
 
   if (typeof value === "string") {
-    return value
-      .split(",")
-      .map((item) => item.trim())
-      .filter(Boolean);
+    return value.split(",").map((item) => item.trim()).filter(Boolean);
   }
 
   return [];
 }
 
 function normalizePublicationFocus(value) {
-  if (Array.isArray(value)) {
-    return value.filter(Boolean);
-  }
-
-  if (!value || value === "all") {
-    return ["all"];
-  }
-
+  if (Array.isArray(value)) return value.filter(Boolean);
+  if (!value || value === "all") return ["all"];
   return [value];
 }
 
@@ -50,6 +41,15 @@ function buildGeneratePayload(form) {
     publicationFocus: normalizePublicationFocus(form.publicationFocus),
     sentimentFilter: normalizeSentimentFilter(form.sentiment),
     sortBy: form.sortBy || "final-desc",
+  };
+}
+
+function buildJsonHeaders() {
+  const accessToken = getStoredAccessToken();
+
+  return {
+    "Content-Type": "application/json",
+    ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
   };
 }
 
@@ -129,9 +129,7 @@ export async function generateIntelligence(form) {
 
   const response = await fetch(endpoint, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
+    headers: buildJsonHeaders(),
     body: JSON.stringify(buildGeneratePayload(form)),
   });
 

@@ -138,6 +138,11 @@ CORS_ALLOWED_ORIGINS=\$${FRONTEND_ORIGIN}
 PYTHON_COMMAND=\$${BACKEND_DIR}/.venv/bin/python
 PYTHON_INTELLIGENCE_WORKER=\$${BACKEND_DIR}/src/python/rss_intelligence_worker.py
 PYTHON_WORKER_TIMEOUT_MS=\$${PYTHON_WORKER_TIMEOUT_MS}
+AUTH_MODE=optional
+COGNITO_REGION=eu-central-1
+COGNITO_USER_POOL_ID=eu-central-1_Ad02mr3SA
+COGNITO_CLIENT_ID=2gcie8c4t6l79bafgrvtncpmki
+COGNITO_ISSUER=https://cognito-idp.eu-central-1.amazonaws.com/eu-central-1_Ad02mr3SA
 EOT
 
 echo "🛠️ Writing systemd service"
