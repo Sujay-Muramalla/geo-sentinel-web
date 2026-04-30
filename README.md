@@ -1,5 +1,26 @@
 # Geo-Sentinel Web
 
+<p align="center">
+  <!-- Cloud & Infrastructure -->
+  <img src="https://img.shields.io/badge/AWS-%23FF9900.svg?style=for-the-badge&logo=amazon-web-services&logoColor=white" alt="AWS" />
+  <img src="https://img.shields.io/badge/Terraform-%235835CC.svg?style=for-the-badge&logo=terraform&logoColor=white" alt="Terraform" />
+  <img src="https://img.shields.io/badge/GitHub_Actions-%232088FF.svg?style=for-the-badge&logo=github-actions&logoColor=white" alt="GitHub Actions" />
+  <!-- Frontend -->
+  <img src="https://img.shields.io/badge/React_19-%2320232a.svg?style=for-the-badge&logo=react&logoColor=%2361DAFB" alt="React" />
+  <img src="https://img.shields.io/badge/Vite-%23646CFF.svg?style=for-the-badge&logo=vite&logoColor=white" alt="Vite" />
+  <img src="https://img.shields.io/badge/TailwindCSS-%2306B6D4.svg?style=for-the-badge&logo=tailwindcss&logoColor=white" alt="TailwindCSS" />
+  <!-- Backend -->
+  <img src="https://img.shields.io/badge/Node.js-%23339933.svg?style=for-the-badge&logo=nodedotjs&logoColor=white" alt="Node.js" />
+  <img src="https://img.shields.io/badge/Express-%23000000.svg?style=for-the-badge&logo=express&logoColor=white" alt="Express" />
+  <img src="https://img.shields.io/badge/Python_3-%233776AB.svg?style=for-the-badge&logo=python&logoColor=white" alt="Python" />
+  <!-- AWS Services -->
+  <img src="https://img.shields.io/badge/Amazon_S3-%23569A31.svg?style=for-the-badge&logo=amazons3&logoColor=white" alt="Amazon S3" />
+  <img src="https://img.shields.io/badge/Amazon_DynamoDB-%234053D6.svg?style=for-the-badge&logo=amazondynamodb&logoColor=white" alt="DynamoDB" />
+  <img src="https://img.shields.io/badge/Amazon_Cognito-%23DD344C.svg?style=for-the-badge&logo=amazoncognito&logoColor=white" alt="Cognito" />
+  <img src="https://img.shields.io/badge/Amazon_CloudFront-%238C4FFF.svg?style=for-the-badge&logo=amazonaws&logoColor=white" alt="CloudFront" />
+  <img src="https://img.shields.io/badge/Amazon_EC2-%23FF9900.svg?style=for-the-badge&logo=amazonec2&logoColor=white" alt="EC2" />
+</p>
+
 > **Geopolitical Intelligence Platform** — Real-time RSS-driven news aggregation, relevance scoring, and intelligence reporting for global scenario analysis.
 
 ---
