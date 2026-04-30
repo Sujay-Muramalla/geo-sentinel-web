@@ -227,12 +227,71 @@ function triggerPdfDownload(blob, queryHash, resultId = "") {
   window.URL.revokeObjectURL(url);
 }
 
+function explainReportError(error) {
+  const message = error?.message || "";
+
+  if (
+    message.includes("REPORT_METADATA_NOT_FOUND") ||
+    message.toLowerCase().includes("metadata not found")
+  ) {
+    return "This report index is no longer available. Generate the same intelligence query again, then retry the download.";
+  }
+
+  if (
+    message.includes("REPORT_SNAPSHOT_KEY_MISSING") ||
+    message.toLowerCase().includes("snapshot key")
+  ) {
+    return "The report snapshot was generated without a storage key. Regenerate the query to recreate the report snapshot.";
+  }
+
+  if (
+    message.includes("REPORT_SNAPSHOT_NOT_FOUND") ||
+    message.toLowerCase().includes("snapshot")
+  ) {
+    return "The stored report snapshot could not be loaded. Regenerate the query and try the report download again.";
+  }
+
+  if (message.toLowerCase().includes("failed to fetch")) {
+    return "The backend is currently unreachable. Recreate the backend/ALB validation stack, then try again.";
+  }
+
+  return (
+    message ||
+    "Report download failed. Regenerate the intelligence query and retry the download."
+  );
+}
+
+function ThumbnailFallback({ source, region }) {
+  const label = cleanText(source || region || "Geo-Sentinel");
+
+  return (
+    <div className="flex h-full w-full flex-col justify-between bg-gradient-to-br from-slate-900 via-slate-950 to-cyan-950/60 p-3">
+      <div className="flex items-center justify-between">
+        <span className="h-2 w-2 rounded-full bg-cyan-300/80 shadow-lg shadow-cyan-400/40" />
+        <span className="text-[0.6rem] uppercase tracking-[0.18em] text-cyan-200/70">
+          Signal
+        </span>
+      </div>
+
+      <div>
+        <p className="line-clamp-2 text-xs font-semibold text-slate-100">
+          {label}
+        </p>
+        <p className="mt-1 text-[0.65rem] text-slate-400">
+          Source image unavailable
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export function ResultCard({ result, reportQueryHash = "" }) {
   const [downloadState, setDownloadState] = useState({
     loadingQuery: false,
     loadingItem: false,
     error: "",
   });
+  const [thumbnailFailed, setThumbnailFailed] = useState(false);
 
   const summary = truncateText(result.summary);
   const sourceMeta = sourceLine(result);
@@ -245,6 +304,9 @@ export function ResultCard({ result, reportQueryHash = "" }) {
   const sourceTier = cleanText(result.sourceTier);
   const resultId = getResultId(result);
   const thumbnail = cleanText(result.thumbnail || result.image || result.imageUrl);
+  const canShowImage = Boolean(thumbnail && !thumbnailFailed);
+  const sourceUrl = cleanText(result.url);
+  const canOpenSource = Boolean(sourceUrl);
   const canDownloadQueryReport = Boolean(reportQueryHash);
   const canDownloadItemReport = Boolean(reportQueryHash && resultId);
 
@@ -261,9 +323,7 @@ export function ResultCard({ result, reportQueryHash = "" }) {
       setDownloadState({
         loadingQuery: false,
         loadingItem: false,
-        error:
-          error?.message ||
-          "Query report download failed. The backend may be offline or the report snapshot may be unavailable.",
+        error: explainReportError(error),
       });
     }
   }
@@ -281,9 +341,7 @@ export function ResultCard({ result, reportQueryHash = "" }) {
       setDownloadState({
         loadingQuery: false,
         loadingItem: false,
-        error:
-          error?.message ||
-          "Per-card PDF report download failed. The backend may be offline or the report item may be unavailable.",
+        error: explainReportError(error),
       });
     }
   }
@@ -346,20 +404,16 @@ export function ResultCard({ result, reportQueryHash = "" }) {
 
             <div className="flex shrink-0 gap-3">
               <div className="h-28 w-36 overflow-hidden rounded-2xl border border-white/10 bg-slate-950/80 shadow-lg shadow-black/20">
-                {thumbnail ? (
+                {canShowImage ? (
                   <img
                     src={thumbnail}
                     alt={cleanText(result.title) || "Article thumbnail"}
                     className="h-full w-full object-cover"
                     loading="lazy"
-                    onError={(event) => {
-                      event.currentTarget.style.display = "none";
-                    }}
+                    onError={() => setThumbnailFailed(true)}
                   />
                 ) : (
-                  <div className="flex h-full w-full items-center justify-center bg-white/[0.03] px-3 text-center text-xs text-slate-500">
-                    No image
-                  </div>
+                  <ThumbnailFallback source={result.source} region={region} />
                 )}
               </div>
 
@@ -498,23 +552,40 @@ export function ResultCard({ result, reportQueryHash = "" }) {
             )}
 
             {downloadState.error ? (
-              <p className="mt-3 text-xs text-red-300">{downloadState.error}</p>
+              <div className="mt-3 rounded-xl border border-red-400/20 bg-red-400/10 p-3">
+                <p className="text-xs font-medium text-red-200">
+                  Report download needs a fresh snapshot
+                </p>
+                <p className="mt-1 text-xs leading-5 text-red-100/80">
+                  {downloadState.error}
+                </p>
+              </div>
             ) : null}
           </div>
 
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-4">
             <p className="text-xs text-slate-500">
-              Live RSS intelligence result · GEO-51E article thumbnails enabled
+              Live RSS intelligence result · GEO-51F product reliability enabled
             </p>
 
-            <a
-              href={result.url || "#"}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center rounded-lg border border-cyan-400/20 bg-cyan-400/10 px-3 py-2 text-sm font-medium text-cyan-200 transition hover:border-cyan-300/40 hover:bg-cyan-400/15"
-            >
-              Open source article
-            </a>
+            {canOpenSource ? (
+              <a
+                href={sourceUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center rounded-lg border border-cyan-400/20 bg-cyan-400/10 px-3 py-2 text-sm font-medium text-cyan-200 transition hover:border-cyan-300/40 hover:bg-cyan-400/15"
+              >
+                Open source article
+              </a>
+            ) : (
+              <button
+                type="button"
+                disabled
+                className="inline-flex cursor-not-allowed items-center rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm font-medium text-slate-500"
+              >
+                Source link unavailable
+              </button>
+            )}
           </div>
         </div>
       </article>
