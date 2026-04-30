@@ -7,7 +7,7 @@ import {
   isRecoverableReportError,
 } from "@/lib/api";
 
-const SUMMARY_LIMIT = 360;
+const SUMMARY_LIMIT = 380;
 
 function sentimentLabel(sentiment) {
   const normalized = String(sentiment || "neutral").toLowerCase();
@@ -51,6 +51,8 @@ function cleanText(value) {
   if (!value) return "";
 
   return String(value)
+    .replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?>[\s\S]*?<\/style>/gi, " ")
     .replace(/<[^>]*>/g, " ")
     .replace(/&nbsp;/gi, " ")
     .replace(/&amp;/gi, "&")
@@ -63,13 +65,48 @@ function cleanText(value) {
     .trim();
 }
 
-function truncateText(value, limit = SUMMARY_LIMIT) {
+function compactSentence(value, limit = SUMMARY_LIMIT) {
   const cleaned = cleanText(value);
 
-  if (!cleaned) return "No clean summary was returned for this result.";
+  if (!cleaned) return "";
   if (cleaned.length <= limit) return cleaned;
 
-  return `${cleaned.slice(0, limit).trim()}…`;
+  const sentenceMatch = cleaned
+    .slice(0, limit + 80)
+    .match(/^(.+?[.!?])\s+[A-Z0-9]/);
+
+  if (sentenceMatch?.[1] && sentenceMatch[1].length >= 80) {
+    return sentenceMatch[1];
+  }
+
+  return `${cleaned.slice(0, limit).replace(/\s+\S*$/, "").trim()}…`;
+}
+
+function buildSummary(result) {
+  const candidates = [
+    result.summary,
+    result.rawSummary,
+    result.description,
+    result.snippet,
+    result.contentSnippet,
+  ];
+
+  for (const candidate of candidates) {
+    const cleaned = compactSentence(candidate);
+    if (cleaned && cleaned.toLowerCase() !== cleanText(result.title).toLowerCase()) {
+      return cleaned;
+    }
+  }
+
+  const source = cleanText(result.source) || "this source";
+  const region = cleanText(result.sourceRegion || result.region || result.country);
+  const title = cleanText(result.title) || "this signal";
+
+  return compactSentence(
+    `${source} reported a monitoring-relevant signal: ${title}${
+      region ? ` in ${region}` : ""
+    }. Geo-Sentinel ranked this card using query relevance, source quality, recency, sentiment, and geographic alignment.`
+  );
 }
 
 function sourceLine(result) {
@@ -256,6 +293,14 @@ function explainReportError(error) {
     return "The stored report snapshot could not be loaded. Regenerate the query and retry the report download.";
   }
 
+  if (
+    code === "REPORT_ITEM_NOT_FOUND" ||
+    message.includes("REPORT_ITEM_NOT_FOUND") ||
+    message.toLowerCase().includes("item not found")
+  ) {
+    return "This card report was not found in the stored snapshot. Regenerate the query to rebuild the card-level report.";
+  }
+
   if (message.toLowerCase().includes("failed to fetch")) {
     return "The backend is currently unreachable. Recreate the backend/ALB validation stack, then try again.";
   }
@@ -266,11 +311,28 @@ function explainReportError(error) {
   );
 }
 
-function ThumbnailFallback({ source, region }) {
-  const label = cleanText(source || region || "Geo-Sentinel");
+function fallbackTone(result) {
+  const sentiment = String(result.sentiment || "neutral").toLowerCase();
+  const region = String(result.sourceRegion || result.region || "").toLowerCase();
+
+  if (sentiment === "negative") return "from-red-950 via-slate-950 to-orange-950/70";
+  if (sentiment === "positive") return "from-emerald-950 via-slate-950 to-cyan-950/70";
+  if (region.includes("middle")) return "from-amber-950 via-slate-950 to-red-950/60";
+  if (region.includes("asia")) return "from-cyan-950 via-slate-950 to-blue-950/70";
+  if (region.includes("europe")) return "from-indigo-950 via-slate-950 to-cyan-950/70";
+
+  return "from-slate-900 via-slate-950 to-cyan-950/60";
+}
+
+function ThumbnailFallback({ result }) {
+  const source = cleanText(result.source);
+  const region = cleanText(result.sourceRegion || result.region);
+  const country = cleanText(result.sourceCountry || result.country);
+  const label = source || region || country || "Geo-Sentinel";
+  const tone = fallbackTone(result);
 
   return (
-    <div className="flex h-full w-full flex-col justify-between bg-gradient-to-br from-slate-900 via-slate-950 to-cyan-950/60 p-3">
+    <div className={`flex h-full w-full flex-col justify-between bg-gradient-to-br ${tone} p-3`}>
       <div className="flex items-center justify-between">
         <span className="h-2 w-2 rounded-full bg-cyan-300/80 shadow-lg shadow-cyan-400/40" />
         <span className="text-[0.6rem] uppercase tracking-[0.18em] text-cyan-200/70">
@@ -283,7 +345,7 @@ function ThumbnailFallback({ source, region }) {
           {label}
         </p>
         <p className="mt-1 text-[0.65rem] text-slate-400">
-          Source image unavailable
+          {region || country || "Source image unavailable"}
         </p>
       </div>
     </div>
@@ -305,7 +367,7 @@ export function ResultCard({
   });
   const [thumbnailFailed, setThumbnailFailed] = useState(false);
 
-  const summary = truncateText(result.summary);
+  const summary = buildSummary(result);
   const sourceMeta = sourceLine(result);
   const region = cleanText(result.sourceRegion || result.region);
   const score = Number(result.signalScore ?? result.finalScore ?? result.score) || 0;
@@ -318,7 +380,7 @@ export function ResultCard({
   const thumbnail = cleanText(result.thumbnail || result.image || result.imageUrl);
   const canShowImage = Boolean(thumbnail && !thumbnailFailed);
   const sourceUrl = cleanText(result.url);
-  const canOpenSource = Boolean(sourceUrl);
+  const canOpenSource = Boolean(sourceUrl && sourceUrl !== "#");
   const canDownloadQueryReport = Boolean(reportQueryHash);
   const canDownloadItemReport = Boolean(reportQueryHash && resultId);
   const canRegenerateReport =
@@ -508,7 +570,7 @@ export function ResultCard({
                     onError={() => setThumbnailFailed(true)}
                   />
                 ) : (
-                  <ThumbnailFallback source={result.source} region={region} />
+                  <ThumbnailFallback result={result} />
                 )}
               </div>
 
@@ -685,7 +747,7 @@ export function ResultCard({
 
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-4">
             <p className="text-xs text-slate-500">
-              Live RSS intelligence result · GEO-51G report regeneration enabled
+              Live RSS intelligence result · GEO-51I reliability hardening active
             </p>
 
             {canOpenSource ? (

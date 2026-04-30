@@ -7,6 +7,7 @@ export const RECOVERABLE_REPORT_ERROR_CODES = [
   "REPORT_METADATA_NOT_FOUND",
   "REPORT_SNAPSHOT_KEY_MISSING",
   "REPORT_SNAPSHOT_NOT_FOUND",
+  "REPORT_ITEM_NOT_FOUND",
 ];
 
 function normalizeArray(value) {
@@ -70,17 +71,41 @@ function buildJsonHeaders() {
   };
 }
 
+function normalizeBackendErrorCode(payload, fallbackCode = "") {
+  return (
+    payload?.error?.code ||
+    payload?.code ||
+    payload?.data?.error?.code ||
+    fallbackCode ||
+    ""
+  );
+}
+
+function normalizeBackendErrorDetails(payload) {
+  return (
+    payload?.error?.details ||
+    payload?.details ||
+    payload?.data?.error?.details ||
+    null
+  );
+}
+
 function buildApiError(payload, fallbackMessage, fallbackCode = "") {
   const message =
     payload?.error?.message ||
     payload?.message ||
+    payload?.data?.error?.message ||
     fallbackMessage ||
     "Request failed.";
 
   const error = new Error(message);
-  error.code = payload?.error?.code || payload?.code || fallbackCode || "";
-  error.details = payload?.error?.details || payload?.details || null;
+  error.code = normalizeBackendErrorCode(payload, fallbackCode);
+  error.details = normalizeBackendErrorDetails(payload);
   error.payload = payload || null;
+  error.recoverable = Boolean(
+    error.details?.recoverable ||
+      RECOVERABLE_REPORT_ERROR_CODES.includes(error.code)
+  );
 
   return error;
 }
@@ -89,6 +114,10 @@ export function isRecoverableReportError(error) {
   const code = error?.code || "";
 
   if (RECOVERABLE_REPORT_ERROR_CODES.includes(code)) {
+    return true;
+  }
+
+  if (error?.recoverable === true || error?.details?.recoverable === true) {
     return true;
   }
 
@@ -212,6 +241,7 @@ export async function fetchReportByQueryHash(queryHash) {
       "No report query hash is available for this intelligence run."
     );
     error.code = "REPORT_QUERY_HASH_MISSING";
+    error.recoverable = false;
     throw error;
   }
 
@@ -254,12 +284,14 @@ export async function fetchReportItemByResultId(queryHash, resultId) {
       "No report query hash is available for this intelligence run."
     );
     error.code = "REPORT_QUERY_HASH_MISSING";
+    error.recoverable = false;
     throw error;
   }
 
   if (!resultId) {
     const error = new Error("No result id is available for this intelligence result.");
     error.code = "REPORT_RESULT_ID_MISSING";
+    error.recoverable = false;
     throw error;
   }
 
@@ -302,12 +334,14 @@ export async function fetchReportItemPdfByResultId(queryHash, resultId) {
       "No report query hash is available for this intelligence run."
     );
     error.code = "REPORT_QUERY_HASH_MISSING";
+    error.recoverable = false;
     throw error;
   }
 
   if (!resultId) {
     const error = new Error("No result id is available for this intelligence result.");
     error.code = "REPORT_RESULT_ID_MISSING";
+    error.recoverable = false;
     throw error;
   }
 
@@ -342,6 +376,7 @@ export async function fetchReportItemPdfByResultId(queryHash, resultId) {
   if (!contentType.toLowerCase().includes("application/pdf")) {
     const error = new Error("Backend did not return a PDF report.");
     error.code = "REPORT_PDF_CONTENT_TYPE_INVALID";
+    error.recoverable = false;
     throw error;
   }
 

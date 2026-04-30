@@ -92,6 +92,18 @@ function extractDomain(url = "") {
     }
 }
 
+function reportsBucketConfigured() {
+    return Boolean(
+        process.env.S3_REPORTS_BUCKET ||
+        process.env.REPORTS_BUCKET ||
+        process.env.SNAPSHOT_BUCKET
+    );
+}
+
+function hasUsableSnapshotMetadata(item = {}) {
+    return Boolean(item.s3SnapshotKey || item.responsePayload?.cache?.s3SnapshotKey);
+}
+
 function buildStableResultId(article = {}) {
     const identity = [
         article.url || article.link || "",
@@ -346,6 +358,7 @@ function transformRawArticle(raw = {}, payload) {
         resultId,
         title: normalizeText(raw.title),
         summary: normalizeText(raw.summary || raw.description || raw.contentSnippet || ""),
+        rawSummary: normalizeText(raw.rawSummary || raw.description || raw.contentSnippet || ""),
         url: normalizeText(raw.url || raw.link),
         thumbnail: normalizeText(raw.thumbnail || raw.image || raw.imageUrl || raw.enclosureUrl || ""),
         source: normalizeText(raw.source || raw.outlet || raw.publisher || ""),
@@ -546,7 +559,109 @@ function buildCacheMetadata({ hit, queryHash, cachedItem = null }) {
         queryHash,
         createdAt: cachedItem ? cachedItem.createdAt : null,
         expiresAt: cachedItem ? cachedItem.expiresAt : null,
-        s3SnapshotKey: cachedItem ? cachedItem.s3SnapshotKey || null : null
+        s3SnapshotKey: cachedItem ? cachedItem.s3SnapshotKey || null : null,
+        s3SnapshotBucket: cachedItem ? cachedItem.s3SnapshotBucket || null : null
+    };
+}
+
+function buildNoResultExplanation(finalResults, workerMetadata, normalizedPayload) {
+    if (finalResults.length > 0) return null;
+
+    return workerMetadata.noResultExplanation || {
+        status: "no-qualified-matches",
+        message: "The backend responded successfully, but no articles survived the active filters.",
+        query: normalizedPayload.query,
+        suggestions: [
+            "Try a broader geopolitical phrase.",
+            "Check whether country, region, or sentiment filters are too narrow.",
+            "The topic may be real but not currently present in the selected RSS feeds."
+        ]
+    };
+}
+
+async function writeSnapshotOrThrow({ queryHash, normalizedPayload, responsePayload, createdAt, expiresAt }) {
+    const snapshotResult = await putSnapshot({
+        queryHash,
+        payload: normalizedPayload,
+        responsePayload,
+        createdAt,
+        expiresAt
+    });
+
+    if (reportsBucketConfigured() && !snapshotResult?.s3SnapshotKey) {
+        throw new AppError(
+            "Snapshot storage is configured, but no S3 snapshot key was returned.",
+            500,
+            "SNAPSHOT_WRITE_FAILED",
+            { queryHash }
+        );
+    }
+
+    if (snapshotResult?.s3SnapshotKey) {
+        logger.info("S3 intelligence snapshot written", {
+            queryHash,
+            bucket: snapshotResult.bucket,
+            s3SnapshotKey: snapshotResult.s3SnapshotKey,
+            sourceCount: snapshotResult.sourceCount
+        });
+    } else {
+        logger.info("S3 snapshot skipped; no reports bucket configured", {
+            queryHash
+        });
+    }
+
+    return snapshotResult;
+}
+
+async function generateLiveResponse(normalizedPayload, queryHash) {
+    const workerResponse = await runPythonWorker(normalizedPayload);
+
+    const rawResults = Array.isArray(workerResponse.results)
+        ? workerResponse.results
+        : Array.isArray(workerResponse)
+            ? workerResponse
+            : [];
+
+    const transformed = rawResults.map((item) => transformRawArticle(item, normalizedPayload));
+    const filtered = strictGeographicFilter(transformed, normalizedPayload);
+    const sorted = sortArticles(filtered, normalizedPayload.sortBy);
+    const finalResults = sorted;
+    const workerMetadata = buildWorkerMetadata(workerResponse);
+    const noResultExplanation = buildNoResultExplanation(finalResults, workerMetadata, normalizedPayload);
+
+    logger.info("Intelligence generation completed", {
+        mode: workerResponse.mode || "live",
+        rawCount: rawResults.length,
+        filteredCount: filtered.length,
+        returnedCount: finalResults.length,
+        rawItemsSeen: workerMetadata.rawItemsSeen,
+        filteredOutCount: workerMetadata.filteredOutCount,
+        cacheHit: false,
+        queryHash
+    });
+
+    return {
+        mode: workerResponse.mode || "live",
+        query: normalizedPayload.query,
+        expandedQueries: workerMetadata.expandedQueries,
+        appliedFilters: {
+            regions: normalizedPayload.regions,
+            countries: normalizedPayload.countries,
+            publicationFocus: normalizedPayload.publicationFocus,
+            sentimentFilter: normalizedPayload.sentimentFilter
+        },
+        counts: {
+            raw: rawResults.length,
+            filtered: filtered.length,
+            returned: finalResults.length,
+            rawItemsSeen: workerMetadata.rawItemsSeen,
+            filteredOut: workerMetadata.filteredOutCount
+        },
+        selectedSources: workerMetadata.selectedSources,
+        diagnostics: workerMetadata.diagnostics,
+        noResultExplanation,
+        feedErrors: workerMetadata.feedErrors,
+        results: finalResults
     };
 }
 
@@ -556,121 +671,49 @@ async function generateIntelligence(payload = {}) {
 
     const queryHash = generateQueryHash(normalizedPayload);
     const cachedItem = await getCache(queryHash);
+    const snapshotRequired = reportsBucketConfigured();
 
     if (cachedItem && cachedItem.responsePayload) {
-        logger.info("Returning cached intelligence response", {
-            queryHash,
-            sourceCount: cachedItem.sourceCount || 0,
-            createdAt: cachedItem.createdAt,
-            expiresAt: cachedItem.expiresAt,
-            s3SnapshotKey: cachedItem.s3SnapshotKey || null
-        });
-
-        return {
-            ...cachedItem.responsePayload,
-            mode: "cache",
-            cache: buildCacheMetadata({
-                hit: true,
+        if (snapshotRequired && !hasUsableSnapshotMetadata(cachedItem)) {
+            logger.warn("Ignoring cached intelligence response because snapshot metadata is missing", {
                 queryHash,
-                cachedItem
-            })
-        };
+                createdAt: cachedItem.createdAt,
+                expiresAt: cachedItem.expiresAt,
+                sourceCount: cachedItem.sourceCount || 0
+            });
+        } else {
+            logger.info("Returning cached intelligence response", {
+                queryHash,
+                sourceCount: cachedItem.sourceCount || 0,
+                createdAt: cachedItem.createdAt,
+                expiresAt: cachedItem.expiresAt,
+                s3SnapshotKey: cachedItem.s3SnapshotKey || null
+            });
+
+            return {
+                ...cachedItem.responsePayload,
+                mode: "cache",
+                cache: buildCacheMetadata({
+                    hit: true,
+                    queryHash,
+                    cachedItem
+                })
+            };
+        }
     }
 
     try {
-        const workerResponse = await runPythonWorker(normalizedPayload);
-
-        const rawResults = Array.isArray(workerResponse.results)
-            ? workerResponse.results
-            : Array.isArray(workerResponse)
-                ? workerResponse
-                : [];
-
-        const transformed = rawResults.map((item) => transformRawArticle(item, normalizedPayload));
-        const filtered = strictGeographicFilter(transformed, normalizedPayload);
-        const sorted = sortArticles(filtered, normalizedPayload.sortBy);
-        const finalResults = sorted;
-        const workerMetadata = buildWorkerMetadata(workerResponse);
-
-        const noResultExplanation = finalResults.length === 0
-            ? workerMetadata.noResultExplanation || {
-                status: "no-qualified-matches",
-                message: "The backend responded successfully, but no articles survived the active filters.",
-                query: normalizedPayload.query,
-                suggestions: [
-                    "Try a broader geopolitical phrase.",
-                    "Check whether country, region, or sentiment filters are too narrow.",
-                    "The topic may be real but not currently present in the selected RSS feeds."
-                ]
-            }
-            : null;
-
-        logger.info("Intelligence generation completed", {
-            mode: workerResponse.mode || "live",
-            rawCount: rawResults.length,
-            filteredCount: filtered.length,
-            returnedCount: finalResults.length,
-            rawItemsSeen: workerMetadata.rawItemsSeen,
-            filteredOutCount: workerMetadata.filteredOutCount,
-            cacheHit: false,
-            queryHash
-        });
-
-        const responsePayload = {
-            mode: workerResponse.mode || "live",
-            query: normalizedPayload.query,
-            expandedQueries: workerMetadata.expandedQueries,
-            appliedFilters: {
-                regions: normalizedPayload.regions,
-                countries: normalizedPayload.countries,
-                publicationFocus: normalizedPayload.publicationFocus,
-                sentimentFilter: normalizedPayload.sentimentFilter
-            },
-            counts: {
-                raw: rawResults.length,
-                filtered: filtered.length,
-                returned: finalResults.length,
-                rawItemsSeen: workerMetadata.rawItemsSeen,
-                filteredOut: workerMetadata.filteredOutCount
-            },
-            selectedSources: workerMetadata.selectedSources,
-            diagnostics: workerMetadata.diagnostics,
-            noResultExplanation,
-            feedErrors: workerMetadata.feedErrors,
-            results: finalResults
-        };
+        const responsePayload = await generateLiveResponse(normalizedPayload, queryHash);
 
         const createdAt = Date.now();
         const expiresAt = buildExpiryTimestamp(createdAt);
-        let snapshotResult = null;
-
-        try {
-            snapshotResult = await putSnapshot({
-                queryHash,
-                payload: normalizedPayload,
-                responsePayload,
-                createdAt,
-                expiresAt
-            });
-
-            if (snapshotResult?.s3SnapshotKey) {
-                logger.info("S3 intelligence snapshot written", {
-                    queryHash,
-                    bucket: snapshotResult.bucket,
-                    s3SnapshotKey: snapshotResult.s3SnapshotKey,
-                    sourceCount: snapshotResult.sourceCount
-                });
-            } else {
-                logger.info("S3 snapshot skipped; no reports bucket configured", {
-                    queryHash
-                });
-            }
-        } catch (snapshotError) {
-            logger.warn("S3 snapshot write failed; continuing without snapshot", {
-                queryHash,
-                message: snapshotError.message
-            });
-        }
+        const snapshotResult = await writeSnapshotOrThrow({
+            queryHash,
+            normalizedPayload,
+            responsePayload,
+            createdAt,
+            expiresAt
+        });
 
         await putCache(buildCacheItem(queryHash, normalizedPayload, responsePayload, {
             createdAt,
@@ -687,7 +730,8 @@ async function generateIntelligence(payload = {}) {
                 cachedItem: {
                     createdAt,
                     expiresAt,
-                    s3SnapshotKey: snapshotResult?.s3SnapshotKey || null
+                    s3SnapshotKey: snapshotResult?.s3SnapshotKey || null,
+                    s3SnapshotBucket: snapshotResult?.bucket || null
                 }
             })
         };

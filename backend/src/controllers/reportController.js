@@ -17,13 +17,26 @@ function isValidResultId(resultId) {
     return Boolean(resultId && /^[a-f0-9]{64}$/i.test(resultId));
 }
 
+function buildReportRecoveryDetails(cacheItem = {}, extra = {}) {
+    return {
+        createdAt: cacheItem.createdAt || null,
+        expiresAt: cacheItem.expiresAt || null,
+        isExpired: Boolean(cacheItem.isExpired),
+        s3SnapshotKey: cacheItem.s3SnapshotKey || null,
+        s3SnapshotBucket: cacheItem.s3SnapshotBucket || null,
+        recoverable: true,
+        recommendedAction: "REGENERATE_INTELLIGENCE_QUERY",
+        ...extra
+    };
+}
+
 async function loadSnapshotForQueryHash(queryHash) {
     if (!isValidQueryHash(queryHash)) {
         throw new AppError(
             "Invalid report query hash",
             400,
             "INVALID_QUERY_HASH",
-            { queryHash }
+            { queryHash, recoverable: false }
         );
     }
 
@@ -31,24 +44,23 @@ async function loadSnapshotForQueryHash(queryHash) {
 
     if (!cacheItem) {
         throw new AppError(
-            "Report metadata not found. Generate this intelligence query again to recreate the report index.",
+            "Report metadata not found. Regenerate this intelligence query to recreate the report index.",
             404,
             "REPORT_METADATA_NOT_FOUND",
-            { queryHash }
+            {
+                queryHash,
+                recoverable: true,
+                recommendedAction: "REGENERATE_INTELLIGENCE_QUERY"
+            }
         );
     }
 
     if (!cacheItem.s3SnapshotKey) {
         throw new AppError(
-            "Report snapshot key is missing from cache metadata. Generate this intelligence query again to recreate the report snapshot.",
+            "Report snapshot key is missing from cache metadata. Regenerate this intelligence query to recreate the report snapshot.",
             404,
             "REPORT_SNAPSHOT_KEY_MISSING",
-            {
-                queryHash,
-                createdAt: cacheItem.createdAt,
-                expiresAt: cacheItem.expiresAt,
-                isExpired: cacheItem.isExpired
-            }
+            buildReportRecoveryDetails(cacheItem, { queryHash })
         );
     }
 
@@ -56,16 +68,10 @@ async function loadSnapshotForQueryHash(queryHash) {
 
     if (!snapshot) {
         throw new AppError(
-            "Report snapshot could not be loaded from storage. Generate this intelligence query again to recreate the report snapshot.",
+            "Report snapshot could not be loaded from storage. Regenerate this intelligence query to recreate the report snapshot.",
             404,
             "REPORT_SNAPSHOT_NOT_FOUND",
-            {
-                queryHash,
-                s3SnapshotKey: cacheItem.s3SnapshotKey,
-                createdAt: cacheItem.createdAt,
-                expiresAt: cacheItem.expiresAt,
-                isExpired: cacheItem.isExpired
-            }
+            buildReportRecoveryDetails(cacheItem, { queryHash })
         );
     }
 
@@ -79,14 +85,37 @@ function normalizeResultId(result = {}) {
     return result.resultId || result.id || "";
 }
 
-function findSnapshotResult(snapshot, resultId) {
-    const results = Array.isArray(snapshot?.responsePayload?.results)
-        ? snapshot.responsePayload.results
-        : Array.isArray(snapshot?.results)
-            ? snapshot.results
-            : [];
+function getSnapshotResults(snapshot) {
+    if (Array.isArray(snapshot?.responsePayload?.results)) {
+        return snapshot.responsePayload.results;
+    }
 
+    if (Array.isArray(snapshot?.results)) {
+        return snapshot.results;
+    }
+
+    if (Array.isArray(snapshot?.report?.responsePayload?.results)) {
+        return snapshot.report.responsePayload.results;
+    }
+
+    return [];
+}
+
+function findSnapshotResult(snapshot, resultId) {
+    const results = getSnapshotResults(snapshot);
     return results.find((result) => normalizeResultId(result) === resultId) || null;
+}
+
+function buildReportMetadata(queryHash, cacheItem, extra = {}) {
+    return {
+        queryHash,
+        s3SnapshotKey: cacheItem.s3SnapshotKey,
+        s3SnapshotBucket: cacheItem.s3SnapshotBucket || null,
+        createdAt: cacheItem.createdAt,
+        expiresAt: cacheItem.expiresAt,
+        isExpired: cacheItem.isExpired || false,
+        ...extra
+    };
 }
 
 const handleGetReportByQueryHash = asyncHandler(async (req, res) => {
@@ -97,14 +126,7 @@ const handleGetReportByQueryHash = asyncHandler(async (req, res) => {
         successResponse(
             {
                 report: snapshot,
-                metadata: {
-                    queryHash,
-                    s3SnapshotKey: cacheItem.s3SnapshotKey,
-                    s3SnapshotBucket: cacheItem.s3SnapshotBucket || null,
-                    createdAt: cacheItem.createdAt,
-                    expiresAt: cacheItem.expiresAt,
-                    isExpired: cacheItem.isExpired || false
-                }
+                metadata: buildReportMetadata(queryHash, cacheItem)
             },
             {
                 timestamp: new Date().toISOString()
@@ -122,7 +144,7 @@ const handleGetReportItemByResultId = asyncHandler(async (req, res) => {
             "Invalid report result id",
             400,
             "INVALID_RESULT_ID",
-            { queryHash, resultId }
+            { queryHash, resultId, recoverable: false }
         );
     }
 
@@ -131,14 +153,13 @@ const handleGetReportItemByResultId = asyncHandler(async (req, res) => {
 
     if (!result) {
         throw new AppError(
-            "Report item not found in snapshot",
+            "Report item not found in snapshot. Regenerate the intelligence query to rebuild this card report.",
             404,
             "REPORT_ITEM_NOT_FOUND",
-            {
+            buildReportRecoveryDetails(cacheItem, {
                 queryHash,
-                resultId,
-                s3SnapshotKey: cacheItem.s3SnapshotKey
-            }
+                resultId
+            })
         );
     }
 
@@ -171,15 +192,9 @@ const handleGetReportItemByResultId = asyncHandler(async (req, res) => {
         successResponse(
             {
                 report,
-                metadata: {
-                    queryHash,
-                    resultId,
-                    s3SnapshotKey: cacheItem.s3SnapshotKey,
-                    s3SnapshotBucket: cacheItem.s3SnapshotBucket || null,
-                    createdAt: cacheItem.createdAt,
-                    expiresAt: cacheItem.expiresAt,
-                    isExpired: cacheItem.isExpired || false
-                }
+                metadata: buildReportMetadata(queryHash, cacheItem, {
+                    resultId
+                })
             },
             {
                 timestamp: new Date().toISOString()
