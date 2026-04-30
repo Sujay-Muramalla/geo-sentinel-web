@@ -3,6 +3,12 @@ import { getStoredAccessToken } from "@/lib/auth";
 const DEFAULT_API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
 
+export const RECOVERABLE_REPORT_ERROR_CODES = [
+  "REPORT_METADATA_NOT_FOUND",
+  "REPORT_SNAPSHOT_KEY_MISSING",
+  "REPORT_SNAPSHOT_NOT_FOUND",
+];
+
 function normalizeArray(value) {
   return Array.isArray(value) ? value : [];
 }
@@ -62,6 +68,35 @@ function buildJsonHeaders() {
     "Content-Type": "application/json",
     ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
   };
+}
+
+function buildApiError(payload, fallbackMessage, fallbackCode = "") {
+  const message =
+    payload?.error?.message ||
+    payload?.message ||
+    fallbackMessage ||
+    "Request failed.";
+
+  const error = new Error(message);
+  error.code = payload?.error?.code || payload?.code || fallbackCode || "";
+  error.details = payload?.error?.details || payload?.details || null;
+  error.payload = payload || null;
+
+  return error;
+}
+
+export function isRecoverableReportError(error) {
+  const code = error?.code || "";
+
+  if (RECOVERABLE_REPORT_ERROR_CODES.includes(code)) {
+    return true;
+  }
+
+  const message = String(error?.message || "").toUpperCase();
+
+  return RECOVERABLE_REPORT_ERROR_CODES.some((recoverableCode) =>
+    message.includes(recoverableCode)
+  );
 }
 
 export function getApiResults(payload) {
@@ -153,19 +188,19 @@ export async function generateIntelligence(form) {
   }
 
   if (!response.ok) {
-    const message =
-      payload?.error?.message ||
-      payload?.message ||
-      `Request failed with status ${response.status}`;
-    throw new Error(message);
+    throw buildApiError(
+      payload,
+      `Request failed with status ${response.status}`,
+      `HTTP_${response.status}`
+    );
   }
 
   if (payload?.success === false) {
-    const message =
-      payload?.error?.message ||
-      payload?.message ||
-      "Backend returned an unsuccessful response.";
-    throw new Error(message);
+    throw buildApiError(
+      payload,
+      "Backend returned an unsuccessful response.",
+      "INTELLIGENCE_GENERATION_FAILED"
+    );
   }
 
   return payload;
@@ -173,7 +208,11 @@ export async function generateIntelligence(form) {
 
 export async function fetchReportByQueryHash(queryHash) {
   if (!queryHash) {
-    throw new Error("No report query hash is available for this intelligence run.");
+    const error = new Error(
+      "No report query hash is available for this intelligence run."
+    );
+    error.code = "REPORT_QUERY_HASH_MISSING";
+    throw error;
   }
 
   const endpoint = `${DEFAULT_API_BASE_URL}/api/reports/${encodeURIComponent(
@@ -191,19 +230,19 @@ export async function fetchReportByQueryHash(queryHash) {
   }
 
   if (!response.ok) {
-    const message =
-      payload?.error?.message ||
-      payload?.message ||
-      `Report download failed with status ${response.status}`;
-    throw new Error(message);
+    throw buildApiError(
+      payload,
+      `Report download failed with status ${response.status}`,
+      `HTTP_${response.status}`
+    );
   }
 
   if (payload?.success === false) {
-    const message =
-      payload?.error?.message ||
-      payload?.message ||
-      "Backend returned an unsuccessful report response.";
-    throw new Error(message);
+    throw buildApiError(
+      payload,
+      "Backend returned an unsuccessful report response.",
+      "REPORT_DOWNLOAD_FAILED"
+    );
   }
 
   return payload;
@@ -211,11 +250,17 @@ export async function fetchReportByQueryHash(queryHash) {
 
 export async function fetchReportItemByResultId(queryHash, resultId) {
   if (!queryHash) {
-    throw new Error("No report query hash is available for this intelligence run.");
+    const error = new Error(
+      "No report query hash is available for this intelligence run."
+    );
+    error.code = "REPORT_QUERY_HASH_MISSING";
+    throw error;
   }
 
   if (!resultId) {
-    throw new Error("No result id is available for this intelligence result.");
+    const error = new Error("No result id is available for this intelligence result.");
+    error.code = "REPORT_RESULT_ID_MISSING";
+    throw error;
   }
 
   const endpoint = `${DEFAULT_API_BASE_URL}/api/reports/${encodeURIComponent(
@@ -233,19 +278,19 @@ export async function fetchReportItemByResultId(queryHash, resultId) {
   }
 
   if (!response.ok) {
-    const message =
-      payload?.error?.message ||
-      payload?.message ||
-      `Per-card report download failed with status ${response.status}`;
-    throw new Error(message);
+    throw buildApiError(
+      payload,
+      `Per-card report download failed with status ${response.status}`,
+      `HTTP_${response.status}`
+    );
   }
 
   if (payload?.success === false) {
-    const message =
-      payload?.error?.message ||
-      payload?.message ||
-      "Backend returned an unsuccessful per-card report response.";
-    throw new Error(message);
+    throw buildApiError(
+      payload,
+      "Backend returned an unsuccessful per-card report response.",
+      "CARD_REPORT_DOWNLOAD_FAILED"
+    );
   }
 
   return payload;
@@ -253,11 +298,17 @@ export async function fetchReportItemByResultId(queryHash, resultId) {
 
 export async function fetchReportItemPdfByResultId(queryHash, resultId) {
   if (!queryHash) {
-    throw new Error("No report query hash is available for this intelligence run.");
+    const error = new Error(
+      "No report query hash is available for this intelligence run."
+    );
+    error.code = "REPORT_QUERY_HASH_MISSING";
+    throw error;
   }
 
   if (!resultId) {
-    throw new Error("No result id is available for this intelligence result.");
+    const error = new Error("No result id is available for this intelligence result.");
+    error.code = "REPORT_RESULT_ID_MISSING";
+    throw error;
   }
 
   const endpoint = `${DEFAULT_API_BASE_URL}/api/reports/${encodeURIComponent(
@@ -271,22 +322,27 @@ export async function fetchReportItemPdfByResultId(queryHash, resultId) {
   });
 
   if (!response.ok) {
-    let message = `Per-card PDF report download failed with status ${response.status}`;
+    let payload = null;
 
     try {
-      const payload = await response.json();
-      message = payload?.error?.message || payload?.message || message;
+      payload = await response.json();
     } catch {
-      // PDF endpoint may return non-JSON errors. Keep the HTTP status message.
+      payload = null;
     }
 
-    throw new Error(message);
+    throw buildApiError(
+      payload,
+      `Per-card PDF report download failed with status ${response.status}`,
+      `HTTP_${response.status}`
+    );
   }
 
   const contentType = response.headers.get("content-type") || "";
 
   if (!contentType.toLowerCase().includes("application/pdf")) {
-    throw new Error("Backend did not return a PDF report.");
+    const error = new Error("Backend did not return a PDF report.");
+    error.code = "REPORT_PDF_CONTENT_TYPE_INVALID";
+    throw error;
   }
 
   return response.blob();

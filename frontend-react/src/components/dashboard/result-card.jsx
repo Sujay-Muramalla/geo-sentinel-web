@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import {
   fetchReportByQueryHash,
   fetchReportItemPdfByResultId,
+  isRecoverableReportError,
 } from "@/lib/api";
 
 const SUMMARY_LIMIT = 360;
@@ -229,15 +230,18 @@ function triggerPdfDownload(blob, queryHash, resultId = "") {
 
 function explainReportError(error) {
   const message = error?.message || "";
+  const code = error?.code || "";
 
   if (
+    code === "REPORT_METADATA_NOT_FOUND" ||
     message.includes("REPORT_METADATA_NOT_FOUND") ||
     message.toLowerCase().includes("metadata not found")
   ) {
-    return "This report index is no longer available. Generate the same intelligence query again, then retry the download.";
+    return "This report index is no longer available. Regenerate the same intelligence query, then retry the download.";
   }
 
   if (
+    code === "REPORT_SNAPSHOT_KEY_MISSING" ||
     message.includes("REPORT_SNAPSHOT_KEY_MISSING") ||
     message.toLowerCase().includes("snapshot key")
   ) {
@@ -245,10 +249,11 @@ function explainReportError(error) {
   }
 
   if (
+    code === "REPORT_SNAPSHOT_NOT_FOUND" ||
     message.includes("REPORT_SNAPSHOT_NOT_FOUND") ||
     message.toLowerCase().includes("snapshot")
   ) {
-    return "The stored report snapshot could not be loaded. Regenerate the query and try the report download again.";
+    return "The stored report snapshot could not be loaded. Regenerate the query and retry the report download.";
   }
 
   if (message.toLowerCase().includes("failed to fetch")) {
@@ -285,11 +290,18 @@ function ThumbnailFallback({ source, region }) {
   );
 }
 
-export function ResultCard({ result, reportQueryHash = "" }) {
+export function ResultCard({
+  result,
+  reportQueryHash = "",
+  onRegenerateReport,
+  regeneratingReport = false,
+}) {
   const [downloadState, setDownloadState] = useState({
     loadingQuery: false,
     loadingItem: false,
     error: "",
+    recoverable: false,
+    lastAction: "",
   });
   const [thumbnailFailed, setThumbnailFailed] = useState(false);
 
@@ -309,21 +321,49 @@ export function ResultCard({ result, reportQueryHash = "" }) {
   const canOpenSource = Boolean(sourceUrl);
   const canDownloadQueryReport = Boolean(reportQueryHash);
   const canDownloadItemReport = Boolean(reportQueryHash && resultId);
+  const canRegenerateReport =
+    Boolean(onRegenerateReport) && downloadState.recoverable;
+
+  async function downloadQueryReport(queryHashToUse = reportQueryHash) {
+    const reportPayload = await fetchReportByQueryHash(queryHashToUse);
+    triggerJsonDownload(reportPayload, queryHashToUse, "", "query");
+  }
+
+  async function downloadItemReport(queryHashToUse = reportQueryHash) {
+    const reportBlob = await fetchReportItemPdfByResultId(
+      queryHashToUse,
+      resultId
+    );
+    triggerPdfDownload(reportBlob, queryHashToUse, resultId);
+  }
 
   async function handleQueryReportDownload() {
     if (!canDownloadQueryReport || downloadState.loadingQuery) return;
 
-    setDownloadState({ loadingQuery: true, loadingItem: false, error: "" });
+    setDownloadState({
+      loadingQuery: true,
+      loadingItem: false,
+      error: "",
+      recoverable: false,
+      lastAction: "query",
+    });
 
     try {
-      const reportPayload = await fetchReportByQueryHash(reportQueryHash);
-      triggerJsonDownload(reportPayload, reportQueryHash, "", "query");
-      setDownloadState({ loadingQuery: false, loadingItem: false, error: "" });
+      await downloadQueryReport(reportQueryHash);
+      setDownloadState({
+        loadingQuery: false,
+        loadingItem: false,
+        error: "",
+        recoverable: false,
+        lastAction: "",
+      });
     } catch (error) {
       setDownloadState({
         loadingQuery: false,
         loadingItem: false,
         error: explainReportError(error),
+        recoverable: isRecoverableReportError(error),
+        lastAction: "query",
       });
     }
   }
@@ -331,17 +371,72 @@ export function ResultCard({ result, reportQueryHash = "" }) {
   async function handleItemReportDownload() {
     if (!canDownloadItemReport || downloadState.loadingItem) return;
 
-    setDownloadState({ loadingQuery: false, loadingItem: true, error: "" });
+    setDownloadState({
+      loadingQuery: false,
+      loadingItem: true,
+      error: "",
+      recoverable: false,
+      lastAction: "item",
+    });
 
     try {
-      const reportBlob = await fetchReportItemPdfByResultId(reportQueryHash, resultId);
-      triggerPdfDownload(reportBlob, reportQueryHash, resultId);
-      setDownloadState({ loadingQuery: false, loadingItem: false, error: "" });
+      await downloadItemReport(reportQueryHash);
+      setDownloadState({
+        loadingQuery: false,
+        loadingItem: false,
+        error: "",
+        recoverable: false,
+        lastAction: "",
+      });
     } catch (error) {
       setDownloadState({
         loadingQuery: false,
         loadingItem: false,
         error: explainReportError(error),
+        recoverable: isRecoverableReportError(error),
+        lastAction: "item",
+      });
+    }
+  }
+
+  async function handleRegenerateAndRetry() {
+    if (!canRegenerateReport || regeneratingReport) return;
+
+    const retryAction = downloadState.lastAction || "item";
+
+    setDownloadState({
+      loadingQuery: retryAction === "query",
+      loadingItem: retryAction === "item",
+      error: "",
+      recoverable: false,
+      lastAction: retryAction,
+    });
+
+    try {
+      const freshQueryHash = await onRegenerateReport();
+
+      if (retryAction === "query") {
+        await downloadQueryReport(freshQueryHash);
+      } else {
+        await downloadItemReport(freshQueryHash);
+      }
+
+      setDownloadState({
+        loadingQuery: false,
+        loadingItem: false,
+        error: "",
+        recoverable: false,
+        lastAction: "",
+      });
+    } catch (error) {
+      setDownloadState({
+        loadingQuery: false,
+        loadingItem: false,
+        error:
+          error?.message ||
+          "Regeneration failed. Re-run the scenario manually and retry the report download.",
+        recoverable: false,
+        lastAction: retryAction,
       });
     }
   }
@@ -508,22 +603,34 @@ export function ResultCard({ result, reportQueryHash = "" }) {
                 <button
                   type="button"
                   onClick={handleItemReportDownload}
-                  disabled={!canDownloadItemReport || downloadState.loadingItem}
+                  disabled={
+                    !canDownloadItemReport ||
+                    downloadState.loadingItem ||
+                    regeneratingReport
+                  }
                   className="inline-flex items-center rounded-lg border border-emerald-400/20 bg-emerald-400/10 px-3 py-2 text-sm font-medium text-emerald-200 transition hover:border-emerald-300/40 hover:bg-emerald-400/15 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/5 disabled:text-slate-500"
                 >
                   {downloadState.loadingItem
-                    ? "Downloading PDF…"
+                    ? regeneratingReport
+                      ? "Regenerating PDF…"
+                      : "Downloading PDF…"
                     : "Download card PDF"}
                 </button>
 
                 <button
                   type="button"
                   onClick={handleQueryReportDownload}
-                  disabled={!canDownloadQueryReport || downloadState.loadingQuery}
+                  disabled={
+                    !canDownloadQueryReport ||
+                    downloadState.loadingQuery ||
+                    regeneratingReport
+                  }
                   className="inline-flex items-center rounded-lg border border-cyan-400/20 bg-cyan-400/10 px-3 py-2 text-sm font-medium text-cyan-200 transition hover:border-cyan-300/40 hover:bg-cyan-400/15 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/5 disabled:text-slate-500"
                 >
                   {downloadState.loadingQuery
-                    ? "Downloading JSON…"
+                    ? regeneratingReport
+                      ? "Regenerating JSON…"
+                      : "Downloading JSON…"
                     : "Download full JSON"}
                 </button>
               </div>
@@ -559,13 +666,26 @@ export function ResultCard({ result, reportQueryHash = "" }) {
                 <p className="mt-1 text-xs leading-5 text-red-100/80">
                   {downloadState.error}
                 </p>
+
+                {canRegenerateReport ? (
+                  <button
+                    type="button"
+                    onClick={handleRegenerateAndRetry}
+                    disabled={regeneratingReport}
+                    className="mt-3 inline-flex items-center rounded-lg border border-amber-300/30 bg-amber-300/10 px-3 py-2 text-xs font-semibold text-amber-100 transition hover:border-amber-200/50 hover:bg-amber-300/15 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/5 disabled:text-slate-500"
+                  >
+                    {regeneratingReport
+                      ? "Regenerating intelligence…"
+                      : "Regenerate and retry download"}
+                  </button>
+                ) : null}
               </div>
             ) : null}
           </div>
 
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-4">
             <p className="text-xs text-slate-500">
-              Live RSS intelligence result · GEO-51F product reliability enabled
+              Live RSS intelligence result · GEO-51G report regeneration enabled
             </p>
 
             {canOpenSource ? (
