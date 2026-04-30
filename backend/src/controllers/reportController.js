@@ -27,14 +27,28 @@ async function loadSnapshotForQueryHash(queryHash) {
         );
     }
 
-    const cacheItem = await getCache(queryHash);
+    const cacheItem = await getCache(queryHash, { includeExpired: true });
 
-    if (!cacheItem || !cacheItem.s3SnapshotKey) {
+    if (!cacheItem) {
         throw new AppError(
-            "Report snapshot not found",
+            "Report metadata not found. Generate this intelligence query again to recreate the report index.",
             404,
-            "REPORT_NOT_FOUND",
+            "REPORT_METADATA_NOT_FOUND",
             { queryHash }
+        );
+    }
+
+    if (!cacheItem.s3SnapshotKey) {
+        throw new AppError(
+            "Report snapshot key is missing from cache metadata. Generate this intelligence query again to recreate the report snapshot.",
+            404,
+            "REPORT_SNAPSHOT_KEY_MISSING",
+            {
+                queryHash,
+                createdAt: cacheItem.createdAt,
+                expiresAt: cacheItem.expiresAt,
+                isExpired: cacheItem.isExpired
+            }
         );
     }
 
@@ -42,12 +56,15 @@ async function loadSnapshotForQueryHash(queryHash) {
 
     if (!snapshot) {
         throw new AppError(
-            "Report snapshot could not be loaded",
+            "Report snapshot could not be loaded from storage. Generate this intelligence query again to recreate the report snapshot.",
             404,
             "REPORT_SNAPSHOT_NOT_FOUND",
             {
                 queryHash,
-                s3SnapshotKey: cacheItem.s3SnapshotKey
+                s3SnapshotKey: cacheItem.s3SnapshotKey,
+                createdAt: cacheItem.createdAt,
+                expiresAt: cacheItem.expiresAt,
+                isExpired: cacheItem.isExpired
             }
         );
     }
@@ -85,7 +102,8 @@ const handleGetReportByQueryHash = asyncHandler(async (req, res) => {
                     s3SnapshotKey: cacheItem.s3SnapshotKey,
                     s3SnapshotBucket: cacheItem.s3SnapshotBucket || null,
                     createdAt: cacheItem.createdAt,
-                    expiresAt: cacheItem.expiresAt
+                    expiresAt: cacheItem.expiresAt,
+                    isExpired: cacheItem.isExpired || false
                 }
             },
             {
@@ -159,7 +177,8 @@ const handleGetReportItemByResultId = asyncHandler(async (req, res) => {
                     s3SnapshotKey: cacheItem.s3SnapshotKey,
                     s3SnapshotBucket: cacheItem.s3SnapshotBucket || null,
                     createdAt: cacheItem.createdAt,
-                    expiresAt: cacheItem.expiresAt
+                    expiresAt: cacheItem.expiresAt,
+                    isExpired: cacheItem.isExpired || false
                 }
             },
             {

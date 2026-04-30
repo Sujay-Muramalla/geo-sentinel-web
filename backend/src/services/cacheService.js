@@ -30,7 +30,11 @@ function buildCacheItem(queryHash, payload, responsePayload, options = {}) {
         ? Number(options.expiresAt)
         : buildExpiryTimestamp(createdAt, ttlSeconds);
 
-    const s3SnapshotKey = options.s3SnapshotKey || responsePayload?.cache?.s3SnapshotKey || null;
+    const s3SnapshotKey =
+        options.s3SnapshotKey ||
+        responsePayload?.cache?.s3SnapshotKey ||
+        responsePayload?.metadata?.s3SnapshotKey ||
+        null;
 
     return {
         queryHash,
@@ -47,7 +51,9 @@ function buildCacheItem(queryHash, payload, responsePayload, options = {}) {
     };
 }
 
-async function getCache(queryHash) {
+async function getCache(queryHash, options = {}) {
+    const includeExpired = Boolean(options.includeExpired);
+
     try {
         const command = new GetItemCommand({
             TableName: TABLE_NAME,
@@ -73,11 +79,16 @@ async function getCache(queryHash) {
         };
 
         const now = Math.floor(Date.now() / 1000);
-        if (item.expiresAt && item.expiresAt < now) {
+        const isExpired = item.expiresAt && item.expiresAt < now;
+
+        if (isExpired && !includeExpired) {
             return null;
         }
 
-        return item;
+        return {
+            ...item,
+            isExpired: Boolean(isExpired)
+        };
     } catch (error) {
         console.error("[CACHE][GET] Error:", error.message);
         return null;
