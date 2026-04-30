@@ -5,6 +5,7 @@ import traceback
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 from html import unescape
+from urllib.parse import urlparse
 from xml.etree import ElementTree as ET
 
 import requests
@@ -440,6 +441,48 @@ def clean_html(value):
     text = re.sub(r"<[^>]+>", " ", text)
     return re.sub(r"\s+", " ", text).strip()
 
+def is_valid_image_url(value):
+    url = normalize_text(unescape(value))
+    if not url:
+        return False
+
+    try:
+        parsed = urlparse(url)
+        if parsed.scheme not in {"http", "https"}:
+            return False
+    except Exception:
+        return False
+
+    lowered = url.lower()
+
+    # Reject useless images
+    blocked_fragments = [
+        "placeholder",
+        "spacer",
+        "tracking",
+        "pixel",
+        "1x1",
+        "transparent",
+        "logo",
+        "favicon",
+        "avatar"
+    ]
+
+    if any(fragment in lowered for fragment in blocked_fragments):
+        return False
+
+    return True
+
+
+def normalize_thumbnail_url(value):
+    url = normalize_text(unescape(value))
+
+    if not is_valid_image_url(url):
+        return ""
+
+    # Normalize HTML encoding issues
+    return url.replace("&amp;", "&")
+
 
 def extract_thumbnail(item):
     media_namespaces = [
@@ -447,21 +490,40 @@ def extract_thumbnail(item):
         "{http://purl.org/rss/1.0/modules/content/}",
     ]
 
+    # 1. media:content / media:thumbnail
     for namespace in media_namespaces:
         for tag in ["content", "thumbnail"]:
-            node = item.find(f".//{namespace}{tag}")
-            if node is not None:
-                url = normalize_text(node.attrib.get("url") or node.attrib.get("href"))
-                if url:
-                    return unescape(url)
+            for node in item.findall(f".//{namespace}{tag}"):
+                url = normalize_thumbnail_url(
+                    node.attrib.get("url") or node.attrib.get("href")
+                )
+                medium = normalize_text(node.attrib.get("medium")).lower()
+                mime_type = normalize_text(node.attrib.get("type")).lower()
 
+                if url and (not medium or medium == "image" or mime_type.startswith("image/")):
+                    return url
+
+    # 2. media:group (common in richer feeds)
+    for node in item.findall(".//{http://search.yahoo.com/mrss/}group"):
+        for child in list(node):
+            url = normalize_thumbnail_url(
+                child.attrib.get("url") or child.attrib.get("href")
+            )
+            if url:
+                return url
+
+    # 3. enclosure (RSS standard)
     enclosure = item.find("enclosure")
     if enclosure is not None:
         enclosure_type = normalize_text(enclosure.attrib.get("type")).lower()
-        enclosure_url = normalize_text(enclosure.attrib.get("url") or enclosure.attrib.get("href"))
-        if enclosure_url and (not enclosure_type or enclosure_type.startswith("image/")):
-            return unescape(enclosure_url)
+        enclosure_url = normalize_thumbnail_url(
+            enclosure.attrib.get("url") or enclosure.attrib.get("href")
+        )
 
+        if enclosure_url and (not enclosure_type or enclosure_type.startswith("image/")):
+            return enclosure_url
+
+    # 4. HTML fallback (description/content)
     html_candidates = [
         item.findtext("description"),
         item.findtext("summary"),
@@ -472,16 +534,82 @@ def extract_thumbnail(item):
     ]
 
     for html in html_candidates:
-        match = re.search(
-            r'<img[^>]+src=["\']([^"\']+)["\']',
-            normalize_text(html),
+        html = normalize_text(html)
+
+        matches = re.findall(
+            r'<img[^>]+(?:src|data-src|data-original)=["\']([^"\']+)["\']',
+            html,
             flags=re.IGNORECASE,
         )
-        if match:
-            return unescape(match.group(1))
 
-    return None
+        for candidate in matches:
+            url = normalize_thumbnail_url(candidate)
+            if url:
+                return url
 
+    return ""
+
+SUMMARY_MAX_LENGTH = 520
+
+
+def split_sentences(value):
+    text = clean_html(value)
+    if not text:
+        return []
+
+    parts = re.split(r"(?<=[.!?])\s+", text)
+    return [part.strip() for part in parts if len(part.strip()) >= 20]
+
+
+def compact_summary(value, limit=SUMMARY_MAX_LENGTH):
+    text = clean_html(value)
+    if not text:
+        return ""
+
+    if len(text) <= limit:
+        return text
+
+    sentences = split_sentences(text)
+    output = ""
+
+    for sentence in sentences:
+        candidate = f"{output} {sentence}".strip()
+        if len(candidate) > limit:
+            break
+        output = candidate
+
+    if output:
+        return output
+
+    return f"{text[:limit].rsplit(' ', 1)[0].strip()}…"
+
+
+def build_signal_summary(title, raw_summary, query, feed, sentiment_label, matched_query=""):
+    title = clean_html(title)
+    raw_summary = compact_summary(raw_summary, 360)
+    query_text = normalize_text(matched_query or query)
+    source = normalize_text(feed.get("source", "the source"))
+    region = normalize_text(feed.get("region", "the selected region"))
+    country = normalize_text(feed.get("country", ""))
+
+    if raw_summary and raw_summary.lower() != title.lower():
+        return raw_summary
+
+    location = country or region
+    topic = query_text or title or "the selected geopolitical topic"
+
+    sentiment_phrase = {
+        "negative": "risk-sensitive",
+        "positive": "constructive",
+        "neutral": "monitoring-relevant",
+    }.get(sentiment_label, "monitoring-relevant")
+
+    return (
+        f"{source} is reporting a {sentiment_phrase} signal linked to {topic}"
+        f"{f' in {location}' if location else ''}. "
+        f"The article is relevant because it matched Geo-Sentinel source, recency, geography, "
+        f"and query scoring rules for this intelligence run."
+    )
 
 def canonical_token(token):
     token = normalize_text(token).lower()
@@ -1111,6 +1239,7 @@ def parse_feed(feed, query, payload, query_variants, diagnostics):
 
     for item in feed_items:
         title, summary, url, published, thumbnail = parse_feed_item(item, feed_type)
+        matched_query = query
 
         if not title or not url:
             diagnostics["rejectedMissingTitleOrUrl"] += 1
@@ -1175,6 +1304,15 @@ def parse_feed(feed, query, payload, query_variants, diagnostics):
             continue
 
         sent, sent_score = sentiment(text)
+        article_summary = build_signal_summary(
+            title=title,
+            raw_summary=summary,
+            query=query,
+            feed=feed,
+            sentiment_label=sent,
+            matched_query=matched_query,
+        )
+
         r_score = recency_score(published)
         g_score = geo_score(query, feed, payload)
         s_score = source_score(feed)
@@ -1184,7 +1322,8 @@ def parse_feed(feed, query, payload, query_variants, diagnostics):
 
         items.append({
             "title": title,
-            "summary": summary,
+            "summary": article_summary,
+            "rawSummary": summary,
             "url": url,
             "thumbnail": thumbnail,
             "source": feed["source"],
