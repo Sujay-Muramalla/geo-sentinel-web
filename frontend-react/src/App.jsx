@@ -37,13 +37,31 @@ const INITIAL_FORM = {
   sortBy: "final-desc",
 };
 
-const EXAMPLE_SCENARIOS = [
-  "Taiwan semiconductor disruption",
-  "Red Sea shipping attacks",
-  "India-China border tension",
-  "NATO escalation in Eastern Europe",
-  "South China Sea naval confrontation",
-  "Iran-Israel regional escalation",
+const BASE_SCENARIOS = [
+  {
+    label: "Taiwan semiconductor disruption",
+    meta: "Asia · supply chain",
+  },
+  {
+    label: "Red Sea shipping attacks",
+    meta: "Middle East · trade route",
+  },
+  {
+    label: "India-China border tension",
+    meta: "Asia · border risk",
+  },
+  {
+    label: "NATO escalation in Eastern Europe",
+    meta: "Europe · security",
+  },
+  {
+    label: "South China Sea naval confrontation",
+    meta: "Asia · maritime",
+  },
+  {
+    label: "Iran-Israel regional escalation",
+    meta: "Middle East · conflict",
+  },
 ];
 
 function normalizeSentiment(value) {
@@ -152,6 +170,7 @@ function mapApiResults(payload) {
       ...item,
       id:
         item?.id ||
+        item?.resultId ||
         item?.url ||
         item?.link ||
         `${item?.source || item?.publisher || "source"}-${index}`,
@@ -167,6 +186,8 @@ function mapApiResults(payload) {
         item?.snippet ||
         item?.contentSnippet ||
         "No summary was returned for this result.",
+      rawSummary: item?.rawSummary || item?.raw_summary || "",
+      thumbnail: item?.thumbnail || item?.image || item?.imageUrl || "",
       publishedAt:
         item?.publishedAt ||
         item?.published_at ||
@@ -195,6 +216,49 @@ function mapApiResults(payload) {
       publicationFocus: item?.publicationFocus,
     };
   });
+}
+
+function buildScenarioItems(results, requestMeta) {
+  const dynamicItems = [];
+
+  if (requestMeta?.requestedScenario) {
+    dynamicItems.push({
+      label: requestMeta.requestedScenario,
+      meta: "Last query",
+    });
+  }
+
+  const seenTitles = new Set();
+
+  results.slice(0, 4).forEach((result) => {
+    const matchedQuery = result.matchedQuery || result.title || "";
+    const cleanLabel = String(matchedQuery).trim();
+
+    if (!cleanLabel || seenTitles.has(cleanLabel.toLowerCase())) return;
+
+    seenTitles.add(cleanLabel.toLowerCase());
+    dynamicItems.push({
+      label: cleanLabel,
+      meta: `${result.sourceRegion || result.region || "Live"} · ${
+        result.sentiment || "signal"
+      }`,
+    });
+  });
+
+  const merged = [...dynamicItems, ...BASE_SCENARIOS];
+  const deduped = [];
+  const seen = new Set();
+
+  merged.forEach((item) => {
+    const key = item.label.toLowerCase();
+
+    if (seen.has(key)) return;
+
+    seen.add(key);
+    deduped.push(item);
+  });
+
+  return deduped.slice(0, 8);
 }
 
 export default function App() {
@@ -278,6 +342,11 @@ export default function App() {
     };
   }, [results]);
 
+  const scenarioItems = useMemo(
+    () => buildScenarioItems(results, requestMeta),
+    [results, requestMeta]
+  );
+
   const authState = useMemo(
     () => ({
       configured: isAuthConfigured(),
@@ -299,9 +368,11 @@ export default function App() {
   }
 
   function handleExampleSelect(value) {
+    const scenario = typeof value === "string" ? value : value?.label || "";
+
     setForm((prev) => ({
       ...prev,
-      scenario: value,
+      scenario,
     }));
   }
 
@@ -375,6 +446,8 @@ export default function App() {
       timestamp: meta?.timestamp || response?.meta?.timestamp || attemptTimestamp,
       queryHash,
       auth: response?.meta?.auth || null,
+      cache: response?.data?.cache || response?.cache || null,
+      mode: response?.data?.mode || response?.mode || "unknown",
       regenerated: Boolean(regeneratingReport),
     });
 
@@ -504,7 +577,7 @@ export default function App() {
           />
 
           <ExampleChips
-            items={EXAMPLE_SCENARIOS}
+            items={scenarioItems}
             onSelect={handleExampleSelect}
             disabled={loading}
           />
