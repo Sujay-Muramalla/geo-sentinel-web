@@ -1,6 +1,12 @@
 import { ResultCard } from "@/components/dashboard/result-card";
 
-export function ResultsList({ results = [], loading = false, reportQueryHash = "" }) {
+export function ResultsList({
+  results = [],
+  loading = false,
+  reportQueryHash = "",
+  onRegenerateReport,
+  regeneratingReport = false,
+}) {
   return (
     <section className="space-y-4">
       <div className="flex items-center justify-between gap-3">
@@ -16,8 +22,10 @@ export function ResultsList({ results = [], loading = false, reportQueryHash = "
           </p>
         </div>
 
-        {loading ? (
-          <span className="text-sm text-slate-400">Refreshing…</span>
+        {loading || regeneratingReport ? (
+          <span className="text-sm text-slate-400">
+            {regeneratingReport ? "Regenerating report…" : "Refreshing…"}
+          </span>
         ) : (
           <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-sm text-slate-300">
             {results.length} item(s)
@@ -31,6 +39,8 @@ export function ResultsList({ results = [], loading = false, reportQueryHash = "
             key={result.id}
             result={result}
             reportQueryHash={reportQueryHash}
+            onRegenerateReport={onRegenerateReport}
+            regeneratingReport={regeneratingReport}
           />
         ))}
       </div>

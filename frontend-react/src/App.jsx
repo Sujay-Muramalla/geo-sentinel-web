@@ -202,6 +202,7 @@ export default function App() {
     readStoredAuthSession()?.authenticated ? "dashboard" : "landing"
   );
   const [form, setForm] = useState(INITIAL_FORM);
+  const [lastSubmittedForm, setLastSubmittedForm] = useState(null);
   const [results, setResults] = useState([]);
   const [requestMeta, setRequestMeta] = useState(null);
   const [reportQueryHash, setReportQueryHash] = useState("");
@@ -218,6 +219,7 @@ export default function App() {
     feedErrors: [],
   });
   const [loading, setLoading] = useState(false);
+  const [regeneratingReport, setRegeneratingReport] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
   const hasResults = results.length > 0;
@@ -339,6 +341,52 @@ export default function App() {
     setErrorMessage("");
   }
 
+  function applyIntelligenceResponse(response, attemptTimestamp, submittedForm) {
+    const mappedResults = mapApiResults(response);
+    const counts = getApiCounts(response);
+    const meta = getApiMeta(response);
+    const appliedFilters = getAppliedFilters(response);
+    const selectedSources = getSelectedSources(response);
+    const expandedQueries = getExpandedQueries(response);
+    const diagnostics = getDiagnostics(response);
+    const noResultExplanation = getNoResultExplanation(response);
+    const feedErrors = getFeedErrors(response);
+    const queryHash = getReportQueryHash(response);
+
+    setResults(mappedResults);
+    setReportQueryHash(queryHash);
+    setSourceTransparency({
+      selectedSources,
+      appliedFilters,
+      counts,
+      meta,
+      expandedQueries,
+      diagnostics,
+      noResultExplanation,
+      feedErrors,
+    });
+    setRequestMeta({
+      requestedScenario: submittedForm.scenario,
+      rawCount: counts?.raw ?? mappedResults.length,
+      filteredCount: counts?.filtered ?? mappedResults.length,
+      returnedCount: counts?.returned ?? mappedResults.length,
+      rawItemsSeen: counts?.rawItemsSeen ?? 0,
+      filteredOut: counts?.filteredOut ?? 0,
+      timestamp: meta?.timestamp || response?.meta?.timestamp || attemptTimestamp,
+      queryHash,
+      auth: response?.meta?.auth || null,
+      regenerated: Boolean(regeneratingReport),
+    });
+
+    return {
+      mappedResults,
+      counts,
+      meta,
+      noResultExplanation,
+      queryHash,
+    };
+  }
+
   async function handleSubmit(event) {
     event.preventDefault();
 
@@ -347,14 +395,16 @@ export default function App() {
       return;
     }
 
+    const submittedForm = { ...form };
     const attemptTimestamp = new Date().toISOString();
 
+    setLastSubmittedForm(submittedForm);
     setLoading(true);
     setErrorMessage("");
     setResults([]);
     setReportQueryHash("");
     setRequestMeta({
-      requestedScenario: form.scenario,
+      requestedScenario: submittedForm.scenario,
       rawCount: 0,
       timestamp: attemptTimestamp,
     });
@@ -370,41 +420,12 @@ export default function App() {
     });
 
     try {
-      const response = await generateIntelligence(form);
-      const mappedResults = mapApiResults(response);
-      const counts = getApiCounts(response);
-      const meta = getApiMeta(response);
-      const appliedFilters = getAppliedFilters(response);
-      const selectedSources = getSelectedSources(response);
-      const expandedQueries = getExpandedQueries(response);
-      const diagnostics = getDiagnostics(response);
-      const noResultExplanation = getNoResultExplanation(response);
-      const feedErrors = getFeedErrors(response);
-      const queryHash = getReportQueryHash(response);
-
-      setResults(mappedResults);
-      setReportQueryHash(queryHash);
-      setSourceTransparency({
-        selectedSources,
-        appliedFilters,
-        counts,
-        meta,
-        expandedQueries,
-        diagnostics,
-        noResultExplanation,
-        feedErrors,
-      });
-      setRequestMeta({
-        requestedScenario: form.scenario,
-        rawCount: counts?.raw ?? mappedResults.length,
-        filteredCount: counts?.filtered ?? mappedResults.length,
-        returnedCount: counts?.returned ?? mappedResults.length,
-        rawItemsSeen: counts?.rawItemsSeen ?? 0,
-        filteredOut: counts?.filteredOut ?? 0,
-        timestamp: meta?.timestamp || response?.meta?.timestamp || attemptTimestamp,
-        queryHash,
-        auth: response?.meta?.auth || null,
-      });
+      const response = await generateIntelligence(submittedForm);
+      const { mappedResults, noResultExplanation } = applyIntelligenceResponse(
+        response,
+        attemptTimestamp,
+        submittedForm
+      );
 
       if (mappedResults.length === 0 && !noResultExplanation) {
         setErrorMessage(
@@ -418,6 +439,40 @@ export default function App() {
       );
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleRegenerateReport() {
+    const regenerationForm = lastSubmittedForm || form;
+
+    if (!regenerationForm?.scenario?.trim()) {
+      throw new Error(
+        "No previous intelligence query is available for regeneration. Run a scenario first, then retry the report download."
+      );
+    }
+
+    const attemptTimestamp = new Date().toISOString();
+
+    setRegeneratingReport(true);
+    setErrorMessage("");
+
+    try {
+      const response = await generateIntelligence(regenerationForm);
+      const { queryHash } = applyIntelligenceResponse(
+        response,
+        attemptTimestamp,
+        regenerationForm
+      );
+
+      if (!queryHash) {
+        throw new Error(
+          "The regenerated intelligence response did not include a report query hash."
+        );
+      }
+
+      return queryHash;
+    } finally {
+      setRegeneratingReport(false);
     }
   }
 
@@ -459,6 +514,8 @@ export default function App() {
               results={results}
               loading={loading}
               reportQueryHash={reportQueryHash}
+              onRegenerateReport={handleRegenerateReport}
+              regeneratingReport={regeneratingReport}
             />
           ) : (
             <ResultsPlaceholder
@@ -473,7 +530,7 @@ export default function App() {
 
         <aside className="space-y-6">
           <StatusPanel
-            loading={loading}
+            loading={loading || regeneratingReport}
             errorMessage={errorMessage}
             hasResults={hasResults}
             requestMeta={requestMeta}
