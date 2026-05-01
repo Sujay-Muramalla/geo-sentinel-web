@@ -1,7 +1,7 @@
 export function AppFooter() {
   return (
-    <footer className="rounded-3xl border border-slate-800 bg-slate-950/60 px-5 py-4 text-sm text-slate-500">
-      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+    <footer className="border-t border-slate-800 bg-slate-950/95">
+      <div className="mx-auto flex max-w-[1600px] flex-col gap-3 px-4 py-4 text-sm text-slate-500 md:flex-row md:items-center md:justify-between md:px-6">
         <div>
           <p className="font-semibold text-slate-300">Geo-Sentinel</p>
           <p className="mt-1">

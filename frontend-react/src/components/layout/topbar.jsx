@@ -23,8 +23,8 @@ export function Topbar({
   const isAuthenticated = Boolean(authState?.authenticated);
 
   return (
-    <header className="sticky top-4 z-30 rounded-3xl border border-slate-800/90 bg-slate-950/85 px-4 py-3 shadow-2xl shadow-slate-950/30 backdrop-blur md:px-5">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+    <header className="sticky top-0 z-40 border-b border-slate-800 bg-slate-950/95 backdrop-blur">
+      <div className="mx-auto flex max-w-[1600px] flex-col gap-3 px-4 py-3 md:px-6 lg:flex-row lg:items-center lg:justify-between">
         <div className="flex min-w-0 items-center gap-3">
           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-cyan-500/15 text-sm font-bold text-cyan-300 ring-1 ring-cyan-500/30">
             GS
@@ -41,14 +41,14 @@ export function Topbar({
               </Badge>
             </div>
             <p className="mt-1 text-xs text-slate-500">
-              Geopolitical intelligence platform · SIMPLE architecture
+              Geopolitical intelligence platform
             </p>
           </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
           {authState?.message ? (
-            <p className="max-w-xl rounded-2xl border border-cyan-400/20 bg-cyan-400/10 px-3 py-2 text-xs text-cyan-100">
+            <p className="max-w-xl rounded-xl border border-cyan-400/20 bg-cyan-400/10 px-3 py-2 text-xs text-cyan-100">
               {authState.message}
             </p>
           ) : null}
