@@ -27,6 +27,30 @@ function base64UrlEncode(buffer) {
     .replace(/=+$/g, "");
 }
 
+function decodeBase64Url(value) {
+  const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
+  const padded = normalized.padEnd(
+    normalized.length + ((4 - (normalized.length % 4)) % 4),
+    "="
+  );
+
+  return decodeURIComponent(
+    atob(padded)
+      .split("")
+      .map((char) => `%${char.charCodeAt(0).toString(16).padStart(2, "0")}`)
+      .join("")
+  );
+}
+
+function decodeJwtPayload(token) {
+  try {
+    const [, payload] = String(token || "").split(".");
+    return payload ? JSON.parse(decodeBase64Url(payload)) : {};
+  } catch {
+    return {};
+  }
+}
+
 async function sha256(value) {
   const encoded = new TextEncoder().encode(value);
   return window.crypto.subtle.digest("SHA-256", encoded);
@@ -106,6 +130,26 @@ export function getStoredAccessToken() {
 export function getStoredIdToken() {
   const session = readStoredAuthSession();
   return session?.idToken || "";
+}
+
+export function getStoredUserProfile(sessionOverride = null) {
+  const session = sessionOverride || readStoredAuthSession();
+  const claims = decodeJwtPayload(session?.idToken);
+
+  const email = claims.email || "";
+  const name =
+    claims.name ||
+    [claims.given_name, claims.family_name].filter(Boolean).join(" ") ||
+    claims.preferred_username ||
+    email.split("@")[0] ||
+    "";
+
+  return {
+    name,
+    email,
+    username: claims.preferred_username || claims["cognito:username"] || "",
+    emailVerified: Boolean(claims.email_verified),
+  };
 }
 
 async function exchangeCodeForTokens(code) {

@@ -1,6 +1,7 @@
-import { ArrowLeft, LogIn, LogOut, ShieldCheck } from "lucide-react";
+import { ArrowLeft, LogIn, LogOut, ShieldCheck, UserCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { getStoredUserProfile } from "@/lib/auth";
 
 function formatAuthTime(value) {
   if (!value) return "";
@@ -12,6 +13,14 @@ function formatAuthTime(value) {
   return parsed.toLocaleString();
 }
 
+function formatDisplayName(profile) {
+  if (profile?.name) return profile.name;
+  if (profile?.email) return profile.email.split("@")[0];
+  if (profile?.username) return profile.username;
+
+  return "User";
+}
+
 export function Topbar({
   authState,
   onLogin,
@@ -21,6 +30,8 @@ export function Topbar({
 }) {
   const isConfigured = Boolean(authState?.configured);
   const isAuthenticated = Boolean(authState?.authenticated);
+  const userProfile = isAuthenticated ? getStoredUserProfile() : null;
+  const displayName = formatDisplayName(userProfile);
 
   return (
     <header className="sticky top-0 z-40 border-b border-slate-800 bg-slate-950/95 backdrop-blur">
@@ -46,7 +57,7 @@ export function Topbar({
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center justify-start gap-3 lg:justify-end">
           {authState?.message ? (
             <p className="max-w-xl rounded-xl border border-cyan-400/20 bg-cyan-400/10 px-3 py-2 text-xs text-cyan-100">
               {authState.message}
@@ -58,6 +69,23 @@ export function Topbar({
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back to landing
             </Button>
+          ) : null}
+
+          {isAuthenticated ? (
+            <div className="flex items-center gap-3 rounded-2xl border border-slate-800 bg-slate-900/70 px-3 py-2">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-cyan-500/10 text-cyan-200 ring-1 ring-cyan-500/25">
+                <UserCircle className="h-5 w-5" />
+              </div>
+
+              <div className="min-w-0">
+                <p className="max-w-[180px] truncate text-sm font-semibold text-slate-100">
+                  Hello, {displayName}
+                </p>
+                <p className="max-w-[220px] truncate text-xs text-slate-500">
+                  {userProfile?.email || "Account & Settings"}
+                </p>
+              </div>
+            </div>
           ) : null}
 
           {isConfigured ? (
@@ -77,7 +105,7 @@ export function Topbar({
 
           {isAuthenticated ? (
             <>
-              <div className="hidden text-right text-xs text-slate-500 sm:block">
+              <div className="hidden text-right text-xs text-slate-500 xl:block">
                 <p className="text-slate-300">Session active</p>
                 <p>{formatAuthTime(authState?.storedAt) || "Ready"}</p>
               </div>
