@@ -4,18 +4,19 @@ import { Textarea } from "@/components/ui/textarea";
 
 export function QueryPanel({ form, onChange, onSubmit, loading }) {
   return (
-    <Panel className="p-6 md:p-7">
+    <Panel className="p-6 md:p-7 border border-white/10 bg-slate-950/80 shadow-[0_0_60px_rgba(255,255,255,0.08)]">
       <div className="mb-6 flex items-start justify-between gap-4">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.28em] text-cyan-300/80">
-            Intelligence Query
+            Intelligence Console
           </p>
           <h1 className="mt-2 text-2xl font-semibold tracking-tight text-slate-100 md:text-3xl">
-            Generate geopolitical intelligence
+            Define the scenario. Scope the sources. Track the signals.
           </h1>
-          <p className="mt-2 max-w-2xl text-sm text-slate-400">
-            Submit a scenario and query the existing Geo-Sentinel backend contract.
-            The frontend is ready now, even while the backend stays switched off for cost control.
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
+            Geo-Sentinel’s intelligence workspace lets users enter a geopolitical scenario,
+            filter the source universe, rank relevant news signals, and pivot quickly using
+            the latest trend indicators.
           </p>
         </div>
       </div>
@@ -144,7 +145,7 @@ export function QueryPanel({ form, onChange, onSubmit, loading }) {
 
         <div className="flex flex-col gap-3 border-t border-white/10 pt-5 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-slate-500">
-            Existing backend contract remains the source of truth. No backend redesign in this story.
+            Start with a scenario, refine the scope, then generate ranked intelligence signals.
           </p>
 
           <button
