@@ -105,7 +105,7 @@ function buildSummary(result) {
   return compactSentence(
     `${source} reported a monitoring-relevant signal: ${title}${
       region ? ` in ${region}` : ""
-    }. Geo-Sentinel ranked this card using query relevance, source quality, recency, sentiment, and geographic alignment.`
+    }. Geo-Sentinel ranked this card using relevance, source quality, recency, sentiment, and geographic alignment.`
   );
 }
 
@@ -202,19 +202,11 @@ function getRankingSignals(result) {
 
   return {
     queryRelevance:
-      result.queryMatchScore ??
-      result.queryRelevance ??
-      fallbackSignals.queryRelevance,
+      result.queryMatchScore ?? result.queryRelevance ?? fallbackSignals.queryRelevance,
     geoAlignment:
-      result.geoAlignmentScore ??
-      result.geoAlignment ??
-      fallbackSignals.geoAlignment,
-    sourceQuality:
-      result.sourceQualityScore ??
-      fallbackSignals.sourceQuality,
-    recency:
-      result.recencyScore ??
-      fallbackSignals.recency,
+      result.geoAlignmentScore ?? result.geoAlignment ?? fallbackSignals.geoAlignment,
+    sourceQuality: result.sourceQualityScore ?? fallbackSignals.sourceQuality,
+    recency: result.recencyScore ?? fallbackSignals.recency,
   };
 }
 
@@ -222,12 +214,7 @@ function getResultId(result) {
   return result.resultId || result.id || "";
 }
 
-function buildReportFilename(
-  queryHash,
-  resultId = "",
-  reportType = "query",
-  extension = "json"
-) {
+function buildReportFilename(queryHash, resultId = "", reportType = "query", extension = "json") {
   const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
   const shortHash = queryHash ? queryHash.slice(0, 12) : "unknown";
   const shortResultId = resultId ? resultId.slice(0, 12) : "run";
@@ -266,49 +253,17 @@ function triggerPdfDownload(blob, queryHash, resultId = "") {
 }
 
 function explainReportError(error) {
-  const message = error?.message || "";
-  const code = error?.code || "";
-
-  if (
-    code === "REPORT_METADATA_NOT_FOUND" ||
-    message.includes("REPORT_METADATA_NOT_FOUND") ||
-    message.toLowerCase().includes("metadata not found")
-  ) {
-    return "This report index is no longer available. Regenerate the same intelligence query, then retry the download.";
+  if (isRecoverableReportError(error)) {
+    return "This report needs to be refreshed before download.";
   }
 
-  if (
-    code === "REPORT_SNAPSHOT_KEY_MISSING" ||
-    message.includes("REPORT_SNAPSHOT_KEY_MISSING") ||
-    message.toLowerCase().includes("snapshot key")
-  ) {
-    return "The report snapshot was generated without a storage key. Regenerate the query to recreate the report snapshot.";
+  const message = String(error?.message || "").toLowerCase();
+
+  if (message.includes("unreachable") || message.includes("failed to fetch")) {
+    return "The intelligence service is temporarily unavailable. Please retry later.";
   }
 
-  if (
-    code === "REPORT_SNAPSHOT_NOT_FOUND" ||
-    message.includes("REPORT_SNAPSHOT_NOT_FOUND") ||
-    message.toLowerCase().includes("snapshot")
-  ) {
-    return "The stored report snapshot could not be loaded. Regenerate the query and retry the report download.";
-  }
-
-  if (
-    code === "REPORT_ITEM_NOT_FOUND" ||
-    message.includes("REPORT_ITEM_NOT_FOUND") ||
-    message.toLowerCase().includes("item not found")
-  ) {
-    return "This card report was not found in the stored snapshot. Regenerate the query to rebuild the card-level report.";
-  }
-
-  if (message.toLowerCase().includes("failed to fetch")) {
-    return "The backend is currently unreachable. Recreate the backend/ALB validation stack, then try again.";
-  }
-
-  return (
-    message ||
-    "Report download failed. Regenerate the intelligence query and retry the download."
-  );
+  return error?.message || "Report download failed. Please retry.";
 }
 
 function fallbackTone(result) {
@@ -373,9 +328,7 @@ export function ResultCard({
   const score = Number(result.signalScore ?? result.finalScore ?? result.score) || 0;
   const rankingSignals = getRankingSignals(result);
   const qualityLabel = sourceQualityLabel(result);
-  const matchedQuery = cleanText(result.matchedQuery);
   const expandedQueryUsed = Boolean(result.expandedQueryUsed);
-  const sourceTier = cleanText(result.sourceTier);
   const resultId = getResultId(result);
   const thumbnail = cleanText(result.thumbnail || result.image || result.imageUrl);
   const canShowImage = Boolean(thumbnail && !thumbnailFailed);
@@ -383,8 +336,7 @@ export function ResultCard({
   const canOpenSource = Boolean(sourceUrl && sourceUrl !== "#");
   const canDownloadQueryReport = Boolean(reportQueryHash);
   const canDownloadItemReport = Boolean(reportQueryHash && resultId);
-  const canRegenerateReport =
-    Boolean(onRegenerateReport) && downloadState.recoverable;
+  const canRegenerateReport = Boolean(onRegenerateReport) && downloadState.recoverable;
 
   async function downloadQueryReport(queryHashToUse = reportQueryHash) {
     const reportPayload = await fetchReportByQueryHash(queryHashToUse);
@@ -392,10 +344,7 @@ export function ResultCard({
   }
 
   async function downloadItemReport(queryHashToUse = reportQueryHash) {
-    const reportBlob = await fetchReportItemPdfByResultId(
-      queryHashToUse,
-      resultId
-    );
+    const reportBlob = await fetchReportItemPdfByResultId(queryHashToUse, resultId);
     triggerPdfDownload(reportBlob, queryHashToUse, resultId);
   }
 
@@ -524,19 +473,13 @@ export function ResultCard({
                   Source {qualityLabel}
                 </Badge>
 
-                {sourceTier ? (
-                  <Badge className="border-white/10 bg-slate-950/60 text-slate-200">
-                    Tier {sourceTier}
-                  </Badge>
-                ) : null}
-
                 <Badge className="border-white/10 bg-slate-950/60 text-slate-200">
                   Signal {scoreLabel(score)}
                 </Badge>
 
                 {expandedQueryUsed ? (
                   <Badge className="border-violet-400/30 bg-violet-400/10 text-violet-200">
-                    Expanded query match
+                    Expanded scenario match
                   </Badge>
                 ) : null}
               </div>
@@ -550,13 +493,6 @@ export function ResultCard({
                 <span className="mx-2 text-slate-600">•</span>
                 {safeDate(result.publishedAt)}
               </p>
-
-              {matchedQuery ? (
-                <p className="text-xs text-slate-500">
-                  Matched query:{" "}
-                  <span className="text-cyan-200">{matchedQuery}</span>
-                </p>
-              ) : null}
             </div>
 
             <div className="flex shrink-0 gap-3">
@@ -593,30 +529,21 @@ export function ResultCard({
             <div className="mb-4 flex items-center justify-between gap-3">
               <div>
                 <h4 className="text-sm font-semibold text-slate-100">
-                  Ranking explanation
+                  Signal confidence
                 </h4>
                 <p className="mt-1 text-xs text-slate-500">
-                  Why this article was promoted by the intelligence engine.
+                  Key factors used to rank this article for the current scenario.
                 </p>
               </div>
               <Badge className="border-cyan-400/30 bg-cyan-400/10 text-cyan-200">
-                Transparent scoring
+                Explainable ranking
               </Badge>
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2">
-              <RankingSignal
-                label="Query relevance"
-                value={rankingSignals.queryRelevance}
-              />
-              <RankingSignal
-                label="Geo alignment"
-                value={rankingSignals.geoAlignment}
-              />
-              <RankingSignal
-                label="Source quality"
-                value={rankingSignals.sourceQuality}
-              />
+              <RankingSignal label="Topic relevance" value={rankingSignals.queryRelevance} />
+              <RankingSignal label="Geographic fit" value={rankingSignals.geoAlignment} />
+              <RankingSignal label="Source confidence" value={rankingSignals.sourceQuality} />
               <RankingSignal label="Recency" value={rankingSignals.recency} />
             </div>
           </div>
@@ -633,7 +560,7 @@ export function ResultCard({
 
             <div>
               <p className="text-[0.65rem] uppercase tracking-[0.2em] text-slate-500">
-                Source quality
+                Source confidence
               </p>
               <p className="mt-1 text-sm font-medium text-slate-200">
                 {qualityLabel}
@@ -654,10 +581,10 @@ export function ResultCard({
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h4 className="text-sm font-semibold text-slate-100">
-                  Persistent intelligence reports
+                  Intelligence reports
                 </h4>
                 <p className="mt-1 text-xs text-slate-500">
-                  Download either the full query snapshot JSON or this card’s dedicated PDF analyst brief.
+                  Download the full scenario snapshot or this card’s dedicated analyst brief.
                 </p>
               </div>
 
@@ -674,7 +601,7 @@ export function ResultCard({
                 >
                   {downloadState.loadingItem
                     ? regeneratingReport
-                      ? "Regenerating PDF…"
+                      ? "Refreshing PDF…"
                       : "Downloading PDF…"
                     : "Download card PDF"}
                 </button>
@@ -691,39 +618,29 @@ export function ResultCard({
                 >
                   {downloadState.loadingQuery
                     ? regeneratingReport
-                      ? "Regenerating JSON…"
+                      ? "Refreshing JSON…"
                       : "Downloading JSON…"
                     : "Download full JSON"}
                 </button>
               </div>
             </div>
 
-            {reportQueryHash ? (
-              <p className="mt-3 break-all text-[0.7rem] text-slate-500">
-                Query report key:{" "}
-                <span className="text-slate-400">{reportQueryHash}</span>
-              </p>
-            ) : (
+            {!canDownloadQueryReport ? (
               <p className="mt-3 text-[0.7rem] text-amber-200/80">
-                Report download will appear when the backend response includes a cache query hash.
+                Report downloads will appear after a successful intelligence run.
               </p>
-            )}
+            ) : null}
 
-            {resultId ? (
-              <p className="mt-2 break-all text-[0.7rem] text-slate-500">
-                Card report id:{" "}
-                <span className="text-slate-400">{resultId}</span>
+            {!canDownloadItemReport && canDownloadQueryReport ? (
+              <p className="mt-3 text-[0.7rem] text-amber-200/80">
+                This card needs a refreshed intelligence run before PDF download.
               </p>
-            ) : (
-              <p className="mt-2 text-[0.7rem] text-amber-200/80">
-                Per-card PDF report download requires a stable result id from the backend.
-              </p>
-            )}
+            ) : null}
 
             {downloadState.error ? (
               <div className="mt-3 rounded-xl border border-red-400/20 bg-red-400/10 p-3">
                 <p className="text-xs font-medium text-red-200">
-                  Report download needs a fresh snapshot
+                  Report refresh required
                 </p>
                 <p className="mt-1 text-xs leading-5 text-red-100/80">
                   {downloadState.error}
@@ -736,9 +653,7 @@ export function ResultCard({
                     disabled={regeneratingReport}
                     className="mt-3 inline-flex items-center rounded-lg border border-amber-300/30 bg-amber-300/10 px-3 py-2 text-xs font-semibold text-amber-100 transition hover:border-amber-200/50 hover:bg-amber-300/15 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-white/5 disabled:text-slate-500"
                   >
-                    {regeneratingReport
-                      ? "Regenerating intelligence…"
-                      : "Regenerate and retry download"}
+                    {regeneratingReport ? "Refreshing intelligence…" : "Refresh and retry"}
                   </button>
                 ) : null}
               </div>
@@ -747,7 +662,7 @@ export function ResultCard({
 
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-4">
             <p className="text-xs text-slate-500">
-              Live RSS intelligence result · GEO-51I reliability hardening active
+              Ranked intelligence signal
             </p>
 
             {canOpenSource ? (
