@@ -38,30 +38,12 @@ const INITIAL_FORM = {
 };
 
 const BASE_SCENARIOS = [
-  {
-    label: "Taiwan semiconductor disruption",
-    meta: "Asia · supply chain",
-  },
-  {
-    label: "Red Sea shipping attacks",
-    meta: "Middle East · trade route",
-  },
-  {
-    label: "India-China border tension",
-    meta: "Asia · border risk",
-  },
-  {
-    label: "NATO escalation in Eastern Europe",
-    meta: "Europe · security",
-  },
-  {
-    label: "South China Sea naval confrontation",
-    meta: "Asia · maritime",
-  },
-  {
-    label: "Iran-Israel regional escalation",
-    meta: "Middle East · conflict",
-  },
+  { label: "Taiwan semiconductor disruption", meta: "Asia · supply chain" },
+  { label: "Red Sea shipping attacks", meta: "Middle East · trade route" },
+  { label: "India-China border tension", meta: "Asia · border risk" },
+  { label: "NATO escalation in Eastern Europe", meta: "Europe · security" },
+  { label: "South China Sea naval confrontation", meta: "Asia · maritime" },
+  { label: "Iran-Israel regional escalation", meta: "Middle East · conflict" },
 ];
 
 function normalizeSentiment(value) {
@@ -261,10 +243,164 @@ function buildScenarioItems(results, requestMeta) {
   return deduped.slice(0, 8);
 }
 
+function SimplePage({ title, eyebrow, description, cards = [] }) {
+  return (
+    <section className="rounded-3xl border border-slate-800 bg-slate-950/70 p-6 shadow-2xl shadow-slate-950/30">
+      <p className="text-xs uppercase tracking-[0.28em] text-cyan-300">
+        {eyebrow}
+      </p>
+      <h1 className="mt-3 text-3xl font-semibold tracking-tight text-slate-100">
+        {title}
+      </h1>
+      <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-400">
+        {description}
+      </p>
+
+      <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        {cards.map((card) => (
+          <div
+            key={card.title}
+            className="rounded-2xl border border-slate-800 bg-slate-900/70 p-5"
+          >
+            <p className="text-sm font-semibold text-slate-100">{card.title}</p>
+            <p className="mt-2 text-sm leading-6 text-slate-400">
+              {card.description}
+            </p>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function PlaceholderView({ activeView }) {
+  const pages = {
+    "signals-feed": {
+      title: "Signals Feed",
+      eyebrow: "Live signal stream",
+      description:
+        "A future operational feed for generated intelligence signals, trending topics, source events, and analyst-ready alerts.",
+      cards: [
+        {
+          title: "Signal queue",
+          description:
+            "Show ranked intelligence events from recent queries and future scheduled scans.",
+        },
+        {
+          title: "Trend context",
+          description:
+            "Group signals by region, sentiment, source quality, and urgency.",
+        },
+        {
+          title: "Next step",
+          description:
+            "GEO-52E can evolve this into the Trending Signals panel.",
+        },
+      ],
+    },
+    "reports-vault": {
+      title: "Reports Vault",
+      eyebrow: "Persistent intelligence reports",
+      description:
+        "A future workspace for PDF/JSON reports generated from S3 snapshots and cached intelligence runs.",
+      cards: [
+        {
+          title: "Saved reports",
+          description:
+            "List query-level and card-level reports stored through the report pipeline.",
+        },
+        {
+          title: "Download history",
+          description:
+            "Surface PDF and JSON retrieval status without exposing backend internals.",
+        },
+        {
+          title: "Next step",
+          description:
+            "Connect this view to report metadata once backend listing is added.",
+        },
+      ],
+    },
+    "regional-monitor": {
+      title: "Regional Monitor",
+      eyebrow: "Geographic risk overview",
+      description:
+        "A future regional intelligence view for heat maps, country-level sentiment, and source intensity by geography.",
+      cards: [
+        {
+          title: "Heat map foundation",
+          description:
+            "Track negative, neutral, and positive source intensity by country or region.",
+        },
+        {
+          title: "Regional filters",
+          description:
+            "Reuse existing country, region, sentiment, and source metadata.",
+        },
+        {
+          title: "Next step",
+          description: "Add visual map/heat layer after routing is stable.",
+        },
+      ],
+    },
+    "source-registry": {
+      title: "Source Registry",
+      eyebrow: "Coverage and reliability",
+      description:
+        "A future registry view for news sources, country coverage, source quality, reliability, tier, and feed health.",
+      cards: [
+        {
+          title: "Source coverage",
+          description:
+            "Display registered sources by region, country, tier, and publication focus.",
+        },
+        {
+          title: "Feed health",
+          description:
+            "Show failures, stale feeds, and source selection diagnostics in a user-safe way.",
+        },
+        {
+          title: "Next step",
+          description:
+            "Connect registry metadata from backend source selection output.",
+        },
+      ],
+    },
+    "system-status": {
+      title: "System Status",
+      eyebrow: "Platform operations",
+      description:
+        "A future user-safe status page for frontend, API, cache, reports, authentication, and deployment health.",
+      cards: [
+        {
+          title: "API status",
+          description:
+            "Show backend availability without developer-heavy error messages.",
+        },
+        {
+          title: "Report pipeline",
+          description:
+            "Track cache and S3 snapshot readiness for report downloads.",
+        },
+        {
+          title: "Next step",
+          description:
+            "Hide raw debug data behind admin/debug mode in GEO-52C.",
+        },
+      ],
+    },
+  };
+
+  const page = pages[activeView] || pages["signals-feed"];
+
+  return <SimplePage {...page} />;
+}
+
 export default function App() {
   const [view, setView] = useState(() =>
     readStoredAuthSession()?.authenticated ? "dashboard" : "landing"
   );
+  const [activeView, setActiveView] = useState("intelligence-console");
   const [form, setForm] = useState(INITIAL_FORM);
   const [lastSubmittedForm, setLastSubmittedForm] = useState(null);
   const [results, setResults] = useState([]);
@@ -301,6 +437,7 @@ export default function App() {
           setAuthSession(callbackResult.session);
           setAuthMessage("Cognito login complete. JWT session stored.");
           setView("dashboard");
+          setActiveView("intelligence-console");
         }
 
         if (callbackResult.handled && callbackResult.error) {
@@ -310,15 +447,16 @@ export default function App() {
               "Cognito returned an authentication error."
           );
           setView("landing");
+          setActiveView("intelligence-console");
         }
       } catch (error) {
         if (!mounted) return;
 
         setAuthMessage(
-          error?.message ||
-            "Cognito login completed, but token exchange failed."
+          error?.message || "Cognito login completed, but token exchange failed."
         );
         setView("landing");
+        setActiveView("intelligence-console");
       }
     }
 
@@ -391,6 +529,7 @@ export default function App() {
     clearAuthSession();
     setAuthSession(null);
     setAuthMessage("Local frontend session cleared.");
+    setActiveView("intelligence-console");
 
     const logoutUrl = buildLogoutUrl();
 
@@ -404,11 +543,13 @@ export default function App() {
 
   function handleViewDemo() {
     setView("dashboard");
+    setActiveView("intelligence-console");
     setAuthMessage("Public demo mode active. Login remains optional.");
   }
 
   function handleBackToLanding() {
     setView("landing");
+    setActiveView("intelligence-console");
     setErrorMessage("");
   }
 
@@ -566,53 +707,59 @@ export default function App() {
       onLogout={handleLogout}
       onBackToLanding={demoMode ? handleBackToLanding : undefined}
       demoMode={demoMode}
+      activeView={activeView}
+      onNavigate={setActiveView}
     >
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_380px]">
-        <section className="space-y-6">
-          <QueryPanel
-            form={form}
-            onChange={updateField}
-            onSubmit={handleSubmit}
-            loading={loading}
-          />
-
-          <ExampleChips
-            items={scenarioItems}
-            onSelect={handleExampleSelect}
-            disabled={loading}
-          />
-
-          {hasResults ? (
-            <ResultsList
-              results={results}
+      {activeView === "intelligence-console" ? (
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_380px]">
+          <section className="space-y-6">
+            <QueryPanel
+              form={form}
+              onChange={updateField}
+              onSubmit={handleSubmit}
               loading={loading}
-              reportQueryHash={reportQueryHash}
-              onRegenerateReport={handleRegenerateReport}
-              regeneratingReport={regeneratingReport}
             />
-          ) : (
-            <ResultsPlaceholder
-              loading={loading}
+
+            <ExampleChips
+              items={scenarioItems}
+              onSelect={handleExampleSelect}
+              disabled={loading}
+            />
+
+            {hasResults ? (
+              <ResultsList
+                results={results}
+                loading={loading}
+                reportQueryHash={reportQueryHash}
+                onRegenerateReport={handleRegenerateReport}
+                regeneratingReport={regeneratingReport}
+              />
+            ) : (
+              <ResultsPlaceholder
+                loading={loading}
+                errorMessage={errorMessage}
+                noResultExplanation={sourceTransparency.noResultExplanation}
+                counts={sourceTransparency.counts}
+                expandedQueries={sourceTransparency.expandedQueries}
+              />
+            )}
+          </section>
+
+          <aside className="space-y-6">
+            <StatusPanel
+              loading={loading || regeneratingReport}
               errorMessage={errorMessage}
-              noResultExplanation={sourceTransparency.noResultExplanation}
-              counts={sourceTransparency.counts}
-              expandedQueries={sourceTransparency.expandedQueries}
+              hasResults={hasResults}
+              requestMeta={requestMeta}
+              stats={resultStats}
+              sourceTransparency={sourceTransparency}
+              authState={authState}
             />
-          )}
-        </section>
-
-        <aside className="space-y-6">
-          <StatusPanel
-            loading={loading || regeneratingReport}
-            errorMessage={errorMessage}
-            hasResults={hasResults}
-            requestMeta={requestMeta}
-            stats={resultStats}
-            sourceTransparency={sourceTransparency}
-            authState={authState}
-          />
-        </aside>
-      </div>
+          </aside>
+        </div>
+      ) : (
+        <PlaceholderView activeView={activeView} />
+      )}
     </AppShell>
   );
 }
