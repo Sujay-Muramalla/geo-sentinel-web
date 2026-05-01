@@ -243,24 +243,50 @@ function buildScenarioItems(results, requestMeta) {
   return deduped.slice(0, 8);
 }
 
+function sanitizeAuthMessage(message) {
+  if (!message) return "";
+
+  const text = String(message);
+
+  if (text.toLowerCase().includes("invalid_grant")) {
+    return "Your sign-in session expired before completion. Please start the login again.";
+  }
+
+  if (text.toLowerCase().includes("jwt")) {
+    return "Login complete. Your session is ready.";
+  }
+
+  if (text.toLowerCase().includes("stored")) {
+    return "Login complete. Your session is ready.";
+  }
+
+  if (text.toLowerCase().includes("token exchange")) {
+    return "Login could not be completed. Please retry from the sign-in button.";
+  }
+
+  return text;
+}
+
 function SimplePage({ title, eyebrow, description, cards = [] }) {
   return (
-    <section className="rounded-3xl border border-slate-800 bg-slate-950/70 p-6 shadow-2xl shadow-slate-950/30">
-      <p className="text-xs uppercase tracking-[0.28em] text-cyan-300">
-        {eyebrow}
-      </p>
-      <h1 className="mt-3 text-3xl font-semibold tracking-tight text-slate-100">
-        {title}
-      </h1>
-      <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-400">
-        {description}
-      </p>
+    <section className="space-y-6">
+      <div className="rounded-3xl border border-slate-800 bg-slate-950/70 p-6 shadow-2xl shadow-slate-950/30">
+        <p className="text-xs uppercase tracking-[0.28em] text-cyan-300">
+          {eyebrow}
+        </p>
+        <h1 className="mt-3 text-3xl font-semibold tracking-tight text-slate-100">
+          {title}
+        </h1>
+        <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-400">
+          {description}
+        </p>
+      </div>
 
-      <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {cards.map((card) => (
           <div
             key={card.title}
-            className="rounded-2xl border border-slate-800 bg-slate-900/70 p-5"
+            className="rounded-3xl border border-slate-800 bg-slate-950/60 p-5 shadow-xl shadow-slate-950/20"
           >
             <p className="text-sm font-semibold text-slate-100">{card.title}</p>
             <p className="mt-2 text-sm leading-6 text-slate-400">
@@ -277,115 +303,116 @@ function PlaceholderView({ activeView }) {
   const pages = {
     "signals-feed": {
       title: "Signals Feed",
-      eyebrow: "Live signal stream",
+      eyebrow: "Signal monitoring",
       description:
-        "A future operational feed for generated intelligence signals, trending topics, source events, and analyst-ready alerts.",
+        "Track emerging geopolitical signals, recurring topics, and high-priority developments from generated intelligence runs.",
       cards: [
         {
-          title: "Signal queue",
+          title: "Ranked signal stream",
           description:
-            "Show ranked intelligence events from recent queries and future scheduled scans.",
+            "Review important geopolitical developments grouped by scenario, region, source quality, and sentiment.",
         },
         {
           title: "Trend context",
           description:
-            "Group signals by region, sentiment, source quality, and urgency.",
+            "Compare how topics evolve across regions and sources without exposing backend processing details.",
         },
         {
-          title: "Next step",
+          title: "Operational focus",
           description:
-            "GEO-52E can evolve this into the Trending Signals panel.",
+            "Designed to become the main view for recurring alerts and high-value intelligence signals.",
         },
       ],
     },
     "reports-vault": {
       title: "Reports Vault",
-      eyebrow: "Persistent intelligence reports",
+      eyebrow: "Saved intelligence",
       description:
-        "A future workspace for PDF/JSON reports generated from S3 snapshots and cached intelligence runs.",
+        "Access generated PDF and JSON reports from previous intelligence runs once report listing is connected.",
       cards: [
         {
-          title: "Saved reports",
+          title: "Report library",
           description:
-            "List query-level and card-level reports stored through the report pipeline.",
+            "Organize query-level and article-level reports created from saved intelligence snapshots.",
         },
         {
           title: "Download history",
           description:
-            "Surface PDF and JSON retrieval status without exposing backend internals.",
+            "Give users a clean way to retrieve analysis outputs without showing storage internals.",
         },
         {
-          title: "Next step",
+          title: "Analyst workflow",
           description:
-            "Connect this view to report metadata once backend listing is added.",
+            "Support repeatable brief generation for portfolio demos, client showcases, and future premium use.",
         },
       ],
     },
     "regional-monitor": {
       title: "Regional Monitor",
-      eyebrow: "Geographic risk overview",
+      eyebrow: "Geographic overview",
       description:
-        "A future regional intelligence view for heat maps, country-level sentiment, and source intensity by geography.",
+        "Explore country and region-level intelligence intensity using sentiment, source volume, and signal quality.",
       cards: [
         {
-          title: "Heat map foundation",
+          title: "Risk heat layer",
           description:
-            "Track negative, neutral, and positive source intensity by country or region.",
+            "Highlight countries or regions with rising negative, neutral, or positive signal concentration.",
         },
         {
-          title: "Regional filters",
+          title: "Regional comparison",
           description:
-            "Reuse existing country, region, sentiment, and source metadata.",
+            "Use existing country, region, sentiment, and source metadata to compare geopolitical pressure points.",
         },
         {
-          title: "Next step",
-          description: "Add visual map/heat layer after routing is stable.",
+          title: "Map-ready model",
+          description:
+            "Prepared for a future visual map while keeping the current SIMPLE architecture stable.",
         },
       ],
     },
     "source-registry": {
       title: "Source Registry",
-      eyebrow: "Coverage and reliability",
+      eyebrow: "Coverage intelligence",
       description:
-        "A future registry view for news sources, country coverage, source quality, reliability, tier, and feed health.",
+        "Review news source coverage, reliability, geographic focus, and registry readiness in a user-friendly format.",
       cards: [
         {
-          title: "Source coverage",
+          title: "Coverage by region",
           description:
-            "Display registered sources by region, country, tier, and publication focus.",
+            "Show registered outlets by region, country, tier, and publication focus.",
         },
         {
-          title: "Feed health",
+          title: "Source quality",
           description:
-            "Show failures, stale feeds, and source selection diagnostics in a user-safe way.",
+            "Present reliability and selection strength as product-facing confidence indicators.",
         },
         {
-          title: "Next step",
+          title: "Feed readiness",
           description:
-            "Connect registry metadata from backend source selection output.",
+            "Summarize source availability without exposing raw diagnostics to regular users.",
         },
       ],
     },
     "system-status": {
       title: "System Status",
-      eyebrow: "Platform operations",
+      eyebrow: "Platform readiness",
       description:
-        "A future user-safe status page for frontend, API, cache, reports, authentication, and deployment health.",
+        "View a clean status summary for frontend delivery, API availability, reports, authentication, and intelligence readiness.",
       cards: [
         {
-          title: "API status",
+          title: "Application availability",
           description:
-            "Show backend availability without developer-heavy error messages.",
+            "Show whether the product experience is ready, degraded, or waiting for backend validation.",
         },
         {
           title: "Report pipeline",
           description:
-            "Track cache and S3 snapshot readiness for report downloads.",
+            "Track whether cached snapshots and downloadable reports are available for the current session.",
         },
         {
-          title: "Next step",
+          title: "User-safe status",
           description:
-            "Hide raw debug data behind admin/debug mode in GEO-52C.",
+            "Keep operational detail readable while moving raw debug output behind admin controls later.",
         },
       ],
     },
@@ -435,16 +462,18 @@ export default function App() {
 
         if (callbackResult.handled && callbackResult.session) {
           setAuthSession(callbackResult.session);
-          setAuthMessage("Cognito login complete. JWT session stored.");
+          setAuthMessage("Login complete. Your session is ready.");
           setView("dashboard");
           setActiveView("intelligence-console");
         }
 
         if (callbackResult.handled && callbackResult.error) {
           setAuthMessage(
-            callbackResult.errorDescription ||
-              callbackResult.error ||
-              "Cognito returned an authentication error."
+            sanitizeAuthMessage(
+              callbackResult.errorDescription ||
+                callbackResult.error ||
+                "Authentication could not be completed."
+            )
           );
           setView("landing");
           setActiveView("intelligence-console");
@@ -453,7 +482,9 @@ export default function App() {
         if (!mounted) return;
 
         setAuthMessage(
-          error?.message || "Cognito login completed, but token exchange failed."
+          sanitizeAuthMessage(
+            error?.message || "Login could not be completed. Please retry."
+          )
         );
         setView("landing");
         setActiveView("intelligence-console");
@@ -491,7 +522,7 @@ export default function App() {
       authenticated: Boolean(authSession?.authenticated),
       provider: authSession?.provider || "",
       storedAt: authSession?.storedAt || "",
-      message: authMessage,
+      message: sanitizeAuthMessage(authMessage),
     }),
     [authSession, authMessage]
   );
@@ -518,7 +549,7 @@ export default function App() {
     const loginUrl = await buildLoginUrl();
 
     if (!loginUrl) {
-      setAuthMessage("Cognito auth is not configured for this frontend environment.");
+      setAuthMessage("Sign-in is not configured for this deployment yet.");
       return;
     }
 
@@ -528,7 +559,7 @@ export default function App() {
   function handleLogout() {
     clearAuthSession();
     setAuthSession(null);
-    setAuthMessage("Local frontend session cleared.");
+    setAuthMessage("You have been signed out.");
     setActiveView("intelligence-console");
 
     const logoutUrl = buildLogoutUrl();
@@ -544,7 +575,7 @@ export default function App() {
   function handleViewDemo() {
     setView("dashboard");
     setActiveView("intelligence-console");
-    setAuthMessage("Public demo mode active. Login remains optional.");
+    setAuthMessage("Public demo mode is active.");
   }
 
   function handleBackToLanding() {
@@ -605,7 +636,7 @@ export default function App() {
     event.preventDefault();
 
     if (!form.scenario.trim()) {
-      setErrorMessage("Please enter a geopolitical scenario before generating intelligence.");
+      setErrorMessage("Enter a geopolitical scenario before generating intelligence.");
       return;
     }
 
@@ -643,13 +674,13 @@ export default function App() {
 
       if (mappedResults.length === 0 && !noResultExplanation) {
         setErrorMessage(
-          "The backend responded successfully, but no results passed the relevance and source-coverage filters for this scenario."
+          "No qualified intelligence signals were found for this scenario. Try broadening the region, country, or sentiment filters."
         );
       }
     } catch (error) {
       setErrorMessage(
         error?.message ||
-          "Unable to reach the backend API. This is expected while the backend remains OFF for cost saving."
+          "The intelligence API is not available right now. This can happen while the backend is offline for cost control."
       );
     } finally {
       setLoading(false);
@@ -680,7 +711,7 @@ export default function App() {
 
       if (!queryHash) {
         throw new Error(
-          "The regenerated intelligence response did not include a report query hash."
+          "The regenerated intelligence response did not include a report reference."
         );
       }
 

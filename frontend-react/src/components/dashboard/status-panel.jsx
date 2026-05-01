@@ -14,9 +14,9 @@ function formatTimestamp(value) {
 function stateDetails({ loading, errorMessage, hasResults, noResultExplanation }) {
   if (loading) {
     return {
-      label: "Generating",
+      label: "Analyzing",
       className: "border-cyan-400/40 bg-cyan-400/10 text-cyan-200",
-      message: "Frontend request is in progress. Waiting for the backend intelligence payload.",
+      message: "Geo-Sentinel is collecting source signals and preparing the intelligence view.",
     };
   }
 
@@ -25,32 +25,32 @@ function stateDetails({ loading, errorMessage, hasResults, noResultExplanation }
       label: "API unavailable",
       className: "border-red-400/40 bg-red-400/10 text-red-200",
       message:
-        "The frontend is healthy, but the backend request failed or the backend is offline for cost saving.",
+        "The frontend is available, but live intelligence generation is currently unavailable.",
     };
   }
 
   if (hasResults) {
     return {
-      label: "Live results loaded",
+      label: "Signals ready",
       className: "border-emerald-400/40 bg-emerald-400/10 text-emerald-200",
-      message: "The dashboard is rendering real results from the backend API contract.",
+      message: "Ranked intelligence signals are loaded for the current scenario.",
     };
   }
 
   if (noResultExplanation?.status === "no-qualified-matches") {
     return {
-      label: "No qualified matches",
+      label: "No qualified signals",
       className: "border-amber-400/40 bg-amber-400/10 text-amber-200",
       message:
         noResultExplanation.message ||
-        "The backend completed successfully, but no article passed the active intelligence filters.",
+        "Geo-Sentinel completed the search, but no source passed the active filters.",
     };
   }
 
   return {
     label: "Ready",
     className: "border-amber-400/40 bg-amber-400/10 text-amber-200",
-    message: "Enter a scenario to query the backend. Backend may be offline until recreated for validation.",
+    message: "Enter a scenario to generate geopolitical intelligence signals.",
   };
 }
 
@@ -123,7 +123,7 @@ function SourceCoverageCard({ source }) {
 
       {Number.isFinite(Number(coverageScore)) ? (
         <p className="mt-3 text-xs leading-5 text-slate-500">
-          Coverage selection score:{" "}
+          Selection strength:{" "}
           <span className="text-slate-300">{Number(coverageScore).toFixed(2)}</span>
         </p>
       ) : null}
@@ -189,16 +189,20 @@ export function StatusPanel({
       <div className="space-y-5">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-300/80">
-            Mission status
+            Intelligence summary
           </p>
           <h2 className="mt-2 text-lg font-semibold text-slate-100">
-            Query execution telemetry
+            Current scenario overview
           </h2>
+          <p className="mt-2 text-sm leading-6 text-slate-400">
+            A compact view of source coverage, signal volume, sentiment, and filters
+            for the active intelligence run.
+          </p>
         </div>
 
         <div className="rounded-2xl border border-white/10 bg-slate-950/60 p-4">
           <div className="flex items-center justify-between gap-3">
-            <span className="text-sm text-slate-400">Current state</span>
+            <span className="text-sm text-slate-400">Status</span>
             <Badge className={currentState.className}>{currentState.label}</Badge>
           </div>
           <p className="mt-3 text-sm leading-6 text-slate-400">
@@ -209,7 +213,7 @@ export function StatusPanel({
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
           <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
             <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
-              Total rendered results
+              Signals shown
             </p>
             <p className="mt-2 text-2xl font-semibold text-slate-100">
               {stats?.total ?? 0}
@@ -218,7 +222,7 @@ export function StatusPanel({
 
           <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
             <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
-              Last request time
+              Last analysis
             </p>
             <p className="mt-2 text-sm font-medium text-slate-100">
               {formatTimestamp(requestMeta?.timestamp)}
@@ -229,36 +233,35 @@ export function StatusPanel({
         <div className="grid gap-3">
           <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
             <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
-              Source coverage
+              Sources considered
             </p>
             <p className="mt-2 text-2xl font-semibold text-slate-100">
               {selectedSourceCount}
             </p>
             <p className="mt-1 text-xs text-slate-500">
-              selected source(s) from the backend registry
+              selected source(s) matched to this scenario
             </p>
           </div>
 
           <div className="grid grid-cols-3 gap-2">
-            <DiagnosticStat label="Raw" value={counts.rawItemsSeen ?? counts.raw} />
-            <DiagnosticStat label="Filtered" value={counts.filtered ?? 0} />
-            <DiagnosticStat label="Returned" value={counts.returned ?? 0} />
+            <DiagnosticStat label="Collected" value={counts.rawItemsSeen ?? counts.raw} />
+            <DiagnosticStat label="Qualified" value={counts.filtered ?? 0} />
+            <DiagnosticStat label="Shown" value={counts.returned ?? 0} />
           </div>
 
           <div className="grid grid-cols-2 gap-2">
-            <DiagnosticStat label="Filtered out" value={counts.filteredOut ?? 0} />
-            <DiagnosticStat label="Worker accepted" value={diagnostics.acceptedItems ?? 0} />
+            <DiagnosticStat label="Excluded" value={counts.filteredOut ?? 0} />
+            <DiagnosticStat label="Accepted" value={diagnostics.acceptedItems ?? 0} />
           </div>
         </div>
 
         {expandedQueries.length > 0 ? (
           <div className="space-y-3 rounded-2xl border border-white/10 bg-white/5 p-4">
             <h3 className="text-sm font-semibold text-slate-100">
-              Query expansion
+              Search variants
             </h3>
             <p className="text-sm leading-6 text-slate-400">
-              GEO-47I tried deterministic query variants before accepting or rejecting
-              RSS articles.
+              Related scenario phrases used to improve source matching.
             </p>
             <div className="flex flex-wrap gap-2">
               {expandedQueries.map((query) => (
@@ -273,59 +276,10 @@ export function StatusPanel({
           </div>
         ) : null}
 
-        {diagnostics && Object.keys(diagnostics).length > 0 ? (
-          <div className="space-y-3 rounded-2xl border border-white/10 bg-white/5 p-4">
-            <h3 className="text-sm font-semibold text-slate-100">
-              Rejection diagnostics
-            </h3>
-
-            <div className="grid grid-cols-2 gap-2">
-              <DiagnosticStat
-                label="Strict gate"
-                value={diagnostics.rejectedByStrictGate ?? 0}
-              />
-              <DiagnosticStat
-                label="Country gate"
-                value={diagnostics.rejectedByMultiCountryGate ?? 0}
-              />
-              <DiagnosticStat
-                label="Low relevance"
-                value={diagnostics.rejectedByRelevanceThreshold ?? 0}
-              />
-              <DiagnosticStat
-                label="Missing data"
-                value={diagnostics.rejectedMissingTitleOrUrl ?? 0}
-              />
-            </div>
-
-            {Array.isArray(diagnostics.rejectionSamples) &&
-            diagnostics.rejectionSamples.length > 0 ? (
-              <div className="space-y-2">
-                <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
-                  Sample rejected articles
-                </p>
-                {diagnostics.rejectionSamples.slice(0, 3).map((sample, index) => (
-                  <div
-                    key={`${sample?.title || "sample"}-${index}`}
-                    className="rounded-xl border border-white/10 bg-slate-950/50 p-3"
-                  >
-                    <p className="text-xs font-semibold text-slate-300">
-                      {sample?.title || "Untitled article"}
-                    </p>
-                    <p className="mt-1 text-xs text-slate-500">
-                      {sample?.source || "Unknown source"} · {sample?.reason || "rejected"}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            ) : null}
-          </div>
-        ) : null}
-
         {selectedSources.length > 0 ? (
           <div className="space-y-3">
             <h3 className="text-sm font-semibold text-slate-100">
-              Selected source registry
+              Source coverage
             </h3>
 
             <div className="grid gap-3">
@@ -350,7 +304,7 @@ export function StatusPanel({
         </div>
 
         <div className="space-y-2 rounded-2xl border border-white/10 bg-white/5 p-4">
-          <h3 className="text-sm font-semibold text-slate-100">Applied filters</h3>
+          <h3 className="text-sm font-semibold text-slate-100">Active filters</h3>
           <p className="text-sm leading-6 text-slate-400">
             Regions: {(appliedFilters?.regions || []).join(", ") || "—"}
           </p>
@@ -362,19 +316,10 @@ export function StatusPanel({
           </p>
         </div>
 
-        <div className="space-y-2 rounded-2xl border border-white/10 bg-white/5 p-4">
-          <h3 className="text-sm font-semibold text-slate-100">Backend contract note</h3>
-          <p className="text-sm leading-6 text-slate-400">
-            GEO-47I preserves the strict relevance and source-registry engine, then adds
-            query expansion, no-result diagnostics, rejection visibility, and source-quality
-            transparency. No AI-generated facts are inserted into live results.
-          </p>
-        </div>
-
         {requestMeta?.requestedScenario ? (
           <div className="space-y-2 rounded-2xl border border-white/10 bg-white/5 p-4">
             <h3 className="text-sm font-semibold text-slate-100">
-              Last requested scenario
+              Scenario
             </h3>
             <p className="text-sm leading-6 text-slate-400">
               {requestMeta.requestedScenario}

@@ -30,7 +30,8 @@ export function AppShell({
             onBackToLanding={onBackToLanding}
             demoMode={demoMode}
           />
-          {children}
+
+          <div className="min-w-0">{children}</div>
         </main>
       </div>
     </div>
