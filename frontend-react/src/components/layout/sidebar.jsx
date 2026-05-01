@@ -3,11 +3,11 @@ import { cn } from "@/lib/utils";
 
 export const NAV_ITEMS = [
   { id: "intelligence-console", label: "Intelligence Console", status: "LIVE" },
-  { id: "signals-feed", label: "Signals Feed", status: "NEW" },
-  { id: "reports-vault", label: "Reports Vault", status: "READY" },
-  { id: "regional-monitor", label: "Regional Monitor", status: "READY" },
-  { id: "source-registry", label: "Source Registry", status: "READY" },
-  { id: "system-status", label: "System Status", status: "READY" },
+  { id: "signals-feed", label: "Signals Feed", status: "SOON" },
+  { id: "reports-vault", label: "Reports Vault", status: "SOON" },
+  { id: "regional-monitor", label: "Regional Monitor", status: "SOON" },
+  { id: "source-registry", label: "Source Registry", status: "SOON" },
+  { id: "system-status", label: "System Status", status: "SOON" },
 ];
 
 export function Sidebar({ className, activeView, onNavigate }) {
@@ -25,13 +25,13 @@ export function Sidebar({ className, activeView, onNavigate }) {
           </div>
           <div>
             <p className="text-sm font-semibold text-slate-100">Geo-Sentinel</p>
-            <p className="text-xs text-slate-400">Intelligence Platform</p>
+            <p className="text-xs text-slate-400">Geopolitical intelligence</p>
           </div>
         </div>
       </div>
 
       <div className="mb-6">
-        <Badge variant="cyan">Simple-first delivery</Badge>
+        <Badge variant="cyan">SIMPLE architecture</Badge>
       </div>
 
       <nav className="space-y-2">
@@ -59,13 +59,13 @@ export function Sidebar({ className, activeView, onNavigate }) {
 
       <div className="mt-auto rounded-2xl border border-slate-800 bg-slate-900/80 p-4">
         <p className="text-xs uppercase tracking-[0.22em] text-slate-500">
-          Backend status
+          Runtime mode
         </p>
         <p className="mt-2 text-sm font-medium text-slate-200">
-          Cost-aware runtime
+          Cost-aware validation
         </p>
         <p className="mt-1 text-sm text-slate-400">
-          Backend and ALB stay off unless validation requires them.
+          The live API can be enabled for testing while stable frontend delivery stays available.
         </p>
       </div>
     </aside>

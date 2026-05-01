@@ -26,15 +26,14 @@ export function Topbar({
     <header className="flex flex-col gap-4 rounded-3xl border border-slate-800 bg-slate-950/70 p-5 md:flex-row md:items-center md:justify-between">
       <div>
         <p className="text-xs uppercase tracking-[0.25em] text-cyan-300">
-          Geopolitical Intelligence Workspace
+          Intelligence Console
         </p>
         <h1 className="mt-2 text-2xl font-semibold tracking-tight text-slate-100 md:text-3xl">
-          Geo-Sentinel Intelligence Dashboard
+          Monitor geopolitical signals with source-backed analysis
         </h1>
-        <p className="mt-2 max-w-2xl text-sm text-slate-400">
-          {demoMode
-            ? "You are viewing the public demo. Sign in when ready to enter authenticated intelligence workflows."
-            : "Public intelligence queries remain available. Cognito authentication is wired as an optional entry point for the user and premium layers."}
+        <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
+          Generate ranked intelligence signals, review source coverage, and download
+          analyst-style reports from live RSS-based geopolitical monitoring.
         </p>
 
         {authState?.message ? (
@@ -53,7 +52,7 @@ export function Topbar({
         ) : null}
 
         <Badge variant="green">
-          {demoMode ? "Demo mode active" : "Public demo active"}
+          {demoMode ? "Demo mode" : "Public access"}
         </Badge>
 
         {isConfigured ? (
@@ -64,17 +63,17 @@ export function Topbar({
                 : "border-cyan-400/40 bg-cyan-400/10 text-cyan-200"
             }
           >
-            {isAuthenticated ? "Signed in" : "Cognito ready"}
+            {isAuthenticated ? "Signed in" : "Login ready"}
           </Badge>
         ) : (
-          <Badge variant="amber">Auth not configured</Badge>
+          <Badge variant="amber">Login unavailable</Badge>
         )}
 
         {isAuthenticated ? (
           <>
             <div className="text-right text-xs text-slate-500">
-              <p className="text-slate-300">Hosted UI session</p>
-              <p>{formatAuthTime(authState?.storedAt) || "Stored locally"}</p>
+              <p className="text-slate-300">Session active</p>
+              <p>{formatAuthTime(authState?.storedAt) || "Ready"}</p>
             </div>
             <Button variant="outline" onClick={onLogout}>
               <LogOut className="mr-2 h-4 w-4" />
