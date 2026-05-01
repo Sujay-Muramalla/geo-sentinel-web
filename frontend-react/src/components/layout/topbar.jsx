@@ -1,14 +1,14 @@
-import { ArrowLeft, LogIn, LogOut } from "lucide-react";
+import { ArrowLeft, LogIn, LogOut, ShieldCheck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
 function formatAuthTime(value) {
   if (!value) return "";
-  
+
   const parsed = new Date(value);
-  
+
   if (Number.isNaN(parsed.getTime())) return "";
-  
+
   return parsed.toLocaleString();
 }
 
@@ -21,77 +21,86 @@ export function Topbar({
 }) {
   const isConfigured = Boolean(authState?.configured);
   const isAuthenticated = Boolean(authState?.authenticated);
-  
+
   return (
-    <header className="flex flex-col gap-4 rounded-3xl border border-slate-800 bg-slate-950/70 p-5 md:flex-row md:items-center md:justify-between">
-    <div>
-    <p className="text-xs uppercase tracking-[0.25em] text-cyan-300">
-    Geo-Sentinel Platform
-    </p>
-    <h1 className="mt-2 text-2xl font-semibold tracking-tight text-slate-100 md:text-3xl">
-    Monitor, find, and validate your source of truth
-    </h1>
-    <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-400">
-    Track geopolitical developments, verify signals across trusted sources,
-    and turn global events into structured, actionable intelligence.
-    </p>
-    
-    {authState?.message ? (
-      <p className="mt-3 max-w-2xl rounded-2xl border border-cyan-400/20 bg-cyan-400/10 px-4 py-2 text-xs text-cyan-100">
-      {authState.message}
-      </p>
-    ) : null}
-    </div>
-    
-    <div className="flex flex-wrap items-center gap-3">
-    {onBackToLanding ? (
-      <Button variant="outline" onClick={onBackToLanding}>
-      <ArrowLeft className="mr-2 h-4 w-4" />
-      Exit Demo
-      </Button>
-    ) : null}
-    
-    <Badge variant="green">
-    {demoMode ? "Demo mode" : "Public access"}
-    </Badge>
-    
-    {isConfigured ? (
-      <Badge
-      className={
-        isAuthenticated
-        ? "border-emerald-400/40 bg-emerald-400/10 text-emerald-200"
-        : "border-cyan-400/40 bg-cyan-400/10 text-cyan-200"
-      }
-      >
-      {isAuthenticated ? "Signed in" : "Login ready"}
-      </Badge>
-    ) : (
-      <Badge variant="amber">Login unavailable</Badge>
-    )}
-    
-    {isAuthenticated ? (
-      <>
-      <div className="text-right text-xs text-slate-500">
-      <p className="text-slate-300">Session active</p>
-      <p>{formatAuthTime(authState?.storedAt) || "Ready"}</p>
+    <header className="sticky top-4 z-30 rounded-3xl border border-slate-800/90 bg-slate-950/85 px-4 py-3 shadow-2xl shadow-slate-950/30 backdrop-blur md:px-5">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-cyan-500/15 text-sm font-bold text-cyan-300 ring-1 ring-cyan-500/30">
+            GS
+          </div>
+
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-sm font-semibold text-slate-100">
+                Geo-Sentinel
+              </p>
+              <Badge variant="cyan">AWS-hosted</Badge>
+              <Badge variant="green">
+                {demoMode ? "Demo mode" : "Platform access"}
+              </Badge>
+            </div>
+            <p className="mt-1 text-xs text-slate-500">
+              Geopolitical intelligence platform · SIMPLE architecture
+            </p>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3">
+          {authState?.message ? (
+            <p className="max-w-xl rounded-2xl border border-cyan-400/20 bg-cyan-400/10 px-3 py-2 text-xs text-cyan-100">
+              {authState.message}
+            </p>
+          ) : null}
+
+          {onBackToLanding ? (
+            <Button variant="outline" onClick={onBackToLanding}>
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to landing
+            </Button>
+          ) : null}
+
+          {isConfigured ? (
+            <Badge
+              className={
+                isAuthenticated
+                  ? "border-emerald-400/40 bg-emerald-400/10 text-emerald-200"
+                  : "border-cyan-400/40 bg-cyan-400/10 text-cyan-200"
+              }
+            >
+              <ShieldCheck className="mr-1 h-3.5 w-3.5" />
+              {isAuthenticated ? "Signed in" : "Login ready"}
+            </Badge>
+          ) : (
+            <Badge variant="amber">Login unavailable</Badge>
+          )}
+
+          {isAuthenticated ? (
+            <>
+              <div className="hidden text-right text-xs text-slate-500 sm:block">
+                <p className="text-slate-300">Session active</p>
+                <p>{formatAuthTime(authState?.storedAt) || "Ready"}</p>
+              </div>
+
+              <Button variant="outline" onClick={onLogout}>
+                <LogOut className="mr-2 h-4 w-4" />
+                Logout
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button variant="outline" onClick={onLogin} disabled={!isConfigured}>
+                <LogIn className="mr-2 h-4 w-4" />
+                Login
+              </Button>
+
+              <Button onClick={onLogin} disabled={!isConfigured}>
+                Get Started
+              </Button>
+            </>
+          )}
+        </div>
       </div>
-      <Button variant="outline" onClick={onLogout}>
-      <LogOut className="mr-2 h-4 w-4" />
-      Logout
-      </Button>
-      </>
-    ) : (
-      <>
-      <Button variant="outline" onClick={onLogin} disabled={!isConfigured}>
-      <LogIn className="mr-2 h-4 w-4" />
-      Login
-      </Button>
-      <Button onClick={onLogin} disabled={!isConfigured}>
-      Get Started
-      </Button>
-      </>
-    )}
-    </div>
     </header>
   );
 }

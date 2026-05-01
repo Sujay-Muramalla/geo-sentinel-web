@@ -1,5 +1,7 @@
 import { Sidebar } from "@/components/layout/sidebar";
 import { Topbar } from "@/components/layout/topbar";
+import { PageHero } from "@/components/layout/page-hero";
+import { AppFooter } from "@/components/layout/app-footer";
 
 export function AppShell({
   children,
@@ -31,7 +33,11 @@ export function AppShell({
             demoMode={demoMode}
           />
 
-          <div className="min-w-0">{children}</div>
+          <PageHero activeView={activeView} />
+
+          <div className="min-w-0 flex-1">{children}</div>
+
+          <AppFooter />
         </main>
       </div>
     </div>
