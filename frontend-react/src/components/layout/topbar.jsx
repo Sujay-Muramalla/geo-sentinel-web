@@ -3,16 +3,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { getStoredUserProfile } from "@/lib/auth";
 
-function formatAuthTime(value) {
-  if (!value) return "";
-
-  const parsed = new Date(value);
-
-  if (Number.isNaN(parsed.getTime())) return "";
-
-  return parsed.toLocaleString();
-}
-
 function formatDisplayName(profile) {
   if (profile?.name) return profile.name;
   if (profile?.email) return profile.email.split("@")[0];
@@ -82,7 +72,7 @@ export function Topbar({
                   Hello, {displayName}
                 </p>
                 <p className="max-w-[220px] truncate text-xs text-slate-500">
-                  {userProfile?.email || "Account & Settings"}
+                  {userProfile?.email || "Account access"}
                 </p>
               </div>
             </div>
@@ -104,17 +94,10 @@ export function Topbar({
           )}
 
           {isAuthenticated ? (
-            <>
-              <div className="hidden text-right text-xs text-slate-500 xl:block">
-                <p className="text-slate-300">Session active</p>
-                <p>{formatAuthTime(authState?.storedAt) || "Ready"}</p>
-              </div>
-
-              <Button variant="outline" onClick={onLogout}>
-                <LogOut className="mr-2 h-4 w-4" />
-                Logout
-              </Button>
-            </>
+            <Button variant="outline" onClick={onLogout}>
+              <LogOut className="mr-2 h-4 w-4" />
+              Logout
+            </Button>
           ) : (
             <>
               <Button variant="outline" onClick={onLogin} disabled={!isConfigured}>

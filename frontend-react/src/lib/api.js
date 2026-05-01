@@ -15,9 +15,7 @@ function normalizeArray(value) {
 }
 
 function normalizeCountries(value) {
-  if (Array.isArray(value)) {
-    return value.filter(Boolean);
-  }
+  if (Array.isArray(value)) return value.filter(Boolean);
 
   if (typeof value === "string") {
     return value
@@ -30,14 +28,8 @@ function normalizeCountries(value) {
 }
 
 function normalizePublicationFocus(value) {
-  if (Array.isArray(value)) {
-    return value.filter(Boolean);
-  }
-
-  if (!value || value === "all") {
-    return ["all"];
-  }
-
+  if (Array.isArray(value)) return value.filter(Boolean);
+  if (!value || value === "all") return ["all"];
   return [value];
 }
 
@@ -90,21 +82,47 @@ function normalizeBackendErrorDetails(payload) {
   );
 }
 
+function getSafeUserMessage(code, fallbackMessage = "") {
+  if (RECOVERABLE_REPORT_ERROR_CODES.includes(code)) {
+    return "This report needs to be regenerated before download.";
+  }
+
+  if (code === "REPORT_QUERY_HASH_MISSING") {
+    return "Run an intelligence scenario before downloading a report.";
+  }
+
+  if (code === "REPORT_RESULT_ID_MISSING") {
+    return "This result is missing a report reference. Regenerate the scenario and retry.";
+  }
+
+  if (code === "REPORT_PDF_CONTENT_TYPE_INVALID") {
+    return "The PDF report could not be prepared. Please retry the download.";
+  }
+
+  if (String(code).startsWith("HTTP_")) {
+    return "The intelligence service is temporarily unavailable. Please retry later.";
+  }
+
+  return fallbackMessage || "The request could not be completed. Please retry.";
+}
+
 function buildApiError(payload, fallbackMessage, fallbackCode = "") {
-  const message =
+  const rawMessage =
     payload?.error?.message ||
     payload?.message ||
     payload?.data?.error?.message ||
     fallbackMessage ||
     "Request failed.";
 
-  const error = new Error(message);
-  error.code = normalizeBackendErrorCode(payload, fallbackCode);
+  const code = normalizeBackendErrorCode(payload, fallbackCode);
+  const error = new Error(getSafeUserMessage(code, rawMessage));
+
+  error.code = code;
   error.details = normalizeBackendErrorDetails(payload);
   error.payload = payload || null;
+  error.rawMessage = rawMessage;
   error.recoverable = Boolean(
-    error.details?.recoverable ||
-      RECOVERABLE_REPORT_ERROR_CODES.includes(error.code)
+    error.details?.recoverable || RECOVERABLE_REPORT_ERROR_CODES.includes(error.code)
   );
 
   return error;
@@ -113,15 +131,10 @@ function buildApiError(payload, fallbackMessage, fallbackCode = "") {
 export function isRecoverableReportError(error) {
   const code = error?.code || "";
 
-  if (RECOVERABLE_REPORT_ERROR_CODES.includes(code)) {
-    return true;
-  }
+  if (RECOVERABLE_REPORT_ERROR_CODES.includes(code)) return true;
+  if (error?.recoverable === true || error?.details?.recoverable === true) return true;
 
-  if (error?.recoverable === true || error?.details?.recoverable === true) {
-    return true;
-  }
-
-  const message = String(error?.message || "").toUpperCase();
+  const message = String(error?.rawMessage || error?.message || "").toUpperCase();
 
   return RECOVERABLE_REPORT_ERROR_CODES.some((recoverableCode) =>
     message.includes(recoverableCode)
@@ -217,19 +230,11 @@ export async function generateIntelligence(form) {
   }
 
   if (!response.ok) {
-    throw buildApiError(
-      payload,
-      `Request failed with status ${response.status}`,
-      `HTTP_${response.status}`
-    );
+    throw buildApiError(payload, "", `HTTP_${response.status}`);
   }
 
   if (payload?.success === false) {
-    throw buildApiError(
-      payload,
-      "Backend returned an unsuccessful response.",
-      "INTELLIGENCE_GENERATION_FAILED"
-    );
+    throw buildApiError(payload, "", "INTELLIGENCE_GENERATION_FAILED");
   }
 
   return payload;
@@ -237,9 +242,7 @@ export async function generateIntelligence(form) {
 
 export async function fetchReportByQueryHash(queryHash) {
   if (!queryHash) {
-    const error = new Error(
-      "No report query hash is available for this intelligence run."
-    );
+    const error = new Error("Run an intelligence scenario before downloading a report.");
     error.code = "REPORT_QUERY_HASH_MISSING";
     error.recoverable = false;
     throw error;
@@ -260,19 +263,11 @@ export async function fetchReportByQueryHash(queryHash) {
   }
 
   if (!response.ok) {
-    throw buildApiError(
-      payload,
-      `Report download failed with status ${response.status}`,
-      `HTTP_${response.status}`
-    );
+    throw buildApiError(payload, "", `HTTP_${response.status}`);
   }
 
   if (payload?.success === false) {
-    throw buildApiError(
-      payload,
-      "Backend returned an unsuccessful report response.",
-      "REPORT_DOWNLOAD_FAILED"
-    );
+    throw buildApiError(payload, "", "REPORT_DOWNLOAD_FAILED");
   }
 
   return payload;
@@ -280,16 +275,16 @@ export async function fetchReportByQueryHash(queryHash) {
 
 export async function fetchReportItemByResultId(queryHash, resultId) {
   if (!queryHash) {
-    const error = new Error(
-      "No report query hash is available for this intelligence run."
-    );
+    const error = new Error("Run an intelligence scenario before downloading a report.");
     error.code = "REPORT_QUERY_HASH_MISSING";
     error.recoverable = false;
     throw error;
   }
 
   if (!resultId) {
-    const error = new Error("No result id is available for this intelligence result.");
+    const error = new Error(
+      "This result is missing a report reference. Regenerate the scenario and retry."
+    );
     error.code = "REPORT_RESULT_ID_MISSING";
     error.recoverable = false;
     throw error;
@@ -310,19 +305,11 @@ export async function fetchReportItemByResultId(queryHash, resultId) {
   }
 
   if (!response.ok) {
-    throw buildApiError(
-      payload,
-      `Per-card report download failed with status ${response.status}`,
-      `HTTP_${response.status}`
-    );
+    throw buildApiError(payload, "", `HTTP_${response.status}`);
   }
 
   if (payload?.success === false) {
-    throw buildApiError(
-      payload,
-      "Backend returned an unsuccessful per-card report response.",
-      "CARD_REPORT_DOWNLOAD_FAILED"
-    );
+    throw buildApiError(payload, "", "CARD_REPORT_DOWNLOAD_FAILED");
   }
 
   return payload;
@@ -330,16 +317,16 @@ export async function fetchReportItemByResultId(queryHash, resultId) {
 
 export async function fetchReportItemPdfByResultId(queryHash, resultId) {
   if (!queryHash) {
-    const error = new Error(
-      "No report query hash is available for this intelligence run."
-    );
+    const error = new Error("Run an intelligence scenario before downloading a report.");
     error.code = "REPORT_QUERY_HASH_MISSING";
     error.recoverable = false;
     throw error;
   }
 
   if (!resultId) {
-    const error = new Error("No result id is available for this intelligence result.");
+    const error = new Error(
+      "This result is missing a report reference. Regenerate the scenario and retry."
+    );
     error.code = "REPORT_RESULT_ID_MISSING";
     error.recoverable = false;
     throw error;
@@ -364,17 +351,13 @@ export async function fetchReportItemPdfByResultId(queryHash, resultId) {
       payload = null;
     }
 
-    throw buildApiError(
-      payload,
-      `Per-card PDF report download failed with status ${response.status}`,
-      `HTTP_${response.status}`
-    );
+    throw buildApiError(payload, "", `HTTP_${response.status}`);
   }
 
   const contentType = response.headers.get("content-type") || "";
 
   if (!contentType.toLowerCase().includes("application/pdf")) {
-    const error = new Error("Backend did not return a PDF report.");
+    const error = new Error("The PDF report could not be prepared. Please retry the download.");
     error.code = "REPORT_PDF_CONTENT_TYPE_INVALID";
     error.recoverable = false;
     throw error;

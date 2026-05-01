@@ -16,16 +16,17 @@ function stateDetails({ loading, errorMessage, hasResults, noResultExplanation }
     return {
       label: "Analyzing",
       className: "border-cyan-400/40 bg-cyan-400/10 text-cyan-200",
-      message: "Geo-Sentinel is collecting source signals and preparing the intelligence view.",
+      message:
+        "Geo-Sentinel is reviewing source coverage and preparing the intelligence view.",
     };
   }
 
   if (errorMessage) {
     return {
-      label: "API unavailable",
+      label: "Temporarily unavailable",
       className: "border-red-400/40 bg-red-400/10 text-red-200",
       message:
-        "The frontend is available, but live intelligence generation is currently unavailable.",
+        "Live intelligence generation is not available right now. Please retry later.",
     };
   }
 
@@ -43,7 +44,7 @@ function stateDetails({ loading, errorMessage, hasResults, noResultExplanation }
       className: "border-amber-400/40 bg-amber-400/10 text-amber-200",
       message:
         noResultExplanation.message ||
-        "Geo-Sentinel completed the search, but no source passed the active filters.",
+        "Geo-Sentinel completed the review, but no source met the current intelligence criteria.",
     };
   }
 
@@ -96,7 +97,6 @@ function SourceCoverageCard({ source }) {
     source?.sourceReliability ??
     source?.qualityScore;
   const sourceQuality = source?.sourceQuality || source?.tier || "standard";
-  const coverageScore = source?.coverageSelectionScore;
 
   const categories = Array.isArray(source?.categories) ? source.categories : [];
   const coverage = Array.isArray(source?.coverage) ? source.coverage : [];
@@ -121,13 +121,6 @@ function SourceCoverageCard({ source }) {
         </div>
       </div>
 
-      {Number.isFinite(Number(coverageScore)) ? (
-        <p className="mt-3 text-xs leading-5 text-slate-500">
-          Selection strength:{" "}
-          <span className="text-slate-300">{Number(coverageScore).toFixed(2)}</span>
-        </p>
-      ) : null}
-
       {coverage.length > 0 ? (
         <div className="mt-3 flex flex-wrap gap-2">
           {coverage.slice(0, 5).map((item) => (
@@ -150,17 +143,6 @@ function SourceCoverageCard({ source }) {
   );
 }
 
-function DiagnosticStat({ label, value }) {
-  return (
-    <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-3">
-      <p className="text-[0.65rem] uppercase tracking-[0.18em] text-slate-500">
-        {label}
-      </p>
-      <p className="mt-1 text-lg font-semibold text-slate-100">{value ?? 0}</p>
-    </div>
-  );
-}
-
 export function StatusPanel({
   loading,
   errorMessage,
@@ -170,10 +152,7 @@ export function StatusPanel({
   sourceTransparency,
 }) {
   const selectedSources = sourceTransparency?.selectedSources || [];
-  const counts = sourceTransparency?.counts || {};
   const appliedFilters = sourceTransparency?.appliedFilters || {};
-  const expandedQueries = sourceTransparency?.expandedQueries || [];
-  const diagnostics = sourceTransparency?.diagnostics || {};
   const noResultExplanation = sourceTransparency?.noResultExplanation || null;
   const selectedSourceCount = selectedSources.length;
 
@@ -195,7 +174,7 @@ export function StatusPanel({
             Current scenario overview
           </h2>
           <p className="mt-2 text-sm leading-6 text-slate-400">
-            A compact view of source coverage, signal volume, sentiment, and filters
+            A compact view of signal volume, source coverage, sentiment, and filters
             for the active intelligence run.
           </p>
         </div>
@@ -230,51 +209,17 @@ export function StatusPanel({
           </div>
         </div>
 
-        <div className="grid gap-3">
-          <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
-            <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
-              Sources considered
-            </p>
-            <p className="mt-2 text-2xl font-semibold text-slate-100">
-              {selectedSourceCount}
-            </p>
-            <p className="mt-1 text-xs text-slate-500">
-              selected source(s) matched to this scenario
-            </p>
-          </div>
-
-          <div className="grid grid-cols-3 gap-2">
-            <DiagnosticStat label="Collected" value={counts.rawItemsSeen ?? counts.raw} />
-            <DiagnosticStat label="Qualified" value={counts.filtered ?? 0} />
-            <DiagnosticStat label="Shown" value={counts.returned ?? 0} />
-          </div>
-
-          <div className="grid grid-cols-2 gap-2">
-            <DiagnosticStat label="Excluded" value={counts.filteredOut ?? 0} />
-            <DiagnosticStat label="Accepted" value={diagnostics.acceptedItems ?? 0} />
-          </div>
+        <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
+          <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
+            Sources considered
+          </p>
+          <p className="mt-2 text-2xl font-semibold text-slate-100">
+            {selectedSourceCount}
+          </p>
+          <p className="mt-1 text-xs text-slate-500">
+            source(s) matched to this scenario
+          </p>
         </div>
-
-        {expandedQueries.length > 0 ? (
-          <div className="space-y-3 rounded-2xl border border-white/10 bg-white/5 p-4">
-            <h3 className="text-sm font-semibold text-slate-100">
-              Search variants
-            </h3>
-            <p className="text-sm leading-6 text-slate-400">
-              Related scenario phrases used to improve source matching.
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {expandedQueries.map((query) => (
-                <span
-                  key={query}
-                  className="rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-xs text-cyan-100"
-                >
-                  {query}
-                </span>
-              ))}
-            </div>
-          </div>
-        ) : null}
 
         {selectedSources.length > 0 ? (
           <div className="space-y-3">
@@ -318,9 +263,7 @@ export function StatusPanel({
 
         {requestMeta?.requestedScenario ? (
           <div className="space-y-2 rounded-2xl border border-white/10 bg-white/5 p-4">
-            <h3 className="text-sm font-semibold text-slate-100">
-              Scenario
-            </h3>
+            <h3 className="text-sm font-semibold text-slate-100">Scenario</h3>
             <p className="text-sm leading-6 text-slate-400">
               {requestMeta.requestedScenario}
             </p>
