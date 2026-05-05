@@ -95,3 +95,4 @@ tmp/backend/src/python/backups/
 backend/src/python/backups/
 tmp/
 docs/architecture_digrams/*.tfplan
+*.tfplan
