@@ -186,6 +186,108 @@ function SourceCoverageCard({ source }) {
   );
 }
 
+function RawReturnedExplainer({ counts }) {
+  const raw =
+    counts?.rawItemsSeen ??
+    counts?.raw ??
+    counts?.sourceItemsReviewed ??
+    counts?.reviewed ??
+    0;
+  const returned = counts?.returned ?? 0;
+  const filteredOut =
+    counts?.filteredOut ??
+    Math.max(0, Number(raw || 0) - Number(returned || 0));
+
+  return (
+    <div className="rounded-2xl border border-violet-400/20 bg-violet-400/[0.04] p-4">
+      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-violet-300">
+        Review funnel
+      </p>
+      <h3 className="mt-2 text-sm font-semibold text-slate-100">
+        Raw signals versus visible results
+      </h3>
+      <p className="mt-2 text-sm leading-6 text-slate-400">
+        Geo-Sentinel may review many source items but only show cards that pass the
+        active scenario, region, source, recency, and ranking criteria.
+      </p>
+
+      <div className="mt-4 grid grid-cols-3 gap-2">
+        <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+          <p className="text-[0.65rem] uppercase tracking-[0.16em] text-slate-500">
+            Reviewed
+          </p>
+          <p className="mt-1 text-lg font-semibold text-slate-100">{raw}</p>
+        </div>
+        <div className="rounded-xl border border-white/10 bg-white/5 p-3">
+          <p className="text-[0.65rem] uppercase tracking-[0.16em] text-slate-500">
+            Filtered
+          </p>
+          <p className="mt-1 text-lg font-semibold text-slate-100">
+            {filteredOut}
+          </p>
+        </div>
+        <div className="rounded-xl border border-emerald-400/20 bg-emerald-400/10 p-3">
+          <p className="text-[0.65rem] uppercase tracking-[0.16em] text-emerald-200/80">
+            Shown
+          </p>
+          <p className="mt-1 text-lg font-semibold text-emerald-100">
+            {returned}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function TrustNotes({ hasResults, noResultExplanation }) {
+  const suggestions = Array.isArray(noResultExplanation?.suggestions)
+    ? noResultExplanation.suggestions
+    : [];
+
+  if (hasResults) {
+    return (
+      <div className="rounded-2xl border border-cyan-400/20 bg-cyan-400/[0.04] p-4">
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300">
+          Interpretation note
+        </p>
+        <p className="mt-2 text-sm leading-6 text-slate-400">
+          Visible cards are the strongest ranked results from the current run. Fewer cards
+          can mean stronger filtering, not necessarily weak source coverage.
+        </p>
+      </div>
+    );
+  }
+
+  if (!noResultExplanation) return null;
+
+  return (
+    <div className="rounded-2xl border border-amber-400/20 bg-amber-400/[0.04] p-4">
+      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-300">
+        No-result guidance
+      </p>
+      <p className="mt-2 text-sm leading-6 text-slate-400">
+        The backend completed the source review, but no article passed the current
+        ranking and filter threshold.
+      </p>
+
+      {suggestions.length > 0 ? (
+        <ul className="mt-3 space-y-2">
+          {suggestions.slice(0, 3).map((suggestion) => (
+            <li key={suggestion} className="flex gap-2 text-sm leading-5 text-slate-300">
+              <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-amber-300" />
+              <span>{suggestion}</span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="mt-3 text-sm leading-6 text-slate-400">
+          Try broadening the region, clearing country filters, or using a wider scenario phrase.
+        </p>
+      )}
+    </div>
+  );
+}
+
 export function StatusPanel({
   loading,
   errorMessage,
@@ -198,6 +300,7 @@ export function StatusPanel({
   const appliedFilters = sourceTransparency?.appliedFilters || {};
   const noResultExplanation = sourceTransparency?.noResultExplanation || null;
   const selectedSourceCount = selectedSources.length;
+  const counts = sourceTransparency?.counts || {};
 
   const currentState = stateDetails({
     loading,
@@ -217,8 +320,8 @@ export function StatusPanel({
             Current scenario overview
           </h2>
           <p className="mt-2 text-sm leading-6 text-slate-400">
-            A compact view of signal volume, source coverage, sentiment, and filters
-            for the active intelligence run.
+            A compact view of signal volume, source coverage, sentiment, ranking
+            transparency, and filters for the active intelligence run.
           </p>
         </div>
 
@@ -251,6 +354,13 @@ export function StatusPanel({
             </p>
           </div>
         </div>
+
+        <RawReturnedExplainer counts={counts} />
+
+        <TrustNotes
+          hasResults={hasResults}
+          noResultExplanation={noResultExplanation}
+        />
 
         <div className="rounded-2xl border border-white/10 bg-white/5 p-4">
           <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
