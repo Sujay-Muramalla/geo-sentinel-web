@@ -94,4 +94,4 @@ tmp/backend/src/python/backups/
 # Local dev artifacts
 backend/src/python/backups/
 tmp/
-docs/architecture_digrams/
+docs/architecture_digrams/*.tfplan
