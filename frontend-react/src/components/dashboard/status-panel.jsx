@@ -11,22 +11,47 @@ function formatTimestamp(value) {
   return parsed.toLocaleString();
 }
 
+function normalizeMessage(value) {
+  return String(value || "").toLowerCase();
+}
+
+function isBackendUnavailableMessage(message) {
+  const text = normalizeMessage(message);
+
+  return (
+    text.includes("failed to fetch") ||
+    text.includes("networkerror") ||
+    text.includes("unreachable") ||
+    text.includes("temporarily unavailable") ||
+    text.includes("backend is offline") ||
+    text.includes("cost control") ||
+    text.includes("cost-saving")
+  );
+}
+
+function isNoResultMessage(message) {
+  const text = normalizeMessage(message);
+
+  return (
+    text.includes("no qualified intelligence") ||
+    text.includes("no qualified signals") ||
+    text.includes("no result") ||
+    text.includes("no source met") ||
+    text.includes("no strong intelligence signal")
+  );
+}
+
 function stateDetails({ loading, errorMessage, hasResults, noResultExplanation }) {
+  const noQualifiedMatches =
+    noResultExplanation?.status === "no-qualified-matches" ||
+    isNoResultMessage(errorMessage);
+
   if (loading) {
     return {
       label: "Analyzing",
       className: "border-cyan-400/40 bg-cyan-400/10 text-cyan-200",
       message:
         "Geo-Sentinel is reviewing source coverage and preparing the intelligence view.",
-    };
-  }
-
-  if (errorMessage) {
-    return {
-      label: "Temporarily unavailable",
-      className: "border-red-400/40 bg-red-400/10 text-red-200",
-      message:
-        "Live intelligence generation is not available right now. Please retry later.",
     };
   }
 
@@ -38,13 +63,31 @@ function stateDetails({ loading, errorMessage, hasResults, noResultExplanation }
     };
   }
 
-  if (noResultExplanation?.status === "no-qualified-matches") {
+  if (noQualifiedMatches) {
     return {
       label: "No qualified signals",
       className: "border-amber-400/40 bg-amber-400/10 text-amber-200",
       message:
-        noResultExplanation.message ||
-        "Geo-Sentinel completed the review, but no source met the current intelligence criteria.",
+        noResultExplanation?.message ||
+        "The source review completed, but no result met the current intelligence criteria.",
+    };
+  }
+
+  if (errorMessage && isBackendUnavailableMessage(errorMessage)) {
+    return {
+      label: "Backend offline",
+      className: "border-red-400/40 bg-red-400/10 text-red-200",
+      message:
+        "The frontend is online, but the live intelligence backend is currently offline for cost-saving mode.",
+    };
+  }
+
+  if (errorMessage) {
+    return {
+      label: "Analysis incomplete",
+      className: "border-amber-400/40 bg-amber-400/10 text-amber-200",
+      message:
+        "Geo-Sentinel could not complete this analysis run. Adjust the scenario or retry after validation.",
     };
   }
 

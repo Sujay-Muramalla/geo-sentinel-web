@@ -3,11 +3,11 @@ import { cn } from "@/lib/utils";
 
 export const NAV_ITEMS = [
   { id: "intelligence-console", label: "Intelligence Console", status: "LIVE" },
-  { id: "signals-feed", label: "Signals Feed", status: "SOON" },
-  { id: "reports-vault", label: "Reports Vault", status: "SOON" },
-  { id: "regional-monitor", label: "Regional Monitor", status: "SOON" },
-  { id: "source-registry", label: "Source Registry", status: "SOON" },
-  { id: "system-status", label: "System Status", status: "SOON" },
+  { id: "signals-feed", label: "Signals Feed", status: "ACTIVE" },
+  { id: "regional-monitor", label: "Regional Monitor", status: "ACTIVE" },
+  { id: "reports-vault", label: "Reports Vault", status: "ACTIVE" },
+  { id: "source-registry", label: "Source Registry", status: "ACTIVE" },
+  { id: "system-status", label: "System Status", status: "ACTIVE" },
 ];
 
 export function Sidebar({ className, activeView, onNavigate }) {
@@ -30,8 +30,11 @@ export function Sidebar({ className, activeView, onNavigate }) {
         </div>
       </div>
 
-      <div className="mb-6">
+      <div className="mb-6 flex flex-wrap gap-2">
         <Badge variant="cyan">SIMPLE architecture</Badge>
+        <Badge className="border-emerald-400/30 bg-emerald-400/10 text-emerald-200">
+          UX active
+        </Badge>
       </div>
 
       <nav className="space-y-2">
@@ -51,7 +54,14 @@ export function Sidebar({ className, activeView, onNavigate }) {
               )}
             >
               <span>{item.label}</span>
-              {active ? <span className="text-xs">{item.status}</span> : null}
+              <span
+                className={cn(
+                  "text-[0.65rem] uppercase tracking-[0.16em]",
+                  active ? "text-cyan-200" : "text-slate-600"
+                )}
+              >
+                {item.status}
+              </span>
             </button>
           );
         })}
@@ -65,7 +75,7 @@ export function Sidebar({ className, activeView, onNavigate }) {
           Cost-aware validation
         </p>
         <p className="mt-1 text-sm text-slate-400">
-          The live API can be enabled for testing while stable frontend delivery stays available.
+          Frontend stays available while the live backend can be enabled only for validation.
         </p>
       </div>
     </aside>

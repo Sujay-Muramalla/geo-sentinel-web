@@ -109,6 +109,33 @@ function buildSummary(result) {
   );
 }
 
+function buildWhyThisMatters(result) {
+  const sentiment = String(result.sentiment || "neutral").toLowerCase();
+  const source = cleanText(result.source) || "a monitored source";
+  const region = cleanText(result.sourceRegion || result.region || result.country);
+  const country = cleanText(result.sourceCountry || result.country);
+  const topic = cleanText(result.title) || "this development";
+  const score = Number(result.signalScore ?? result.finalScore ?? result.score) || 0;
+
+  const locationPhrase = region || country ? ` in ${region || country}` : "";
+  const scorePhrase =
+    score >= 75
+      ? "a high-priority signal"
+      : score >= 45
+        ? "a moderate-priority signal"
+        : "an early monitoring signal";
+
+  if (sentiment === "negative") {
+    return `${topic} matters because ${source} is framing it as a risk-oriented development${locationPhrase}. Geo-Sentinel marks it as ${scorePhrase}, which means it may deserve closer monitoring for escalation, instability, or policy impact.`;
+  }
+
+  if (sentiment === "positive") {
+    return `${topic} matters because ${source} is framing it as a constructive or stabilizing development${locationPhrase}. Geo-Sentinel marks it as ${scorePhrase}, useful for comparing how different regions interpret the same issue.`;
+  }
+
+  return `${topic} matters because ${source} is reporting it as a relevant geopolitical development${locationPhrase}. Geo-Sentinel marks it as ${scorePhrase}, helping analysts compare source coverage, regional framing, and signal strength.`;
+}
+
 function sourceLine(result) {
   const source = cleanText(result.source) || "Unknown source";
   const country = cleanText(result.sourceCountry || result.country);
@@ -323,6 +350,7 @@ export function ResultCard({
   const [thumbnailFailed, setThumbnailFailed] = useState(false);
 
   const summary = buildSummary(result);
+  const whyThisMatters = buildWhyThisMatters(result);
   const sourceMeta = sourceLine(result);
   const region = cleanText(result.sourceRegion || result.region);
   const score = Number(result.signalScore ?? result.finalScore ?? result.score) || 0;
@@ -524,6 +552,15 @@ export function ResultCard({
 
         <div className="space-y-5 p-5">
           <p className="text-sm leading-6 text-slate-300">{summary}</p>
+
+          <div className="rounded-2xl border border-cyan-400/20 bg-cyan-400/5 p-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300">
+              Why this matters
+            </p>
+            <p className="mt-2 text-sm leading-6 text-slate-300">
+              {whyThisMatters}
+            </p>
+          </div>
 
           <div className="rounded-2xl border border-white/10 bg-slate-950/50 p-4">
             <div className="mb-4 flex items-center justify-between gap-3">
