@@ -6,6 +6,8 @@ import { ResultsList } from "@/components/dashboard/results-list";
 import { ResultsPlaceholder } from "@/components/dashboard/results-placeholder";
 import { StatusPanel } from "@/components/dashboard/status-panel";
 import { LandingPage } from "@/pages/landing";
+import { Badge } from "@/components/ui/badge";
+import { Panel } from "@/components/ui/panel";
 import {
   generateIntelligence,
   getApiCounts,
@@ -267,160 +269,508 @@ function sanitizeAuthMessage(message) {
   return text;
 }
 
-function SimplePage({ title, eyebrow, description, cards = [] }) {
+function cleanValue(value) {
+  if (value === null || value === undefined || value === "") return "—";
+  return String(value);
+}
+
+function percentLabel(value) {
+  const score = Number(value);
+
+  if (!Number.isFinite(score)) return "—";
+  if (score > 0 && score <= 1) return `${Math.round(score * 100)}%`;
+  if (score > 0 && score <= 10) return `${Math.round(score * 10)}%`;
+
+  return `${Math.round(Math.min(score, 100))}%`;
+}
+
+function buildRegionInsights(results) {
+  const buckets = new Map();
+
+  results.forEach((result) => {
+    const region = result.sourceRegion || result.region || result.sourceCountry || "Unspecified";
+    const current = buckets.get(region) || {
+      region,
+      total: 0,
+      positive: 0,
+      neutral: 0,
+      negative: 0,
+      scoreTotal: 0,
+      sources: new Set(),
+    };
+
+    current.total += 1;
+    current[result.sentiment] = (current[result.sentiment] || 0) + 1;
+    current.scoreTotal += Number(result.signalScore ?? result.finalScore ?? result.score) || 0;
+    current.sources.add(result.source || "Unknown source");
+
+    buckets.set(region, current);
+  });
+
+  return Array.from(buckets.values())
+    .map((item) => ({
+      ...item,
+      averageScore: item.total ? item.scoreTotal / item.total : 0,
+      sourceCount: item.sources.size,
+      dominantSentiment:
+        item.negative >= item.positive && item.negative >= item.neutral
+          ? "negative"
+          : item.positive >= item.neutral
+            ? "positive"
+            : "neutral",
+    }))
+    .sort((a, b) => b.total - a.total || b.averageScore - a.averageScore);
+}
+
+function ModuleHeader({ eyebrow, title, description }) {
+  return (
+    <section className="rounded-3xl border border-slate-800 bg-slate-950/70 p-6 shadow-2xl shadow-slate-950/20">
+      <p className="text-xs font-semibold uppercase tracking-[0.28em] text-cyan-300">
+        {eyebrow}
+      </p>
+      <h1 className="mt-3 text-3xl font-semibold tracking-tight text-slate-100">
+        {title}
+      </h1>
+      <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-400">
+        {description}
+      </p>
+    </section>
+  );
+}
+
+function EmptyModuleState({ message = "Run an intelligence scenario to populate this view." }) {
+  return (
+    <Panel className="p-8 text-center">
+      <div className="mx-auto max-w-2xl">
+        <Badge className="border-cyan-400/30 bg-cyan-400/10 text-cyan-200">
+          Waiting for intelligence run
+        </Badge>
+        <h2 className="mt-5 text-xl font-semibold text-slate-100">
+          No module data yet
+        </h2>
+        <p className="mt-2 text-sm leading-6 text-slate-400">{message}</p>
+      </div>
+    </Panel>
+  );
+}
+
+function SentimentPill({ sentiment }) {
+  const classes =
+    sentiment === "positive"
+      ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-200"
+      : sentiment === "negative"
+        ? "border-red-400/30 bg-red-400/10 text-red-200"
+        : "border-amber-400/30 bg-amber-400/10 text-amber-200";
+
+  return <Badge className={classes}>{sentiment}</Badge>;
+}
+
+function SignalsFeedView({ results }) {
+  const ranked = [...results].sort(
+    (a, b) =>
+      Number(b.signalScore ?? b.finalScore ?? b.score) -
+      Number(a.signalScore ?? a.finalScore ?? a.score)
+  );
+
   return (
     <section className="space-y-6">
-      <div className="rounded-3xl border border-slate-800 bg-slate-950/70 p-6 shadow-2xl shadow-slate-950/30">
-        <p className="text-xs uppercase tracking-[0.28em] text-cyan-300">
-          {eyebrow}
-        </p>
-        <h1 className="mt-3 text-3xl font-semibold tracking-tight text-slate-100">
-          {title}
-        </h1>
-        <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-400">
-          {description}
-        </p>
-      </div>
+      <ModuleHeader
+        eyebrow="Signal monitoring"
+        title="Signals Feed"
+        description="A lightweight ranked feed of the strongest signals from the current intelligence run."
+      />
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {cards.map((card) => (
-          <div
-            key={card.title}
-            className="rounded-3xl border border-slate-800 bg-slate-950/60 p-5 shadow-xl shadow-slate-950/20"
-          >
-            <p className="text-sm font-semibold text-slate-100">{card.title}</p>
-            <p className="mt-2 text-sm leading-6 text-slate-400">
-              {card.description}
-            </p>
-          </div>
-        ))}
+      {ranked.length === 0 ? (
+        <EmptyModuleState />
+      ) : (
+        <div className="grid gap-4">
+          {ranked.slice(0, 12).map((result, index) => (
+            <Panel key={result.id || `${result.source}-${index}`} className="p-5">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge className="border-cyan-400/30 bg-cyan-400/10 text-cyan-200">
+                      #{index + 1}
+                    </Badge>
+                    <SentimentPill sentiment={result.sentiment} />
+                    <Badge className="border-white/10 bg-white/5 text-slate-300">
+                      {cleanValue(result.sourceRegion || result.region)}
+                    </Badge>
+                  </div>
+
+                  <h2 className="mt-3 text-lg font-semibold leading-snug text-slate-100">
+                    {result.title}
+                  </h2>
+                  <p className="mt-2 text-sm text-slate-400">
+                    {result.source} · {cleanValue(result.sourceCountry || result.country)}
+                  </p>
+                </div>
+
+                <div className="rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-right">
+                  <p className="text-[0.65rem] uppercase tracking-[0.2em] text-slate-500">
+                    Signal score
+                  </p>
+                  <p className="mt-1 text-2xl font-semibold text-cyan-200">
+                    {Number(result.signalScore ?? result.finalScore ?? result.score ?? 0).toFixed(1)}
+                  </p>
+                </div>
+              </div>
+            </Panel>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function RegionalMonitorView({ results }) {
+  const regions = buildRegionInsights(results);
+  const maxVolume = Math.max(...regions.map((item) => item.total), 1);
+
+  return (
+    <section className="space-y-6">
+      <ModuleHeader
+        eyebrow="Regional heatmap"
+        title="Regional Monitor"
+        description="Compare regional signal intensity using volume, sentiment distribution, source coverage, and average signal score."
+      />
+
+      {regions.length === 0 ? (
+        <EmptyModuleState />
+      ) : (
+        <div className="grid gap-4 lg:grid-cols-2">
+          {regions.map((region) => {
+            const width = Math.max(8, Math.round((region.total / maxVolume) * 100));
+
+            return (
+              <Panel key={region.region} className="p-5">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <h2 className="text-lg font-semibold text-slate-100">
+                      {region.region}
+                    </h2>
+                    <p className="mt-1 text-sm text-slate-500">
+                      {region.total} signal(s) · {region.sourceCount} source(s)
+                    </p>
+                  </div>
+                  <SentimentPill sentiment={region.dominantSentiment} />
+                </div>
+
+                <div className="mt-5 h-3 overflow-hidden rounded-full bg-white/10">
+                  <div
+                    className="h-full rounded-full bg-cyan-400/70"
+                    style={{ width: `${width}%` }}
+                  />
+                </div>
+
+                <div className="mt-5 grid grid-cols-4 gap-3 text-center">
+                  <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+                    <p className="text-xs text-slate-500">Avg</p>
+                    <p className="mt-1 text-sm font-semibold text-slate-100">
+                      {region.averageScore.toFixed(1)}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-emerald-400/20 bg-emerald-400/10 p-3">
+                    <p className="text-xs text-emerald-200/80">Pos</p>
+                    <p className="mt-1 text-sm font-semibold text-emerald-100">
+                      {region.positive}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-amber-400/20 bg-amber-400/10 p-3">
+                    <p className="text-xs text-amber-200/80">Neu</p>
+                    <p className="mt-1 text-sm font-semibold text-amber-100">
+                      {region.neutral}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-red-400/20 bg-red-400/10 p-3">
+                    <p className="text-xs text-red-200/80">Neg</p>
+                    <p className="mt-1 text-sm font-semibold text-red-100">
+                      {region.negative}
+                    </p>
+                  </div>
+                </div>
+              </Panel>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function ReportsVaultView({ reportQueryHash, results, requestMeta }) {
+  const hasReport = Boolean(reportQueryHash);
+
+  return (
+    <section className="space-y-6">
+      <ModuleHeader
+        eyebrow="Reports vault"
+        title="Current Run Reports"
+        description="A basic report availability view for the active scenario. This uses the existing report links; no backend listing is required."
+      />
+
+      <div className="grid gap-4 lg:grid-cols-3">
+        <Panel className="p-5">
+          <p className="text-xs uppercase tracking-[0.22em] text-slate-500">
+            Scenario report
+          </p>
+          <h2 className="mt-3 text-2xl font-semibold text-slate-100">
+            {hasReport ? "Available" : "Not generated"}
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-slate-400">
+            {hasReport
+              ? "The current intelligence run has a downloadable JSON snapshot."
+              : "Run a successful scenario to create report outputs."}
+          </p>
+        </Panel>
+
+        <Panel className="p-5">
+          <p className="text-xs uppercase tracking-[0.22em] text-slate-500">
+            Card briefs
+          </p>
+          <h2 className="mt-3 text-2xl font-semibold text-slate-100">
+            {results.length}
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-slate-400">
+            Article-level PDF briefs available from individual result cards.
+          </p>
+        </Panel>
+
+        <Panel className="p-5">
+          <p className="text-xs uppercase tracking-[0.22em] text-slate-500">
+            Last scenario
+          </p>
+          <h2 className="mt-3 line-clamp-2 text-lg font-semibold text-slate-100">
+            {requestMeta?.requestedScenario || "—"}
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-slate-400">
+            Report generation follows the currently loaded intelligence run.
+          </p>
+        </Panel>
       </div>
     </section>
   );
 }
 
-function PlaceholderView({ activeView }) {
-  const pages = {
-    "signals-feed": {
-      title: "Signals Feed",
-      eyebrow: "Signal monitoring",
-      description:
-        "Track emerging geopolitical signals, recurring topics, and high-priority developments from generated intelligence runs.",
-      cards: [
-        {
-          title: "Ranked signal stream",
-          description:
-            "Review important geopolitical developments grouped by scenario, region, source quality, and sentiment.",
-        },
-        {
-          title: "Trend context",
-          description:
-            "Compare how topics evolve across regions and sources without exposing backend processing details.",
-        },
-        {
-          title: "Operational focus",
-          description:
-            "Designed to become the main view for recurring alerts and high-value intelligence signals.",
-        },
-      ],
-    },
-    "reports-vault": {
-      title: "Reports Vault",
-      eyebrow: "Saved intelligence",
-      description:
-        "Access generated PDF and JSON reports from previous intelligence runs once report listing is connected.",
-      cards: [
-        {
-          title: "Report library",
-          description:
-            "Organize query-level and article-level reports created from saved intelligence snapshots.",
-        },
-        {
-          title: "Download history",
-          description:
-            "Give users a clean way to retrieve analysis outputs without showing storage internals.",
-        },
-        {
-          title: "Analyst workflow",
-          description:
-            "Support repeatable brief generation for portfolio demos, client showcases, and future premium use.",
-        },
-      ],
-    },
-    "regional-monitor": {
-      title: "Regional Monitor",
-      eyebrow: "Geographic overview",
-      description:
-        "Explore country and region-level intelligence intensity using sentiment, source volume, and signal quality.",
-      cards: [
-        {
-          title: "Risk heat layer",
-          description:
-            "Highlight countries or regions with rising negative, neutral, or positive signal concentration.",
-        },
-        {
-          title: "Regional comparison",
-          description:
-            "Use existing country, region, sentiment, and source metadata to compare geopolitical pressure points.",
-        },
-        {
-          title: "Map-ready model",
-          description:
-            "Prepared for a future visual map while keeping the current SIMPLE architecture stable.",
-        },
-      ],
-    },
-    "source-registry": {
-      title: "Source Registry",
-      eyebrow: "Coverage intelligence",
-      description:
-        "Review news source coverage, reliability, geographic focus, and registry readiness in a user-friendly format.",
-      cards: [
-        {
-          title: "Coverage by region",
-          description:
-            "Show registered outlets by region, country, tier, and publication focus.",
-        },
-        {
-          title: "Source quality",
-          description:
-            "Present reliability and selection strength as product-facing confidence indicators.",
-        },
-        {
-          title: "Feed readiness",
-          description:
-            "Summarize source availability without exposing raw diagnostics to regular users.",
-        },
-      ],
-    },
-    "system-status": {
-      title: "System Status",
-      eyebrow: "Platform readiness",
-      description:
-        "View a clean status summary for frontend delivery, API availability, reports, authentication, and intelligence readiness.",
-      cards: [
-        {
-          title: "Application availability",
-          description:
-            "Show whether the product experience is ready, degraded, or waiting for backend validation.",
-        },
-        {
-          title: "Report pipeline",
-          description:
-            "Track whether cached snapshots and downloadable reports are available for the current session.",
-        },
-        {
-          title: "User-safe status",
-          description:
-            "Keep operational detail readable while moving raw debug output behind admin controls later.",
-        },
-      ],
-    },
-  };
+function SourceRegistryView({ sourceTransparency, results }) {
+  const selectedSources = sourceTransparency?.selectedSources || [];
+  const fallbackSources = results.map((result) => ({
+    name: result.source,
+    country: result.sourceCountry || result.country,
+    region: result.sourceRegion || result.region,
+    sourceQualityScore: result.sourceQualityScore,
+    sourceQuality: result.sourceQuality,
+    publicationFocus: result.publicationFocus,
+  }));
 
-  const page = pages[activeView] || pages["signals-feed"];
+  const sources = selectedSources.length > 0 ? selectedSources : fallbackSources;
 
-  return <SimplePage {...page} />;
+  return (
+    <section className="space-y-6">
+      <ModuleHeader
+        eyebrow="Source registry"
+        title="Coverage and Source Readiness"
+        description="A product-safe view of selected outlets, regions, source quality, and publication focus."
+      />
+
+      {sources.length === 0 ? (
+        <EmptyModuleState message="Run a scenario to see which sources were selected for analysis." />
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {sources.slice(0, 18).map((source, index) => {
+            const name = source?.name || source?.source || source?.label || "Unknown source";
+            const country = source?.country || source?.sourceCountry || "—";
+            const region = source?.region || source?.sourceRegion || "—";
+            const quality =
+              source?.sourceQuality || source?.tier || source?.sourceTier || "standard";
+            const score =
+              source?.sourceQualityScore ||
+              source?.reliabilityScore ||
+              source?.sourceReliability ||
+              source?.qualityScore;
+
+            return (
+              <Panel key={`${name}-${index}`} className="p-5">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h2 className="text-sm font-semibold text-slate-100">{name}</h2>
+                    <p className="mt-1 text-xs text-slate-500">
+                      {cleanValue(country)} · {cleanValue(region)}
+                    </p>
+                  </div>
+                  <Badge className="border-cyan-400/30 bg-cyan-400/10 text-cyan-200">
+                    {quality}
+                  </Badge>
+                </div>
+
+                <div className="mt-4 grid grid-cols-2 gap-3">
+                  <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+                    <p className="text-xs text-slate-500">Confidence</p>
+                    <p className="mt-1 text-sm font-semibold text-slate-100">
+                      {percentLabel(score)}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
+                    <p className="text-xs text-slate-500">Focus</p>
+                    <p className="mt-1 text-sm font-semibold text-slate-100">
+                      {cleanValue(source?.publicationFocus || source?.focus)}
+                    </p>
+                  </div>
+                </div>
+              </Panel>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function SystemStatusView({
+  authState,
+  requestMeta,
+  sourceTransparency,
+  errorMessage,
+  hasResults,
+}) {
+  const counts = sourceTransparency?.counts || {};
+  const feedErrors = sourceTransparency?.feedErrors || [];
+  const mode = requestMeta?.mode || sourceTransparency?.meta?.mode || "ready";
+
+  return (
+    <section className="space-y-6">
+      <ModuleHeader
+        eyebrow="System status"
+        title="Platform Readiness"
+        description="A clean product-facing status view for auth, backend mode, source coverage, and report readiness."
+      />
+
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <Panel className="p-5">
+          <p className="text-xs uppercase tracking-[0.22em] text-slate-500">
+            Authentication
+          </p>
+          <h2 className="mt-3 text-xl font-semibold text-slate-100">
+            {authState?.authenticated ? "Signed in" : "Demo/public"}
+          </h2>
+          <p className="mt-2 text-sm text-slate-400">
+            {authState?.configured ? "Login configured" : "Login not configured"}
+          </p>
+        </Panel>
+
+        <Panel className="p-5">
+          <p className="text-xs uppercase tracking-[0.22em] text-slate-500">
+            Intelligence mode
+          </p>
+          <h2 className="mt-3 text-xl font-semibold text-slate-100">
+            {hasResults ? "Results ready" : errorMessage ? "Needs validation" : cleanValue(mode)}
+          </h2>
+          <p className="mt-2 text-sm text-slate-400">
+            Frontend remains available independently of backend runtime.
+          </p>
+        </Panel>
+
+        <Panel className="p-5">
+          <p className="text-xs uppercase tracking-[0.22em] text-slate-500">
+            Raw / returned
+          </p>
+          <h2 className="mt-3 text-xl font-semibold text-slate-100">
+            {counts.rawItemsSeen || counts.raw || 0} / {counts.returned || 0}
+          </h2>
+          <p className="mt-2 text-sm text-slate-400">
+            Source items reviewed versus visible cards.
+          </p>
+        </Panel>
+
+        <Panel className="p-5">
+          <p className="text-xs uppercase tracking-[0.22em] text-slate-500">
+            Source availability
+          </p>
+          <h2 className="mt-3 text-xl font-semibold text-slate-100">
+            {feedErrors.length > 0 ? "Partial" : "Stable"}
+          </h2>
+          <p className="mt-2 text-sm text-slate-400">
+            {feedErrors.length > 0
+              ? "Some feeds may be unavailable or rate-limited."
+              : "No source availability warnings in the current view."}
+          </p>
+        </Panel>
+      </div>
+
+      {feedErrors.length > 0 ? (
+        <Panel className="p-5">
+          <h2 className="text-lg font-semibold text-slate-100">
+            Source availability notes
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-slate-400">
+            Some external feeds did not respond cleanly during the run. This does not mean
+            Geo-Sentinel is broken; it means source coverage was partial for this scenario.
+          </p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {feedErrors.slice(0, 8).map((error, index) => (
+              <Badge
+                key={`${error?.source || "source"}-${index}`}
+                className="border-amber-400/30 bg-amber-400/10 text-amber-200"
+              >
+                {error?.source || error?.name || "Feed issue"}
+              </Badge>
+            ))}
+          </div>
+        </Panel>
+      ) : null}
+    </section>
+  );
+}
+
+function ModuleView({
+  activeView,
+  results,
+  reportQueryHash,
+  requestMeta,
+  sourceTransparency,
+  authState,
+  errorMessage,
+}) {
+  if (activeView === "signals-feed") {
+    return <SignalsFeedView results={results} />;
+  }
+
+  if (activeView === "regional-monitor") {
+    return <RegionalMonitorView results={results} />;
+  }
+
+  if (activeView === "reports-vault") {
+    return (
+      <ReportsVaultView
+        reportQueryHash={reportQueryHash}
+        results={results}
+        requestMeta={requestMeta}
+      />
+    );
+  }
+
+  if (activeView === "source-registry") {
+    return (
+      <SourceRegistryView
+        sourceTransparency={sourceTransparency}
+        results={results}
+      />
+    );
+  }
+
+  if (activeView === "system-status") {
+    return (
+      <SystemStatusView
+        authState={authState}
+        requestMeta={requestMeta}
+        sourceTransparency={sourceTransparency}
+        errorMessage={errorMessage}
+        hasResults={results.length > 0}
+      />
+    );
+  }
+
+  return null;
 }
 
 export default function App() {
@@ -680,7 +1030,7 @@ export default function App() {
     } catch (error) {
       setErrorMessage(
         error?.message ||
-          "The intelligence API is not available right now. This can happen while the backend is offline for cost control."
+          "The intelligence API is not reachable right now. This can happen while the backend is offline for cost-saving mode."
       );
     } finally {
       setLoading(false);
@@ -789,7 +1139,15 @@ export default function App() {
           </aside>
         </div>
       ) : (
-        <PlaceholderView activeView={activeView} />
+        <ModuleView
+          activeView={activeView}
+          results={results}
+          reportQueryHash={reportQueryHash}
+          requestMeta={requestMeta}
+          sourceTransparency={sourceTransparency}
+          authState={authState}
+          errorMessage={errorMessage}
+        />
       )}
     </AppShell>
   );
