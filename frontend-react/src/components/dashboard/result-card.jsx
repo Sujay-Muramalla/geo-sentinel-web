@@ -7,7 +7,15 @@ import {
   isRecoverableReportError,
 } from "@/lib/api";
 
-const SUMMARY_LIMIT = 380;
+const SUMMARY_LIMIT = 260;
+
+const CARD_TABS = [
+  { id: "overview", label: "Overview" },
+  { id: "why", label: "Why" },
+  { id: "ranking", label: "Ranking" },
+  { id: "factors", label: "Factors" },
+  { id: "actions", label: "Actions" },
+];
 
 function sentimentLabel(sentiment) {
   const normalized = String(sentiment || "neutral").toLowerCase();
@@ -200,7 +208,7 @@ function RankingSignal({ label, value }) {
   const width = Number.isFinite(score) ? Math.max(6, Math.min(score, 100)) : 0;
 
   return (
-    <div className="space-y-1.5">
+    <div className="space-y-1.5 rounded-xl border border-white/10 bg-slate-950/45 p-3">
       <div className="flex items-center justify-between gap-3 text-xs">
         <span className="text-slate-400">{label}</span>
         <span className="font-medium text-slate-200">{signalLabel(value)}</span>
@@ -429,84 +437,23 @@ function ThumbnailFallback({ result }) {
   );
 }
 
-function ToggleButton({ expanded, onClick, label }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="group inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-cyan-300/20 bg-slate-950/70 text-xl font-semibold leading-none text-cyan-100 shadow-lg shadow-cyan-950/20 ring-1 ring-white/5 transition duration-200 hover:-translate-y-0.5 hover:border-cyan-300/50 hover:bg-cyan-400/10 hover:text-white hover:shadow-cyan-500/20 focus:outline-none focus:ring-2 focus:ring-cyan-300/40"
-      aria-expanded={expanded}
-      aria-label={`${expanded ? "Collapse" : "Expand"} ${label}`}
-      title={`${expanded ? "Collapse" : "Expand"} ${label}`}
-    >
-      <span className="relative -top-px transition-transform duration-200 group-hover:scale-110">
-        {expanded ? "−" : "+"}
-      </span>
-    </button>
-  );
-}
-
-function CollapsibleSection({
-  eyebrow,
-  title,
-  description,
-  expanded,
-  onToggle,
-  tone = "cyan",
-  children,
-}) {
-  const toneClass =
-    tone === "violet"
-      ? "border-violet-400/20 bg-violet-400/5"
-      : tone === "cyan"
-        ? "border-cyan-400/20 bg-cyan-400/5"
-        : "border-white/10 bg-slate-950/50";
-
-  const eyebrowClass =
-    tone === "violet"
-      ? "text-violet-300"
-      : tone === "cyan"
-        ? "text-cyan-300"
-        : "text-slate-300";
-
-  return (
-    <div className={`rounded-2xl border ${toneClass} p-4`}>
-      <div className="flex flex-nowrap items-start justify-between gap-4">
-        <div className="min-w-0">
-          <p className={`text-xs font-semibold uppercase tracking-[0.2em] ${eyebrowClass}`}>
-            {eyebrow}
-          </p>
-          <h4 className="mt-2 text-sm font-semibold text-slate-100">{title}</h4>
-          {description ? (
-            <p className="mt-1 text-xs leading-5 text-slate-500">{description}</p>
-          ) : null}
-        </div>
-
-        <ToggleButton expanded={expanded} onClick={onToggle} label={title.toLowerCase()} />
-      </div>
-
-      {expanded ? <div className="mt-4">{children}</div> : null}
-    </div>
-  );
-}
-
 function TransparencySummary({ score, inclusionReasons }) {
   const band = scoreBand(score);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h4 className="text-sm font-semibold text-slate-100">
             Why this signal was included
           </h4>
-          <p className="mt-2 text-sm leading-6 text-slate-300">{band.description}</p>
+          <p className="mt-1 text-sm leading-6 text-slate-300">{band.description}</p>
         </div>
 
         <Badge className={band.tone}>{band.label}</Badge>
       </div>
 
-      <ul className="space-y-2">
+      <ul className="grid gap-2 md:grid-cols-2">
         {inclusionReasons.map((reason) => (
           <li key={reason} className="flex gap-2 text-sm leading-6 text-slate-300">
             <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-cyan-300" />
@@ -526,6 +473,34 @@ function TransparencySummary({ score, inclusionReasons }) {
   );
 }
 
+function OverviewMetric({ label, value }) {
+  return (
+    <div className="rounded-xl border border-white/10 bg-slate-950/45 p-3">
+      <p className="text-[0.62rem] uppercase tracking-[0.18em] text-slate-500">
+        {label}
+      </p>
+      <p className="mt-1 text-sm font-semibold text-slate-200">{value || "—"}</p>
+    </div>
+  );
+}
+
+function TabButton({ tab, active, onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+        active
+          ? "border border-cyan-300/40 bg-cyan-400/15 text-cyan-100 shadow-sm shadow-cyan-950/30"
+          : "border border-white/10 bg-white/[0.03] text-slate-400 hover:border-cyan-300/25 hover:bg-cyan-400/10 hover:text-slate-200"
+      }`}
+      aria-pressed={active}
+    >
+      {tab.label}
+    </button>
+  );
+}
+
 export function ResultCard({
   result,
   reportQueryHash = "",
@@ -540,11 +515,7 @@ export function ResultCard({
     lastAction: "",
   });
   const [thumbnailFailed, setThumbnailFailed] = useState(false);
-  const [expandedSections, setExpandedSections] = useState({
-    why: false,
-    transparency: false,
-    factors: false,
-  });
+  const [activeTab, setActiveTab] = useState("overview");
 
   const summary = buildSummary(result);
   const whyThisMatters = buildWhyThisMatters(result);
@@ -569,13 +540,6 @@ export function ResultCard({
   );
 
   const canRegenerateReport = Boolean(onRegenerateReport) && downloadState.recoverable;
-
-  function toggleSection(section) {
-    setExpandedSections((prev) => ({
-      ...prev,
-      [section]: !prev[section],
-    }));
-  }
 
   async function downloadQueryReport(queryHashToUse = reportQueryHash) {
     const reportPayload = await fetchReportByQueryHash(queryHashToUse);
@@ -691,145 +655,54 @@ export function ResultCard({
     }
   }
 
-  return (
-    <Card className="overflow-hidden p-0">
-      <article className="flex flex-col gap-0">
-        <div className="border-b border-white/10 bg-white/[0.03] p-5">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-            <div className="min-w-0 flex-1 space-y-3">
-              <div className="flex flex-wrap gap-2">
-                <Badge className={sentimentBadgeClass(result.sentiment)}>
-                  {sentimentLabel(result.sentiment)}
-                </Badge>
+  function renderActiveTab() {
+    if (activeTab === "why") {
+      return (
+        <div className="rounded-2xl border border-cyan-400/20 bg-cyan-400/5 p-4">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300">
+            Why this matters
+          </p>
+          <h4 className="mt-2 text-sm font-semibold text-slate-100">
+            Scenario relevance
+          </h4>
+          <p className="mt-2 text-sm leading-6 text-slate-300">{whyThisMatters}</p>
+        </div>
+      );
+    }
 
-                {region ? (
-                  <Badge className="border-cyan-400/30 bg-cyan-400/10 text-cyan-200">
-                    {region}
-                  </Badge>
-                ) : null}
+    if (activeTab === "ranking") {
+      return (
+        <div className="rounded-2xl border border-violet-400/20 bg-violet-400/5 p-4">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-violet-300">
+            Ranking transparency
+          </p>
+          <TransparencySummary score={score} inclusionReasons={inclusionReasons} />
+        </div>
+      );
+    }
 
-                <Badge className={sourceQualityBadgeClass(qualityLabel)}>
-                  Source {qualityLabel}
-                </Badge>
-
-                <Badge className={band.tone}>{band.label}</Badge>
-
-                {expandedQueryUsed ? (
-                  <Badge className="border-violet-400/30 bg-violet-400/10 text-violet-200">
-                    Expanded scenario match
-                  </Badge>
-                ) : null}
-              </div>
-
-              <h3 className="text-lg font-semibold leading-snug text-slate-100">
-                {cleanText(result.title) || "Untitled result"}
-              </h3>
-
-              <p className="text-sm text-slate-400">
-                <span className="font-medium text-slate-300">{sourceMeta}</span>
-                <span className="mx-2 text-slate-600">•</span>
-                {safeDate(result.publishedAt)}
-              </p>
-            </div>
-
-            <div className="flex shrink-0 gap-3">
-              <div className="h-28 w-36 overflow-hidden rounded-2xl border border-white/10 bg-slate-950/80 shadow-lg shadow-black/20">
-                {canShowImage ? (
-                  <img
-                    src={thumbnail}
-                    alt={cleanText(result.title) || "Article thumbnail"}
-                    className="h-full w-full object-cover"
-                    loading="lazy"
-                    onError={() => setThumbnailFailed(true)}
-                  />
-                ) : (
-                  <ThumbnailFallback result={result} />
-                )}
-              </div>
-
-              <div className="rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-right">
-                <p className="text-[0.65rem] uppercase tracking-[0.2em] text-slate-500">
-                  Signal score
-                </p>
-                <p className={`mt-1 text-2xl font-semibold ${getScoreTone(score)}`}>
-                  {scoreLabel(score)}
-                </p>
-                <p className="mt-1 text-[0.68rem] text-slate-500">
-                  Prioritized, not absolute
-                </p>
-              </div>
-            </div>
+    if (activeTab === "factors") {
+      return (
+        <div className="rounded-2xl border border-white/10 bg-slate-950/35 p-4">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-300">
+            Score factor breakdown
+          </p>
+          <h4 className="mt-2 text-sm font-semibold text-slate-100">
+            Ranking factors
+          </h4>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <RankingSignal label="Topic relevance" value={rankingSignals.queryRelevance} />
+            <RankingSignal label="Geographic fit" value={rankingSignals.geoAlignment} />
+            <RankingSignal label="Source confidence" value={rankingSignals.sourceQuality} />
+            <RankingSignal label="Recency" value={rankingSignals.recency} />
           </div>
         </div>
+      );
+    }
 
-        <div className="space-y-4 p-5">
-          <p className="text-sm leading-6 text-slate-300">{summary}</p>
-
-          <CollapsibleSection
-            eyebrow="Why this matters"
-            title="Scenario relevance"
-            description="A short analyst-style explanation of why this article deserves attention."
-            expanded={expandedSections.why}
-            onToggle={() => toggleSection("why")}
-            tone="cyan"
-          >
-            <p className="text-sm leading-6 text-slate-300">{whyThisMatters}</p>
-          </CollapsibleSection>
-
-          <CollapsibleSection
-            eyebrow="Ranking transparency"
-            title="Inclusion reasons"
-            description="Explain why this result survived ranking and appeared as a visible card."
-            expanded={expandedSections.transparency}
-            onToggle={() => toggleSection("transparency")}
-            tone="violet"
-          >
-            <TransparencySummary score={score} inclusionReasons={inclusionReasons} />
-          </CollapsibleSection>
-
-          <CollapsibleSection
-            eyebrow="Score factor breakdown"
-            title="Ranking factors"
-            description="See the product-safe scoring factors behind this signal."
-            expanded={expandedSections.factors}
-            onToggle={() => toggleSection("factors")}
-            tone="neutral"
-          >
-            <div className="grid gap-4 sm:grid-cols-2">
-              <RankingSignal label="Topic relevance" value={rankingSignals.queryRelevance} />
-              <RankingSignal label="Geographic fit" value={rankingSignals.geoAlignment} />
-              <RankingSignal label="Source confidence" value={rankingSignals.sourceQuality} />
-              <RankingSignal label="Recency" value={rankingSignals.recency} />
-            </div>
-          </CollapsibleSection>
-
-          <div className="grid gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4 sm:grid-cols-3">
-            <div>
-              <p className="text-[0.65rem] uppercase tracking-[0.2em] text-slate-500">
-                Source country
-              </p>
-              <p className="mt-1 text-sm font-medium text-slate-200">
-                {cleanText(result.sourceCountry) || "—"}
-              </p>
-            </div>
-
-            <div>
-              <p className="text-[0.65rem] uppercase tracking-[0.2em] text-slate-500">
-                Source confidence
-              </p>
-              <p className="mt-1 text-sm font-medium text-slate-200">{qualityLabel}</p>
-            </div>
-
-            <div>
-              <p className="text-[0.65rem] uppercase tracking-[0.2em] text-slate-500">
-                Publication focus
-              </p>
-              <p className="mt-1 text-sm font-medium text-slate-200">
-                {cleanText(result.publicationFocus) || "—"}
-              </p>
-            </div>
-          </div>
-
+    if (activeTab === "actions") {
+      return (
+        <div className="space-y-3">
           <div className="rounded-2xl border border-cyan-400/20 bg-cyan-400/5 p-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
@@ -913,7 +786,7 @@ export function ResultCard({
             ) : null}
           </div>
 
-          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/10 pt-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
             <p className="text-xs text-slate-500">
               Ranked intelligence signal · Review the score as guidance, not certainty.
             </p>
@@ -937,6 +810,107 @@ export function ResultCard({
               </button>
             )}
           </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="grid gap-3 md:grid-cols-4">
+        <OverviewMetric label="Confidence" value={band.label} />
+        <OverviewMetric label="Source country" value={cleanText(result.sourceCountry)} />
+        <OverviewMetric label="Source confidence" value={qualityLabel} />
+        <OverviewMetric
+          label="Publication focus"
+          value={cleanText(result.publicationFocus)}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <Card className="overflow-hidden p-0">
+      <article className="flex flex-col gap-0">
+        <div className="border-b border-white/10 bg-white/[0.03] p-4">
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+            <div className="min-w-0 flex-1 space-y-3">
+              <div className="flex flex-wrap gap-2">
+                <Badge className={sentimentBadgeClass(result.sentiment)}>
+                  {sentimentLabel(result.sentiment)}
+                </Badge>
+
+                {region ? (
+                  <Badge className="border-cyan-400/30 bg-cyan-400/10 text-cyan-200">
+                    {region}
+                  </Badge>
+                ) : null}
+
+                <Badge className={sourceQualityBadgeClass(qualityLabel)}>
+                  Source {qualityLabel}
+                </Badge>
+
+                <Badge className={band.tone}>{band.label}</Badge>
+
+                {expandedQueryUsed ? (
+                  <Badge className="border-violet-400/30 bg-violet-400/10 text-violet-200">
+                    Expanded scenario match
+                  </Badge>
+                ) : null}
+              </div>
+
+              <h3 className="line-clamp-2 text-base font-semibold leading-snug text-slate-100 md:text-lg">
+                {cleanText(result.title) || "Untitled result"}
+              </h3>
+
+              <p className="text-xs text-slate-400 md:text-sm">
+                <span className="font-medium text-slate-300">{sourceMeta}</span>
+                <span className="mx-2 text-slate-600">•</span>
+                {safeDate(result.publishedAt)}
+              </p>
+
+              <p className="line-clamp-3 text-sm leading-6 text-slate-300">{summary}</p>
+            </div>
+
+            <div className="flex shrink-0 gap-3 xl:justify-end">
+              <div className="h-24 w-32 overflow-hidden rounded-2xl border border-white/10 bg-slate-950/80 shadow-lg shadow-black/20 sm:h-28 sm:w-36">
+                {canShowImage ? (
+                  <img
+                    src={thumbnail}
+                    alt={cleanText(result.title) || "Article thumbnail"}
+                    className="h-full w-full object-cover"
+                    loading="lazy"
+                    onError={() => setThumbnailFailed(true)}
+                  />
+                ) : (
+                  <ThumbnailFallback result={result} />
+                )}
+              </div>
+
+              <div className="flex min-w-24 flex-col justify-center rounded-2xl border border-white/10 bg-slate-950/70 px-3 py-2 text-right">
+                <p className="text-[0.6rem] uppercase tracking-[0.18em] text-slate-500">
+                  Score
+                </p>
+                <p className={`mt-1 text-xl font-semibold ${getScoreTone(score)}`}>
+                  {scoreLabel(score)}
+                </p>
+                <p className="mt-1 text-[0.62rem] text-slate-500">Priority signal</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="p-4">
+          <div className="mb-4 flex flex-wrap gap-2">
+            {CARD_TABS.map((tab) => (
+              <TabButton
+                key={tab.id}
+                tab={tab}
+                active={activeTab === tab.id}
+                onClick={() => setActiveTab(tab.id)}
+              />
+            ))}
+          </div>
+
+          {renderActiveTab()}
         </div>
       </article>
     </Card>
