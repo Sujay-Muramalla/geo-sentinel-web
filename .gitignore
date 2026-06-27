@@ -91,8 +91,14 @@ serverless/
 # =========================================================
 .pytest_cache/tmp/
 tmp/backend/src/python/backups/
-# Local dev artifacts
+# Local development artifacts
 backend/src/python/backups/
 tmp/
-docs/architecture_digrams/*.tfplan
+
+# Local architecture working documents
+docs/architecture_digrams/
+
+# Terraform plan files
 *.tfplan
+
+
